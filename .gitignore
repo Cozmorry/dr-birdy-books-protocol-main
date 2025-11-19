@@ -18,6 +18,5 @@ venv
 
 # Hardhat coverage reports
 /coverage
-.env
 .DS_Store
 edr-fork-cache
