@@ -1,0 +1,53 @@
+import { useAppStore } from '../store/useAppStore';
+
+export const useContractsStore = () => {
+  const {
+    contracts,
+    userInfo,
+    vestingInfo,
+    tiers,
+    protocolStats,
+    contractsLoading,
+    contractsError,
+    isRefreshing,
+    lastDataRefresh,
+    loadUserInfo,
+    loadVestingInfo,
+    loadTiers,
+    loadProtocolStats,
+    refreshAllData,
+    stakeTokens,
+    unstakeTokens,
+    stakeBatch,
+    unstakeBatch,
+    claimVestedTokens,
+    burnTokens,
+    approveTokens,
+    emergencyWithdraw,
+  } = useAppStore();
+
+  return {
+    contracts,
+    userInfo,
+    vestingInfo,
+    tiers,
+    protocolStats,
+    isLoading: contractsLoading,
+    error: contractsError,
+    isRefreshing,
+    lastDataRefresh,
+    loadUserInfo,
+    loadVestingInfo,
+    loadTiers,
+    loadProtocolStats,
+    refreshAllData,
+    stakeTokens,
+    unstakeTokens,
+    stakeBatch,
+    unstakeBatch,
+    claimVestedTokens,
+    burnTokens,
+    approveTokens,
+    emergencyWithdraw,
+  };
+};

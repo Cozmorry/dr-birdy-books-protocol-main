@@ -1,0 +1,43 @@
+// TODO:  Step 1 
+// set .env file on the root directory and add the following variables
+// SEPOLIA_PRIVATE_KEY=your_private_key_here
+// MAINNET_PRIVATE_KEY=your_private_key_here
+
+
+
+// // TODO:  Step 2
+// SETUP TEAM AADRESS 
+
+scripts/config.ts - EDIT FILE
+
+  TEAM_WALLETS: {
+    JOSEPH: "0x0000000000000000000000000000000000000001", // Replace with actual
+    AJ: "0x0000000000000000000000000000000000000002", // Replace with actual
+    DSIGN: "0x0000000000000000000000000000000000000003", // Replace with actual
+    DEVELOPER: "0x0000000000000000000000000000000000000004", // Replace with actual
+    BIRDY: "0xBdfa2B3e272fd2A26fa0Dd923697f3492Dd079cF", // Provided
+    AIRDROP: "0x0000000000000000000000000000000000000005", // Replace with actual
+  },
+
+
+
+// TODO:  Step 3  
+// RUN TESTS 
+- SUMMARY of TESTS document docs/TEST_RESULTS_SUMMARY.pdf
+RUN test: npm run test 
+
+
+// TODO:  Step 4 
+// DEPLOY CONTRACTS: 
+
+LOCALY
+    - start the local node:  npm run start:node 
+    - then npm run deploy:local 
+
+
+TESTNET: 
+    - npm run deploy:testnet
+
+
+MAINNET:  
+    -  npm run deploy:mainnet 

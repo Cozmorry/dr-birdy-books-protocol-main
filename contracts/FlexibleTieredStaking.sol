@@ -1,0 +1,947 @@
+/**
+ * @notice Dr. Birdy Books Staking: Grants $DBBP stakers exclusive access to premium content,
+ *         platform features, and gated educational resources.
+ * @dev Staked $DBBP unlocks file downloads and core protocol functionality.
+ *      Part of the Dr. Birdy Books Protocol.
+ */
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface IFlexibleTieredStaking {
+    function hasAccess(address user) external view returns (bool);
+}
+
+// OpenZeppelin Imports
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+interface IPriceOracle {
+    /**
+     * @notice Returns the latest round data from Chainlink oracle
+     * @return roundId The round ID
+     * @return answer The price answer
+     * @return startedAt Timestamp when round started
+     * @return updatedAt Timestamp when round was updated
+     * @return answeredInRound The round ID in which answer was computed
+     */
+    function latestRoundData()
+        external
+        view
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        );
+}
+
+contract FlexibleTieredStaking is
+    Initializable,
+    OwnableUpgradeable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable
+{
+    using SafeERC20 for IERC20;
+
+    // --- Roles ---
+    bytes32 public constant FILE_MANAGER_ROLE = keccak256("FILE_MANAGER_ROLE");
+
+    // --- Pause State ---
+    bool private _paused;
+
+    event Paused(address account);
+    event Unpaused(address account);
+
+    modifier whenNotPaused() {
+        require(!_paused, "Contract is paused");
+        _;
+    }
+
+    modifier whenPaused() {
+        require(_paused, "Contract is not paused");
+        _;
+    }
+
+    // --- ERC20 Token to stake ---
+    IERC20 public stakingToken;
+
+    // --- Tier Struct ---
+    struct Tier {
+        uint256 threshold; // USD value with 8 decimals
+        string name; // Tier label for clarity
+    }
+
+    Tier[] public tiers;
+
+    // --- Arweave File Struct ---
+    struct ArweaveFile {
+        string txId; // Arweave transaction ID or URI
+        string fileType; // e.g., "pdf", "jpeg" (optional)
+        string description; // Optional description or metadata
+        uint256 version; // Version number for file
+        uint256 timestamp; // Timestamp when file was added or updated
+    }
+
+    // Files associated with each tier
+    mapping(uint256 => ArweaveFile[]) private tierFiles;
+
+    // Personal files associated with individual users
+    mapping(address => ArweaveFile[]) private userFiles;
+
+    // --- State Variables ---
+    mapping(address => uint256) public userStakedTokens;
+    mapping(address => uint256) public lastUnstakeTimestamp;
+    mapping(address => uint256) public firstStakeTimestamp;
+    mapping(address => uint256) public stakeTimestamp; // Track last stake timestamp for minimum staking duration
+
+    uint256 public constant GRACE_PERIOD = 1 days;
+    uint256 public constant MIN_STAKING_DURATION = 1 days; // Minimum time before unstaking allowed
+
+    // Token price oracles to get USD price (primary and optional backup)
+    IPriceOracle public primaryPriceOracle;
+    IPriceOracle public backupPriceOracle;
+
+    // Gas refund reward amount (in wei)
+    uint256 public gasRefundReward = 0.001 ether;
+
+    // Max users that can be processed in one clearExpiredAccess call
+    uint256 public constant MAX_USERS_PER_CLEAR = 10;
+
+    // Events
+    event Staked(address indexed user, uint256 amount);
+    event Unstaked(address indexed user, uint256 amount);
+    event TierUpdated(address indexed user, uint256 tierIndex);
+
+    event TierAdded(uint256 tierIndex, uint256 threshold, string name);
+    event TierModified(uint256 tierIndex, uint256 newThreshold, string newName);
+    event TierRemoved(uint256 tierIndex);
+
+    // Events for Arweave file management
+    event TierFileAdded(
+        uint256 indexed tierIndex,
+        string txId,
+        string fileType,
+        string description,
+        uint256 version,
+        uint256 timestamp
+    );
+    event UserFileAdded(
+        address indexed user,
+        string txId,
+        string fileType,
+        string description,
+        uint256 version,
+        uint256 timestamp
+    );
+
+    // Event for file access logging
+    event FileAccessLogged(
+        address indexed user,
+        uint256 indexed tierIndex,
+        string txId,
+        uint256 timestamp
+    );
+    event GasRefundRewardSet(uint256 indexed gasRefundReward);
+
+    // --- Constructor ---
+    /**
+     * @notice Initializes the staking contract
+     * @param _stakingToken Address of the ERC20 token to be staked
+     * @param _primaryPriceOracle Address of the primary Chainlink price oracle
+     * @param _backupPriceOracle Address of the backup Chainlink price oracle (optional, can be zero)
+     */
+    function initialize(
+        address _stakingToken,
+        address _primaryPriceOracle,
+        address _backupPriceOracle
+    ) public initializer {
+        // Initialize Ownable, AccessControl, and ReentrancyGuard
+        __Ownable_init(msg.sender);
+        __AccessControl_init();
+        __ReentrancyGuard_init();
+
+        // Grant DEFAULT_ADMIN_ROLE to the deployer
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        // Set up the staking token
+        require(_stakingToken != address(0), "Invalid staking token address");
+        stakingToken = IERC20(_stakingToken);
+
+        // Set up oracles
+        require(
+            _primaryPriceOracle != address(0),
+            "Invalid primary oracle address"
+        );
+        primaryPriceOracle = IPriceOracle(_primaryPriceOracle);
+
+        if (_backupPriceOracle != address(0)) {
+            backupPriceOracle = IPriceOracle(_backupPriceOracle);
+        }
+
+        _paused = false;
+
+        // Grant roles (DEFAULT_ADMIN_ROLE is already granted by __AccessControl_init)
+        _grantRole(FILE_MANAGER_ROLE, msg.sender);
+
+        // Initialize with default tiers (optional)
+        tiers.push(Tier(24 * 10 ** 8, "Tier 1")); // $24
+        tiers.push(Tier(50 * 10 ** 8, "Tier 2")); // $50
+        tiers.push(Tier(1000 * 10 ** 8, "Tier 3")); // $1000
+    }
+
+    // --- Pause Control Functions ---
+
+    /**
+     * @notice Pause the contract (only owner)
+     */
+    function pause() external onlyOwner whenNotPaused {
+        _paused = true;
+        emit Paused(msg.sender);
+    }
+
+    /**
+     * @notice Unpause the contract (only owner)
+     */
+    function unpause() external onlyOwner whenPaused {
+        _paused = false;
+        emit Unpaused(msg.sender);
+    }
+
+    // --- Tier Management Functions ---
+
+    /**
+     * @notice Add a new tier at the end (only owner)
+     * @param threshold USD value threshold with 8 decimals
+     * @param name Tier name label
+     */
+    function addTier(
+        uint256 threshold,
+        string calldata name
+    ) external onlyOwner {
+        require(bytes(name).length > 0, "Tier name required");
+        tiers.push(Tier(threshold, name));
+        emit TierAdded(tiers.length - 1, threshold, name);
+    }
+
+    /**
+     * @notice Update tier threshold and/or name by index (only owner)
+     * @param tierIndex Index of the tier to update
+     * @param newThreshold New USD threshold with 8 decimals
+     * @param newName New tier name label
+     */
+    function updateTier(
+        uint256 tierIndex,
+        uint256 newThreshold,
+        string calldata newName
+    ) external onlyOwner {
+        require(tierIndex < tiers.length, "Invalid tier index");
+        require(bytes(newName).length > 0, "Tier name required");
+
+        tiers[tierIndex].threshold = newThreshold;
+        tiers[tierIndex].name = newName;
+
+        emit TierModified(tierIndex, newThreshold, newName);
+    }
+
+    /**
+     * @notice Remove tier by index (only owner)
+     * @param tierIndex Index of the tier to remove
+     */
+    function removeTier(uint256 tierIndex) external onlyOwner {
+        require(tierIndex < tiers.length, "Invalid tier index");
+
+        // Move last tier to removed spot and pop last
+        tiers[tierIndex] = tiers[tiers.length - 1];
+        tiers.pop();
+
+        emit TierRemoved(tierIndex);
+    }
+
+    /**
+     * @notice Get number of tiers
+     * @return count Number of tiers
+     */
+    function getTierCount() external view returns (uint256 count) {
+        return tiers.length;
+    }
+
+    /**
+     * @notice Get tier info by index
+     * @param tierIndex Index of the tier
+     * @return threshold USD threshold with 8 decimals
+     * @return name Tier name label
+     */
+    function getTier(
+        uint256 tierIndex
+    ) external view returns (uint256 threshold, string memory name) {
+        require(tierIndex < tiers.length, "Invalid tier index");
+        Tier storage t = tiers[tierIndex];
+        return (t.threshold, t.name);
+    }
+
+    // --- Arweave File Management ---
+
+    /**
+     * @notice Add files to a tier (only FILE_MANAGER_ROLE)
+     * @param tierIndex Tier index
+     * @param txIds Array of Arweave transaction IDs or URIs
+     * @param fileTypes Array of file types (e.g., "pdf", "jpeg")
+     * @param descriptions Array of file descriptions
+     * @param versions Array of version numbers
+     */
+    function addFileToTierBatch(
+        uint256 tierIndex,
+        string[] calldata txIds,
+        string[] calldata fileTypes,
+        string[] calldata descriptions,
+        uint256[] calldata versions
+    ) external onlyRole(FILE_MANAGER_ROLE) {
+        require(tierIndex < tiers.length, "Invalid tier");
+        require(
+            txIds.length == fileTypes.length &&
+                txIds.length == descriptions.length &&
+                txIds.length == versions.length,
+            "Array length mismatch"
+        );
+
+        for (uint256 i = 0; i < txIds.length; i++) {
+            tierFiles[tierIndex].push(
+                ArweaveFile({
+                    txId: txIds[i],
+                    fileType: fileTypes[i],
+                    description: descriptions[i],
+                    version: versions[i],
+                    timestamp: block.timestamp
+                })
+            );
+            emit TierFileAdded(
+                tierIndex,
+                txIds[i],
+                fileTypes[i],
+                descriptions[i],
+                versions[i],
+                block.timestamp
+            );
+        }
+    }
+
+    /**
+     * @notice Add personal files to a user (only FILE_MANAGER_ROLE)
+     * @param user User address
+     * @param txIds Array of Arweave transaction IDs or URIs
+     * @param fileTypes Array of file types
+     * @param descriptions Array of descriptions
+     * @param versions Array of version numbers
+     */
+    function addFileToUserBatch(
+        address user,
+        string[] calldata txIds,
+        string[] calldata fileTypes,
+        string[] calldata descriptions,
+        uint256[] calldata versions
+    ) external onlyRole(FILE_MANAGER_ROLE) {
+        require(user != address(0), "Invalid user address");
+        require(
+            txIds.length == fileTypes.length &&
+                txIds.length == descriptions.length &&
+                txIds.length == versions.length,
+            "Array length mismatch"
+        );
+
+        for (uint256 i = 0; i < txIds.length; i++) {
+            userFiles[user].push(
+                ArweaveFile({
+                    txId: txIds[i],
+                    fileType: fileTypes[i],
+                    description: descriptions[i],
+                    version: versions[i],
+                    timestamp: block.timestamp
+                })
+            );
+            emit UserFileAdded(
+                user,
+                txIds[i],
+                fileTypes[i],
+                descriptions[i],
+                versions[i],
+                block.timestamp
+            );
+        }
+    }
+
+    /**
+     * @notice Get files associated with a tier
+     * @param tierIndex Tier index
+     * @return Array of ArweaveFile structs
+     */
+    function getTierFiles(
+        uint256 tierIndex
+    ) external view returns (ArweaveFile[] memory) {
+        require(tierIndex < tiers.length, "Invalid tier index");
+        return tierFiles[tierIndex];
+    }
+
+    /**
+     * @notice Get personal files associated with a user
+     * @param user User address
+     * @return Array of ArweaveFile structs
+     */
+    function getUserFiles(
+        address user
+    ) external view returns (ArweaveFile[] memory) {
+        return userFiles[user];
+    }
+
+    /**
+     * @notice Log when a user accesses a file (anyone can call, logs event)
+     * @param user User address
+     * @param tierIndex Tier index
+     * @param txId Arweave transaction ID or URI
+     */
+    function logFileAccess(
+        address user,
+        uint256 tierIndex,
+        string calldata txId
+    ) external {
+        emit FileAccessLogged(user, tierIndex, txId, block.timestamp);
+    }
+
+    // --- Staking Functions ---
+
+    /**
+     * @notice Stake tokens by transferring them to contract
+     * @param amount Amount of tokens to stake
+     */
+    function stake(uint256 amount) external whenNotPaused nonReentrant {
+        require(amount > 0, "Cannot stake zero tokens");
+        require(address(stakingToken) != address(0), "Staking token not set");
+        require(address(primaryPriceOracle) != address(0), "Price oracle not set");
+
+        // Transfer tokens from user to contract (requires prior approval)
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        if (firstStakeTimestamp[msg.sender] == 0) {
+            firstStakeTimestamp[msg.sender] = block.timestamp;
+        }
+
+        userStakedTokens[msg.sender] += amount;
+        stakeTimestamp[msg.sender] = block.timestamp;
+
+        _updateUserTier(msg.sender);
+
+        emit Staked(msg.sender, amount);
+    }
+
+    /**
+     * @notice Batch stake multiple amounts (gas efficient)
+     * @param amounts Array of token amounts to stake
+     */
+    function stakeBatch(
+        uint256[] calldata amounts
+    ) external whenNotPaused nonReentrant {
+        require(amounts.length > 0, "No amounts provided");
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            require(amounts[i] > 0, "Zero amount in batch");
+            totalAmount += amounts[i];
+        }
+
+        stakingToken.safeTransferFrom(msg.sender, address(this), totalAmount);
+
+        if (firstStakeTimestamp[msg.sender] == 0) {
+            firstStakeTimestamp[msg.sender] = block.timestamp;
+        }
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            userStakedTokens[msg.sender] += amounts[i];
+        }
+        stakeTimestamp[msg.sender] = block.timestamp;
+
+        _updateUserTier(msg.sender);
+
+        emit Staked(msg.sender, totalAmount);
+    }
+
+    /**
+     * @notice Unstake tokens by transferring them back to user
+     * @param amount Amount of tokens to unstake
+     */
+    function unstake(uint256 amount) external whenNotPaused nonReentrant {
+        require(amount > 0, "Cannot unstake zero tokens");
+        require(
+            userStakedTokens[msg.sender] >= amount,
+            "Insufficient staked tokens"
+        );
+
+        // Enforce minimum staking duration before unstaking allowed
+        require(
+            block.timestamp >=
+                stakeTimestamp[msg.sender] + MIN_STAKING_DURATION,
+            "Minimum staking duration not met"
+        );
+
+        userStakedTokens[msg.sender] -= amount;
+        lastUnstakeTimestamp[msg.sender] = block.timestamp;
+
+        _updateUserTier(msg.sender);
+
+        // Transfer tokens back to user
+        stakingToken.safeTransfer(msg.sender, amount);
+
+        emit Unstaked(msg.sender, amount);
+    }
+
+    /**
+     * @notice Batch unstake multiple amounts (gas efficient)
+     * @param amounts Array of token amounts to unstake
+     */
+    function unstakeBatch(
+        uint256[] calldata amounts
+    ) external whenNotPaused nonReentrant {
+        require(amounts.length > 0, "No amounts provided");
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            require(amounts[i] > 0, "Zero amount in batch");
+            require(
+                userStakedTokens[msg.sender] >= amounts[i],
+                "Insufficient staked tokens"
+            );
+            totalAmount += amounts[i];
+        }
+
+        // Enforce minimum staking duration before unstaking allowed
+        require(
+            block.timestamp >=
+                stakeTimestamp[msg.sender] + MIN_STAKING_DURATION,
+            "Minimum staking duration not met"
+        );
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            userStakedTokens[msg.sender] -= amounts[i];
+        }
+        lastUnstakeTimestamp[msg.sender] = block.timestamp;
+
+        _updateUserTier(msg.sender);
+
+        // Transfer tokens back to user
+        stakingToken.safeTransfer(msg.sender, totalAmount);
+
+        emit Unstaked(msg.sender, totalAmount);
+    }
+
+    // --- Internal: Update user's tier ---
+
+    /**
+     * @dev Update user's tier based on current USD stake value
+     * @param user User address
+     */
+    function _updateUserTier(address user) internal {
+        // Check if oracles are properly initialized before trying to get USD value
+        if (address(primaryPriceOracle) == address(0)) {
+            // If no oracle is set, emit tier update with max value (no tier)
+            emit TierUpdated(user, type(uint256).max);
+            return;
+        }
+
+        uint256 usdValue = _getUserUsdValue(user);
+
+        uint256 bestTierIndex = type(uint256).max; // Use max uint as sentinel for no tier
+        uint256 highestThreshold = 0;
+
+        for (uint256 i = 0; i < tiers.length; i++) {
+            if (
+                usdValue >= tiers[i].threshold &&
+                tiers[i].threshold > highestThreshold
+            ) {
+                highestThreshold = tiers[i].threshold;
+                bestTierIndex = i;
+            }
+        }
+
+        if (bestTierIndex == type(uint256).max) {
+            emit TierUpdated(user, type(uint256).max);
+        } else {
+            emit TierUpdated(user, bestTierIndex);
+        }
+    }
+
+    // --- Access Check ---
+
+    /**
+     * @notice Check if user has access based on tier and grace period after unstake
+     * @param user User address
+     * @return hasAccess Boolean indicating access status
+     */
+    function hasAccess(address user) public view returns (bool) {
+        uint256 usdValue = _getUserUsdValue(user);
+        uint256 bestTierIndex = type(uint256).max;
+        uint256 highestThreshold = 0;
+
+        for (uint256 i = 0; i < tiers.length; i++) {
+            if (
+                usdValue >= tiers[i].threshold &&
+                tiers[i].threshold > highestThreshold
+            ) {
+                highestThreshold = tiers[i].threshold;
+                bestTierIndex = i;
+            }
+        }
+
+        if (bestTierIndex == type(uint256).max) {
+            // No tier met, check grace period after unstake
+            if (block.timestamp <= lastUnstakeTimestamp[user] + GRACE_PERIOD) {
+                return true;
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @notice Get current tier index and name of a user
+     * @param user User address
+     * @return tierIndex Tier index or -1 if none
+     * @return tierName Tier name or empty string if none
+     */
+    function getUserTier(
+        address user
+    ) external view returns (int256 tierIndex, string memory tierName) {
+        uint256 usdValue = _getUserUsdValue(user);
+
+        int256 bestTierIndex = -1;
+        uint256 highestThreshold = 0;
+
+        for (uint256 i = 0; i < tiers.length; i++) {
+            if (
+                usdValue >= tiers[i].threshold &&
+                tiers[i].threshold > highestThreshold
+            ) {
+                highestThreshold = tiers[i].threshold;
+                bestTierIndex = int256(i);
+            }
+        }
+
+        if (bestTierIndex == -1) {
+            return (-1, "");
+        } else {
+            return (bestTierIndex, tiers[uint256(bestTierIndex)].name);
+        }
+    }
+
+    // --- Helper: Get USD value of user stake ---
+
+    /**
+     * @dev Get USD value of user's staked tokens using oracles
+     * @param user User address
+     * @return usdValue USD value with 8 decimals
+     */
+    function _getUserUsdValue(address user) internal view returns (uint256) {
+        uint256 stakedTokens = userStakedTokens[user];
+        if (stakedTokens == 0) {
+            return 0;
+        }
+
+        try primaryPriceOracle.latestRoundData() returns (
+            uint80,
+            int256 primaryPrice,
+            uint256,
+            uint256 primaryUpdatedAt,
+            uint80
+        ) {
+            // Check if primary price is valid and not too stale (relaxed for testing)
+            if (
+                primaryPrice > 0 &&
+                (block.timestamp - primaryUpdatedAt) < 24 hours
+            ) {
+                // If backup oracle is available, try to use it
+                if (address(backupPriceOracle) != address(0)) {
+                    try backupPriceOracle.latestRoundData() returns (
+                        uint80,
+                        int256 backupPrice,
+                        uint256,
+                        uint256 backupUpdatedAt,
+                        uint80
+                    ) {
+                        if (
+                            backupPrice > 0 &&
+                            (block.timestamp - backupUpdatedAt) < 24 hours
+                        ) {
+                            uint256 avgPrice = uint256(
+                                (primaryPrice + backupPrice) / 2
+                            );
+                            return (stakedTokens * avgPrice) / 1e18;
+                        }
+                    } catch {
+                        // Backup oracle failed, use primary only
+                    }
+                }
+
+                // Use primary oracle price
+                return (stakedTokens * uint256(primaryPrice)) / 1e18;
+            } else {
+                // Primary oracle returned invalid price, try backup if available
+                if (address(backupPriceOracle) != address(0)) {
+                    try backupPriceOracle.latestRoundData() returns (
+                        uint80,
+                        int256 backupPrice,
+                        uint256,
+                        uint256 backupUpdatedAt,
+                        uint80
+                    ) {
+                        if (
+                            backupPrice > 0 &&
+                            (block.timestamp - backupUpdatedAt) < 24 hours
+                        ) {
+                            return (stakedTokens * uint256(backupPrice)) / 1e18;
+                        }
+                    } catch {
+                        // Backup oracle also failed
+                    }
+                }
+            }
+        } catch {
+            // Primary oracle failed, try backup if available
+            if (address(backupPriceOracle) != address(0)) {
+                try backupPriceOracle.latestRoundData() returns (
+                    uint80,
+                    int256 backupPrice,
+                    uint256,
+                    uint256 backupUpdatedAt,
+                    uint80
+                ) {
+                    if (
+                        backupPrice > 0 &&
+                        (block.timestamp - backupUpdatedAt) < 24 hours
+                    ) {
+                        return (stakedTokens * uint256(backupPrice)) / 1e18;
+                    }
+                } catch {
+                    // Both oracles failed
+                }
+            }
+        }
+
+        // If all oracles fail, return 0 (no access)
+        return 0;
+    }
+
+    // --- Emergency Withdrawal ---
+
+    /**
+     * @notice Emergency withdraw staked tokens (only allowed when paused)
+     */
+    function emergencyWithdraw() external whenPaused nonReentrant {
+        uint256 balance = userStakedTokens[msg.sender];
+        require(balance > 0, "No staked tokens to withdraw");
+
+        userStakedTokens[msg.sender] = 0;
+
+        stakingToken.safeTransfer(msg.sender, balance);
+
+        emit Unstaked(msg.sender, balance);
+    }
+
+    // --- Admin functions to update oracles and gas refund amount ---
+
+    /**
+     * @notice Set staking token address (only owner)
+     * @param _stakingToken New staking token address
+     */
+    function setStakingToken(address _stakingToken) external onlyOwner {
+        require(_stakingToken != address(0), "Invalid staking token address");
+        stakingToken = IERC20(_stakingToken);
+    }
+
+    /**
+     * @notice Set primary price oracle address (only owner)
+     * @param _primaryPriceOracle New primary oracle address
+     */
+    function setPrimaryPriceOracle(
+        address _primaryPriceOracle
+    ) external onlyOwner {
+        require(_primaryPriceOracle != address(0), "Invalid address");
+        primaryPriceOracle = IPriceOracle(_primaryPriceOracle);
+    }
+
+    /**
+     * @notice Set backup price oracle address (only owner)
+     * @param _backupPriceOracle New backup oracle address
+     */
+    function setBackupPriceOracle(
+        address _backupPriceOracle
+    ) external onlyOwner {
+        backupPriceOracle = IPriceOracle(_backupPriceOracle);
+    }
+
+    /**
+     * @notice Set gas refund reward amount in wei (only owner)
+     * @param _gasRefundReward New gas refund amount
+     */
+    function setGasRefundReward(uint256 _gasRefundReward) external onlyOwner {
+        gasRefundReward = _gasRefundReward;
+        emit GasRefundRewardSet(_gasRefundReward);
+    }
+
+    /**
+     * @notice Withdraw excess ETH from contract (only owner)
+     * @param amount Amount of ETH to withdraw in wei
+     */
+    function withdrawETH(uint256 amount) external onlyOwner {
+        require(amount <= address(this).balance, "Insufficient balance");
+        payable(msg.sender).transfer(amount);
+    }
+
+    // --- Helper: Check token allowance ---
+
+    /**
+     * @notice Check the token allowance of a user for this contract
+     * @param user User address
+     * @return allowance Amount of tokens approved for staking contract
+     */
+    function allowance(address user) external view returns (uint256) {
+        return stakingToken.allowance(user, address(this));
+    }
+
+    // --- Utility Functions ---
+
+    /**
+     * @notice Get contract status information
+     * @return isPaused Whether contract is paused
+     * @return stakingTokenSet Whether staking token is set
+     * @return primaryOracleSet Whether primary oracle is set
+     * @return backupOracleSet Whether backup oracle is set
+     * @return tierCount Number of tiers configured
+     */
+    function getContractStatus()
+        external
+        view
+        returns (
+            bool isPaused,
+            bool stakingTokenSet,
+            bool primaryOracleSet,
+            bool backupOracleSet,
+            uint256 tierCount
+        )
+    {
+        return (
+            _paused,
+            address(stakingToken) != address(0),
+            address(primaryPriceOracle) != address(0),
+            address(backupPriceOracle) != address(0),
+            tiers.length
+        );
+    }
+
+    /**
+     * @notice Get user staking information
+     * @param user User address
+     * @return stakedAmount Amount of tokens staked by user
+     * @return usdValue USD value of staked tokens
+     * @return userHasAccess Whether user has access based on tier
+     * @return canUnstake Whether user can unstake (minimum duration met)
+     */
+    function getUserStakingInfo(
+        address user
+    )
+        external
+        view
+        returns (
+            uint256 stakedAmount,
+            uint256 usdValue,
+            bool userHasAccess,
+            bool canUnstake
+        )
+    {
+        stakedAmount = userStakedTokens[user];
+        usdValue = _getUserUsdValue(user);
+        userHasAccess = hasAccess(user);
+        canUnstake =
+            block.timestamp >= stakeTimestamp[user] + MIN_STAKING_DURATION;
+    }
+
+    /**
+     * @notice Get oracle information
+     * @return primaryOracle Address of primary oracle
+     * @return backupOracle Address of backup oracle
+     * @return currentGasRefundReward Current gas refund reward amount
+     */
+    function getOracleInfo()
+        external
+        view
+        returns (
+            address primaryOracle,
+            address backupOracle,
+            uint256 currentGasRefundReward
+        )
+    {
+        return (
+            address(primaryPriceOracle),
+            address(backupPriceOracle),
+            gasRefundReward
+        );
+    }
+
+    /**
+     * @notice Get total staked tokens across all users
+     * @return total Total staked amount
+     */
+    function getTotalStaked() external view returns (uint256 total) {
+        return stakingToken.balanceOf(address(this));
+    }
+
+    /**
+     * @notice Get contract balances
+     * @return ethBalance ETH balance of contract
+     * @return tokenBalance Token balance of contract
+     */
+    function getContractBalances()
+        external
+        view
+        returns (uint256 ethBalance, uint256 tokenBalance)
+    {
+        return (address(this).balance, stakingToken.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Verify if user is a staker for a specific tier
+     * @param user User address
+     * @param tierIndex Tier index to check
+     * @return isStaker True if user meets tier requirements
+     */
+    function verifyStaker(
+        address user,
+        uint256 tierIndex
+    ) external view returns (bool isStaker) {
+        if (tierIndex >= tiers.length) return false;
+
+        uint256 usdValue = _getUserUsdValue(user);
+        return usdValue >= tiers[tierIndex].threshold;
+    }
+
+    /**
+     * @notice Check if user meets tier requirement
+     * @param user User address
+     * @param tierIndex Tier index to check
+     * @return meetsRequirement True if user meets the tier requirement
+     */
+    function meetsTierRequirement(
+        address user,
+        uint256 tierIndex
+    ) external view returns (bool meetsRequirement) {
+        if (tierIndex >= tiers.length) return false;
+
+        uint256 usdValue = _getUserUsdValue(user);
+        return usdValue >= tiers[tierIndex].threshold;
+    }
+
+    // --- Allow contract to receive ETH for gas refund rewards ---
+    receive() external payable {}
+
+    fallback() external payable {}
+}

@@ -1,0 +1,127 @@
+import React from 'react';
+import { Wallet, AlertCircle, CheckCircle } from 'lucide-react';
+
+interface WalletConnectProps {
+  isConnected: boolean;
+  isCorrectNetwork: boolean;
+  account: string | null;
+  isLoading: boolean;
+  error: string | null;
+  onConnect: () => void;
+  onConnectLocalhost: () => void;
+  onSwitchNetwork: () => void;
+  onDisconnect: () => void;
+}
+
+export const WalletConnect: React.FC<WalletConnectProps> = ({
+  isConnected,
+  isCorrectNetwork,
+  account,
+  isLoading,
+  error,
+  onConnect,
+  onConnectLocalhost,
+  onSwitchNetwork,
+  onDisconnect,
+}) => {
+  if (!isConnected) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-center mb-4">
+          <Wallet className="h-8 w-8 text-blue-600" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 text-center mb-4">
+          Connect Your Wallet
+        </h2>
+        <p className="text-gray-600 text-center mb-6">
+          Connect your MetaMask wallet to interact with the Dr. Birdy Books Protocol
+        </p>
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={onConnect}
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading ? 'Connecting...' : 'Connect MetaMask'}
+          </button>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">or</span>
+            </div>
+          </div>
+          
+          <button
+            onClick={onConnectLocalhost}
+            disabled={isLoading}
+            className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading ? 'Connecting...' : 'Connect to Localhost (127.0.0.1:8545)'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isCorrectNetwork) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-center mb-4">
+          <AlertCircle className="h-8 w-8 text-yellow-600" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 text-center mb-4">
+          Wrong Network
+        </h2>
+        <p className="text-gray-600 text-center mb-6">
+          Please switch to Base network to continue
+        </p>
+        
+        <button
+          onClick={onSwitchNetwork}
+          className="w-full bg-yellow-600 text-white py-3 px-4 rounded-md hover:bg-yellow-700 transition-colors"
+        >
+          Switch to Base Network
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex items-center justify-center mb-4">
+        <CheckCircle className="h-8 w-8 text-green-600" />
+      </div>
+      <h2 className="text-xl font-semibold text-gray-900 text-center mb-4">
+        Wallet Connected
+      </h2>
+      <div className="bg-gray-50 rounded-md p-4 mb-4">
+        <p className="text-sm text-gray-600 mb-1">Connected Address:</p>
+        <p className="font-mono text-sm text-gray-900 break-all">
+          {account}
+        </p>
+      </div>
+      
+      <button
+        onClick={onDisconnect}
+        className="w-full bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors"
+      >
+        Disconnect Wallet
+      </button>
+    </div>
+  );
+};
