@@ -6,4 +6,6 @@ export * as flexibleTieredStakingSol from "./FlexibleTieredStaking.sol";
 export * as reflectiveTokenSol from "./ReflectiveToken.sol";
 export * as mocks from "./mocks";
 export { ImprovedTimelock__factory } from "./ImprovedTimelock__factory";
+export { SimpleStaking__factory } from "./SimpleStaking__factory";
+export { SimpleStakingV2__factory } from "./SimpleStakingV2__factory";
 export { TokenDistribution__factory } from "./TokenDistribution__factory";

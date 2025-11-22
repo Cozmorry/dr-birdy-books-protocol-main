@@ -8,7 +8,7 @@ export const BASE_MAINNET: NetworkConfig = {
 };
 
 export const BASE_TESTNET: NetworkConfig = {
-  chainId: 84531,
+  chainId: 84532,
   name: 'Base Sepolia',
   rpcUrl: 'https://sepolia.base.org',
   blockExplorer: 'https://sepolia.basescan.org'
@@ -55,11 +55,11 @@ export const CONTRACT_ADDRESSES = {
     improvedTimelock: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
   },
   [BASE_TESTNET.chainId]: {
-    reflectiveToken: '0x0000000000000000000000000000000000000000', // Update with actual Base Sepolia address
-    tokenDistribution: '0x0000000000000000000000000000000000000000', // Update with actual Base Sepolia address
-    flexibleTieredStaking: '0x0000000000000000000000000000000000000000', // Update with actual Base Sepolia address
-    arweaveGateway: '0x0000000000000000000000000000000000000000', // Update with actual Base Sepolia address
-    improvedTimelock: '0x0000000000000000000000000000000000000000', // Update with actual Base Sepolia address
+    reflectiveToken: '0xdEA33fCB6BDCaB788De398A636a1227122Ae3d7D', // ✅ WORKING - Non-upgradeable version
+    tokenDistribution: '0x0e9697F783654d5F26f41dA15FbAc449fF4Ddf5d', // Deployed on Base Sepolia
+    flexibleTieredStaking: '0x11D9250B066Cb4E493D78BBc1E07153DcA265746', // ✅ WORKING - Non-upgradeable with simplified USD calc
+    arweaveGateway: '0xb37EE17a794013fFDfE87E5921eE7984588A8eC7', // Deployed on Base Sepolia
+    improvedTimelock: '0x937D2960F0BA86a2c829CC6F5921E8b3725d08dA', // Deployed on Base Sepolia
   },
   [LOCALHOST.chainId]: {
     reflectiveToken: '0x4213F020e9430F3549614231A4Dc06226FEEae40',

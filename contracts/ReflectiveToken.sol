@@ -291,16 +291,19 @@ contract ReflectiveToken is
             "Ownership not set correctly during initialization"
         );
 
-        // Additional debug: Emit event to track initialization
-        emit Transfer(address(0), address(0), 0); // Use Transfer as debug event
-
-        // Initialize token supply (mint to msg.sender)
-        _mint(msg.sender, _TOTAL_SUPPLY);
-
-        // Initialize reflection system
+        // Initialize reflection system FIRST
         _rTotal = (MAX - (MAX % _TOTAL_SUPPLY));
-        _rOwned[msg.sender] = _rTotal;
+        
+        // For excluded accounts (like deployer), ONLY use _tOwned
+        // Do NOT set _rOwned for excluded accounts - they don't participate in reflection
         _tOwned[msg.sender] = _TOTAL_SUPPLY;
+        
+        // Call super._update to sync with ERC20 base contract
+        // This updates _totalSupply and _balances in the base ERC20 contract
+        super._update(address(0), msg.sender, _TOTAL_SUPPLY);
+        
+        // Emit Transfer event for initial mint (already emitted by super._update, but explicit for clarity)
+        // emit Transfer(address(0), msg.sender, _TOTAL_SUPPLY); // Already emitted by super._update
 
         // Set exclusions
         _isExcludedFromFee[msg.sender] = true; // Use msg.sender instead of owner()
@@ -777,7 +780,10 @@ contract ReflectiveToken is
 
     // ERC-20 Standard Functions
     function balanceOf(address account) public view override returns (uint256) {
-        if (_isExcludedFromFee[account]) return _tOwned[account];
+        if (_isExcludedFromFee[account]) {
+            // Excluded accounts ONLY use _tOwned
+            return _tOwned[account];
+        }
         return tokenFromReflection(_rOwned[account]);
     }
 
@@ -835,7 +841,7 @@ contract ReflectiveToken is
         address spender,
         uint256 amount
     ) public override returns (bool) {
-        _approve(_msgSender(), spender, amount);
+        _approve(_msgSender(), spender, amount, true);
         return true;
     }
 
@@ -876,96 +882,111 @@ contract ReflectiveToken is
     }
 
     /// @dev Overrides ERC20Upgradeable._update to implement reflection/fee logic.
+    /// @notice FIXED: Updated reflection balances BEFORE emitting event to prevent conflicts
     function _update(
         address from,
         address to,
         uint256 value
     ) internal virtual override {
-        // 1. Skip custom logic for mint/burn (from/to = address(0))
+        // 1. Handle mint/burn operations (from/to = address(0))
         if (from == address(0) || to == address(0)) {
             super._update(from, to, value);
-            return;
-        }
-
-        // 2. Always call parent _update first for basic balance management
-        super._update(from, to, value);
-
-        // 3. Apply fees if not excluded and not in swap
-        // Apply fees if either from or to is not excluded from fees
-        bool shouldApplyFees = !inSwap &&
-            from != address(this) &&
-            to != address(this) &&
-            (!_isExcludedFromFee[from] || !_isExcludedFromFee[to]);
-
-        if (shouldApplyFees) {
-            uint256 feeAmount = (value * totalFee) / 10000;
-            uint256 transferAmount = value - feeAmount;
-            _tFeeTotal += feeAmount;
-
-            // Update reflection tracking based on exclusion status
-            if (_isExcludedFromFee[from]) {
-                // From is excluded: update _tOwned
-                require(_tOwned[from] >= value, "Insufficient balance");
-                _tOwned[from] -= value;
-            } else {
-                // From is not excluded: update _rOwned
+            // For mint: update reflection totals
+            if (from == address(0)) {
                 uint256 currentRate = _rTotal / _tTotal();
                 uint256 rAmount;
                 unchecked {
                     rAmount = value * currentRate;
                 }
-                require(
-                    _rOwned[from] >= rAmount,
-                    "Insufficient reflection balance"
-                );
+                if (_isExcludedFromFee[to]) {
+                    _tOwned[to] += value;
+                } else {
+                    _rOwned[to] += rAmount;
+                    _rTotal += rAmount;
+                }
+            }
+            // For burn: handled by super._update and _tFeeTotal
+            return;
+        }
+
+        // 2. Determine fee logic
+        bool fromExcluded = _isExcludedFromFee[from];
+        bool toExcluded = _isExcludedFromFee[to];
+        bool stakingContractInvolved = (stakingContract != address(0) && (from == stakingContract || to == stakingContract));
+        bool shouldApplyFees = !inSwap &&
+            from != address(this) &&
+            to != address(this) &&
+            !stakingContractInvolved &&
+            (!fromExcluded || !toExcluded); // Fees apply if at least one is NOT excluded
+
+        uint256 transferAmount = value;
+        uint256 feeAmount = 0;
+
+        // 3. Calculate and apply fees if needed
+        if (shouldApplyFees) {
+            feeAmount = (value * totalFee) / 10000;
+            transferAmount = value - feeAmount;
+            _tFeeTotal += feeAmount;
+        }
+
+        // 4. Update FROM account balance
+        if (fromExcluded) {
+            // Excluded accounts ONLY use _tOwned
+            require(_tOwned[from] >= value, "RT: Insufficient _tOwned balance");
+            unchecked {
+                _tOwned[from] -= value;
+            }
+        } else {
+            // Non-excluded accounts use _rOwned (reflection)
+            require(_tTotal() > 0, "RT: tTotal is zero");
+            uint256 currentRate = _rTotal / _tTotal();
+            require(currentRate > 0, "RT: Reflection rate is zero");
+            uint256 rAmount;
+            unchecked {
+                rAmount = value * currentRate;
+            }
+            require(_rOwned[from] >= rAmount, "RT: Insufficient _rOwned balance");
+            unchecked {
                 _rOwned[from] -= rAmount;
             }
+        }
 
-            if (_isExcludedFromFee[to]) {
-                // To is excluded: update _tOwned
+        // 5. Update TO account balance
+        if (toExcluded) {
+            // Excluded accounts ONLY use _tOwned
+            require(_tOwned[to] + transferAmount >= _tOwned[to], "RT: _tOwned overflow");
+            unchecked {
                 _tOwned[to] += transferAmount;
-            } else {
-                // To is not excluded: update _rOwned
-                uint256 currentRate = _rTotal / _tTotal();
-                uint256 rAmount;
-                unchecked {
-                    rAmount = transferAmount * currentRate;
-                }
+            }
+        } else {
+            // Non-excluded accounts use _rOwned (reflection)
+            require(_tTotal() > 0, "RT: tTotal is zero");
+            uint256 currentRate = _rTotal / _tTotal();
+            require(currentRate > 0, "RT: Reflection rate is zero");
+            uint256 rAmount;
+            unchecked {
+                rAmount = transferAmount * currentRate;
+            }
+            require(_rOwned[to] + rAmount >= _rOwned[to], "RT: _rOwned overflow");
+            unchecked {
                 _rOwned[to] += rAmount;
             }
+        }
 
+        // 6. Handle fees (add to contract if fees were applied)
+        if (feeAmount > 0) {
+            unchecked {
+                _tOwned[address(this)] += feeAmount;
+            }
             // Auto-liquidity trigger
             uint256 contractTokenBalance = balanceOf(address(this));
             if (contractTokenBalance >= swapThreshold) {
                 swapAndLiquify();
             }
-        } else {
-            // No fees: handle mixed excluded/non-excluded transfers
-            if (_isExcludedFromFee[from]) {
-                _tOwned[from] -= value;
-            } else {
-                // For non-excluded accounts, convert token amount to reflection amount
-                uint256 currentRate = _rTotal / _tTotal();
-                uint256 rAmount;
-                unchecked {
-                    rAmount = value * currentRate;
-                }
-                _rOwned[from] -= rAmount;
-            }
-
-            if (_isExcludedFromFee[to]) {
-                _tOwned[to] += value;
-            } else {
-                // For non-excluded accounts, we need to calculate the reflection amount
-                // based on the current reflection rate
-                uint256 currentRate = _rTotal / _tTotal();
-                uint256 rAmount;
-                unchecked {
-                    rAmount = value * currentRate;
-                }
-                _rOwned[to] += rAmount;
-            }
         }
+
+        // 7. Emit Transfer event
+        emit Transfer(from, to, transferAmount);
     }
 
     // 5. allowance()
@@ -981,13 +1002,57 @@ contract ReflectiveToken is
         address sender,
         address recipient,
         uint256 amount
-    ) public override nonReentrant returns (bool) {
+    ) public override returns (bool) {
         uint256 currentAllowance = allowance(sender, msg.sender);
         require(currentAllowance >= amount, "ERC20: insufficient allowance");
 
-        // Use `_update` indirectly via `super._transfer`
-        super._transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, currentAllowance - amount);
+        // Use custom _update logic for reflection system (like transfer() does)
+        _update(sender, recipient, amount);
+        
+        // Decrease allowance
+        _approve(sender, msg.sender, currentAllowance - amount, true);
+        return true;
+    }
+
+    /**
+     * @notice Custom transferFrom function specifically for staking contract
+     * @dev Bypasses SafeERC20's balance checks which are incompatible with reflection tokens
+     * @dev Only callable by the staking contract
+     * @param sender Address to transfer from
+     * @param amount Amount to transfer
+     * @return success Whether the transfer succeeded
+     */
+    function transferFromForStaking(
+        address sender,
+        uint256 amount
+    ) external onlyStakingContract nonReentrant returns (bool) {
+        require(sender != address(0), "RT: Transfer from zero address");
+        require(amount > 0, "RT: Transfer amount must be greater than zero");
+
+        // Check allowance
+        uint256 currentAllowance = allowance(sender, msg.sender);
+        require(currentAllowance >= amount, "RT: Insufficient allowance");
+
+        // Check balance before transfer
+        uint256 senderBalance = balanceOf(sender);
+        require(senderBalance >= amount, "RT: Insufficient balance");
+
+        // Perform the transfer (no fees when staking contract is involved)
+        _update(sender, stakingContract, amount);
+
+        // Decrease allowance
+        _approve(sender, msg.sender, currentAllowance - amount, true);
+
+        // Verify balance after transfer (exact match required)
+        uint256 senderBalanceAfter = balanceOf(sender);
+        uint256 expectedBalanceAfter = senderBalance - amount;
+        
+        // Allow 1 wei tolerance for rounding (reflection tokens can have 1 wei rounding differences)
+        require(
+            senderBalanceAfter >= expectedBalanceAfter - 1 && senderBalanceAfter <= expectedBalanceAfter + 1,
+            "RT: Balance mismatch after transfer"
+        );
+
         return true;
     }
 
@@ -1036,7 +1101,7 @@ contract ReflectiveToken is
      * @dev Main function to swap tokens for ETH and add liquidity.
      * Triggers when contract holds more tokens than `swapThreshold`.
      */
-    function swapAndLiquify() internal nonReentrant {
+    function swapAndLiquify() internal {
         require(
             tradingEnabled && !inSwap && swapEnabled,
             "ReflectiveToken: swap not allowed"
@@ -1110,7 +1175,7 @@ contract ReflectiveToken is
      * @dev Distributes the marketing fee to the marketing wallet.
      * @param ethReceived Total ETH received from the swap.
      */
-    function _distributeMarketingFee(uint256 ethReceived) private nonReentrant {
+    function _distributeMarketingFee(uint256 ethReceived) private {
         uint256 marketingShare = (ethReceived * marketingFee) /
             (marketingFee + liquidityFee);
         payable(marketingWallet).transfer(marketingShare);
@@ -1168,7 +1233,7 @@ contract ReflectiveToken is
     function _addLiquidity(
         uint256 tokensForLiquidity,
         uint256 ethReceived
-    ) private nonReentrant {
+    ) private {
         // Approve router to spend tokens
         require(
             IERC20(address(this)).approve(uniswapRouter, tokensForLiquidity),

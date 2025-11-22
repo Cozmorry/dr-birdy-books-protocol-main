@@ -10,4 +10,6 @@ export type { reflectiveTokenSol };
 import type * as mocks from "./mocks";
 export type { mocks };
 export type { ImprovedTimelock } from "./ImprovedTimelock";
+export type { SimpleStaking } from "./SimpleStaking";
+export type { SimpleStakingV2 } from "./SimpleStakingV2";
 export type { TokenDistribution } from "./TokenDistribution";

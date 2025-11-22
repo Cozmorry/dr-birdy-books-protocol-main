@@ -11,6 +11,8 @@ import { VestingPanelStore } from './components/VestingPanelStore';
 import { TierPurchaseStore } from './components/TierPurchaseStore';
 // import { TokenActionsStore } from './components/TokenActionsStore';
 import { FileManagementStore } from './components/FileManagementStore';
+import { BlogSection } from './components/BlogSection';
+import { ContentDownloads } from './components/ContentDownloads';
 import { RefreshIndicator } from './components/RefreshIndicator';
 import { RefreshButton } from './components/RefreshButton';
 import { ToastProvider } from './contexts/ToastContext';
@@ -118,7 +120,7 @@ function App() {
         ) : (
           <div className="space-y-8">
             {/* Network-specific message */}
-            {chainId && chainId !== 31337 && (
+            {chainId && chainId !== 31337 && chainId === 8453 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -128,14 +130,19 @@ function App() {
                   </div>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-yellow-800">
-                      Contracts Not Deployed
+                      Switch to Base Sepolia Testnet
                     </h3>
                     <div className="mt-2 text-sm text-yellow-700">
-                      <p>
-                        The Dr. Birdy Books Protocol contracts are not yet deployed on this network. 
-                        Please connect to localhost (Chain ID: 31337) to use the application, 
-                        or deploy the contracts to this network first.
+                      <p className="mb-3">
+                        You're connected to <strong>Base Mainnet</strong> (Chain ID: 8453), but the contracts are deployed on <strong>Base Sepolia Testnet</strong> (Chain ID: 84532). 
+                        Please switch your MetaMask network to Base Sepolia to interact with the contracts.
                       </p>
+                      <button
+                        onClick={switchToBaseNetwork}
+                        className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors text-sm font-medium"
+                      >
+                        Switch to Base Sepolia Testnet
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -215,7 +222,18 @@ function App() {
               <VestingPanelStore />
             </div>
 
-            {/* File Management */}
+            {/* Blog Section */}
+            <BlogSection hasAccess={userInfo?.hasAccess || false} />
+
+            {/* Content Downloads - User-facing */}
+            <ContentDownloads
+              userInfo={userInfo}
+              userTier={userInfo?.tier || -1}
+              hasAccess={userInfo?.hasAccess || false}
+              isLoading={isLoading}
+            />
+
+            {/* File Management - Admin/Upload */}
             <FileManagementStore
               userInfo={userInfo}
               userTier={userInfo?.tier || -1}

@@ -18,6 +18,9 @@ export const StakingPanelStore: React.FC = () => {
     unstakeBatch,
     emergencyWithdraw,
     approveTokens,
+    loadUserInfo,
+    loadProtocolStats,
+    refreshAllData,
   } = useContractsStore();
 
   const { provider, signer } = useWeb3Store();
@@ -37,6 +40,12 @@ export const StakingPanelStore: React.FC = () => {
   const handleStake = async () => {
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
       addToast({ type: 'error', title: 'Invalid Amount', message: 'Please enter a valid amount to stake' });
+      return;
+    }
+
+    // Prevent duplicate submissions
+    if (isProcessing) {
+      addToast({ type: 'info', title: 'Transaction in Progress', message: 'Please wait for the current transaction to complete' });
       return;
     }
 
@@ -79,16 +88,45 @@ export const StakingPanelStore: React.FC = () => {
         }
       }
 
+      const stakedAmountStr = stakeAmount;
       await stakeTokens(stakeAmount);
-      addToast({ type: 'success', title: 'Stake Successful', message: `Successfully staked ${stakeAmount} tokens` });
+      
+      // Success - refresh data and update UI
       setStakeAmount('');
+      
+      // Refresh user info and protocol stats after a short delay to ensure blockchain state has updated
+      if (userInfo?.address) {
+        try {
+          // Wait a moment for blockchain state to propagate
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Refresh user info and protocol stats
+          await Promise.all([
+            loadUserInfo(userInfo.address),
+            loadProtocolStats()
+          ]);
+        } catch (refreshError) {
+          console.warn('Failed to refresh data after staking:', refreshError);
+          // Don't fail the whole operation if refresh fails
+        }
+      }
+      
+      addToast({ type: 'success', title: 'Stake Successful', message: `Successfully staked ${stakedAmountStr} tokens` });
     } catch (error: any) {
       console.error('Staking error:', error);
       
       // Provide more specific error messages based on the error
       let errorMessage = 'Failed to stake tokens';
       
-      if (error.message.includes('execution reverted')) {
+      if (error.message.includes('Insufficient balance')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('Insufficient allowance')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('execution reverted') || error.message.includes('missing revert data')) {
+        errorMessage = 'Transaction failed. This could mean:\n1. You don\'t have enough tokens\n2. You need to approve tokens first\n3. The contract is paused\n4. Contract configuration issue';
+      } else if (error.message.includes('Staking failed')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('execution reverted')) {
         if (error.message.includes('require(false)')) {
           errorMessage = 'Staking failed due to contract requirements not being met. Please ensure you have sufficient balance and allowance.';
         } else if (error.message.includes('Cannot stake zero tokens')) {
@@ -521,6 +559,11 @@ export const StakingPanelStore: React.FC = () => {
               <p className="text-lg font-semibold text-gray-900">
                 {formatTokenAmount(userInfo.balance)} DBB
               </p>
+              {parseFloat(userInfo.balance) === 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  No tokens available. You need tokens to stake.
+                </p>
+              )}
             </div>
             <DollarSign className="h-8 w-8 text-green-600" />
           </div>

@@ -313,7 +313,9 @@ export const useContracts = (provider: ethers.BrowserProvider | null, signer: et
 
       const tierData = await Promise.all(tierPromises);
       const formattedTiers = tierData.map(([threshold, name]) => ({
-        threshold: ethers.formatEther(threshold),
+        // Thresholds are in USD with 8 decimals, not 18
+        // So we divide by 1e8, not 1e18
+        threshold: (Number(threshold) / 1e8).toString(),
         name,
       }));
 

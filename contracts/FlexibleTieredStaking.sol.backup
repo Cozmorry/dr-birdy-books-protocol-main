@@ -12,11 +12,11 @@ interface IFlexibleTieredStaking {
 }
 
 // OpenZeppelin Imports
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 interface IPriceOracle {
     /**
@@ -53,10 +53,10 @@ interface IUniswapV2Pair {
 }
 
 contract FlexibleTieredStaking is
-    Ownable,
-    AccessControl,
-    ReentrancyGuard,
-    Pausable
+    Initializable,
+    OwnableUpgradeable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     // Note: Not using SafeERC20 because its balance checks are incompatible with reflection tokens
     // We use standard ERC20 transferFrom/transfer functions instead
@@ -65,7 +65,20 @@ contract FlexibleTieredStaking is
     bytes32 public constant FILE_MANAGER_ROLE = keccak256("FILE_MANAGER_ROLE");
 
     // --- Pause State ---
-    // Using Pausable from OpenZeppelin (whenNotPaused and whenPaused modifiers are inherited)
+    bool private _paused;
+
+    event Paused(address account);
+    event Unpaused(address account);
+
+    modifier whenNotPaused() {
+        require(!_paused, "Contract is paused");
+        _;
+    }
+
+    modifier whenPaused() {
+        require(_paused, "Contract is not paused");
+        _;
+    }
 
     // --- ERC20 Token to stake ---
     IERC20 public stakingToken;
@@ -161,11 +174,16 @@ contract FlexibleTieredStaking is
      * @param _primaryPriceOracle Address of the primary Chainlink price oracle
      * @param _backupPriceOracle Address of the backup Chainlink price oracle (optional, can be zero)
      */
-    constructor(
+    function initialize(
         address _stakingToken,
         address _primaryPriceOracle,
         address _backupPriceOracle
-    ) Ownable(msg.sender) {
+    ) public initializer {
+        // Initialize Ownable, AccessControl, and ReentrancyGuard
+        __Ownable_init(msg.sender);
+        __AccessControl_init();
+        __ReentrancyGuard_init();
+
         // Grant DEFAULT_ADMIN_ROLE to the deployer
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
@@ -184,7 +202,9 @@ contract FlexibleTieredStaking is
             backupPriceOracle = IPriceOracle(_backupPriceOracle);
         }
 
-        // Grant roles
+        _paused = false;
+
+        // Grant roles (DEFAULT_ADMIN_ROLE is already granted by __AccessControl_init)
         _grantRole(FILE_MANAGER_ROLE, msg.sender);
 
         // Initialize with default tiers (optional)
@@ -198,15 +218,17 @@ contract FlexibleTieredStaking is
     /**
      * @notice Pause the contract (only owner)
      */
-    function pause() external onlyOwner {
-        _pause();
+    function pause() external onlyOwner whenNotPaused {
+        _paused = true;
+        emit Paused(msg.sender);
     }
 
     /**
      * @notice Unpause the contract (only owner)
      */
-    function unpause() external onlyOwner {
-        _unpause();
+    function unpause() external onlyOwner whenPaused {
+        _paused = false;
+        emit Unpaused(msg.sender);
     }
 
     // --- Tier Management Functions ---
@@ -414,7 +436,7 @@ contract FlexibleTieredStaking is
      * @notice Stake tokens by transferring them to contract
      * @param amount Amount of tokens to stake
      */
-    function stake(uint256 amount) external whenNotPaused nonReentrant {
+    function stake(uint256 amount) external whenNotPaused {
         require(amount > 0, "Cannot stake zero tokens");
         require(address(stakingToken) != address(0), "Staking token not set");
         require(address(primaryPriceOracle) != address(0), "Price oracle not set");
@@ -657,15 +679,6 @@ contract FlexibleTieredStaking is
             return 0;
         }
 
-        // SIMPLIFIED FOR NOW: Assume 1 token = $1 USD
-        // This allows staking to work while we debug the oracle/Uniswap integration
-        // TODO: Re-enable full USD calculation once Uniswap pair is set
-        if (uniswapPair == address(0)) {
-            // Return USD value with 8 decimals (stakedTokens is 18 decimals)
-            // 1 token (1e18) = 1 USD (1e8)
-            return stakedTokens / (10 ** 10); // Convert from 18 to 8 decimals
-        }
-
         // Get ETH/USD price from oracle
         int256 ethUsdPrice = 0;
         bool hasValidOracle = false;
@@ -891,7 +904,7 @@ contract FlexibleTieredStaking is
         )
     {
         return (
-            paused(),
+            _paused,
             address(stakingToken) != address(0),
             address(primaryPriceOracle) != address(0),
             address(backupPriceOracle) != address(0),

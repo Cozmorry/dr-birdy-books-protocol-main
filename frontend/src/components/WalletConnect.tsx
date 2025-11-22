@@ -34,7 +34,7 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({
           Connect Your Wallet
         </h2>
         <p className="text-gray-600 text-center mb-6">
-          Connect your MetaMask wallet to interact with the Dr. Birdy Books Protocol
+          Connect your wallet to interact with the Dr. Birdy Books Protocol
         </p>
         
         {error && (
@@ -49,13 +49,72 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({
         )}
 
         <div className="space-y-3">
-          <button
-            onClick={onConnect}
-            disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? 'Connecting...' : 'Connect MetaMask'}
-          </button>
+          {/* MetaMask */}
+          {typeof window.ethereum !== 'undefined' && 
+           window.ethereum.isMetaMask && 
+           !window.ethereum.isCoinbaseWallet && (
+            <button
+              onClick={onConnect}
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {isLoading ? 'Connecting...' : (
+                <>
+                  <Wallet className="w-5 h-5 mr-2" />
+                  Connect MetaMask
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Coinbase Wallet */}
+          {typeof window.ethereum !== 'undefined' && 
+           (window.ethereum.isCoinbaseWallet || typeof window.coinbaseWalletExtension !== 'undefined') && (
+            <button
+              onClick={onConnect}
+              disabled={isLoading}
+              className="w-full bg-blue-500 text-white py-3 px-4 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {isLoading ? 'Connecting...' : (
+                <>
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="10" fill="#0052FF"/>
+                    <circle cx="12" cy="12" r="6" fill="white"/>
+                    <circle cx="12" cy="12" r="2" fill="#0052FF"/>
+                  </svg>
+                  Connect Coinbase Wallet
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Generic Wallet Button if ethereum provider exists but no specific wallet detected */}
+          {typeof window.ethereum !== 'undefined' && 
+           !window.ethereum.isMetaMask && 
+           !window.ethereum.isCoinbaseWallet && 
+           typeof window.coinbaseWalletExtension === 'undefined' && (
+            <button
+              onClick={onConnect}
+              disabled={isLoading}
+              className="w-full bg-gray-600 text-white py-3 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {isLoading ? 'Connecting...' : (
+                <>
+                  <Wallet className="w-5 h-5 mr-2" />
+                  Connect Wallet
+                </>
+              )}
+            </button>
+          )}
+
+          {/* No wallet detected */}
+          {typeof window.ethereum === 'undefined' && typeof window.coinbaseWalletExtension === 'undefined' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                No wallet detected. Please install MetaMask or Coinbase Wallet to continue.
+              </p>
+            </div>
+          )}
           
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

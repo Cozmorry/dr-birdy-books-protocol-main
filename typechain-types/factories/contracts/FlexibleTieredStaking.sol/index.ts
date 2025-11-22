@@ -4,3 +4,4 @@
 export { FlexibleTieredStaking__factory } from "./FlexibleTieredStaking__factory";
 export { IFlexibleTieredStaking__factory } from "./IFlexibleTieredStaking__factory";
 export { IPriceOracle__factory } from "./IPriceOracle__factory";
+export { IUniswapV2Pair__factory } from "./IUniswapV2Pair__factory";

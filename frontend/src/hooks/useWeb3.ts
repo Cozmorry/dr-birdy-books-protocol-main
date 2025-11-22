@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { BASE_MAINNET, BASE_TESTNET, LOCALHOST } from '../config/networks';
+import { BASE_MAINNET, BASE_TESTNET, LOCALHOST, getContractAddresses } from '../config/networks';
 
 interface Web3State {
   provider: ethers.BrowserProvider | null;
@@ -45,13 +45,20 @@ export const useWeb3 = () => {
       const network = await provider.getNetwork();
       const chainId = Number(network.chainId);
 
+      // Check if contracts are deployed on this network
+      const contractAddresses = getContractAddresses(chainId);
+      const hasDeployedContracts = 
+        contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
+        contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
+
       setWeb3State({
         provider,
         signer,
         account: accounts[0],
         chainId,
         isConnected: true,
-        isCorrectNetwork: chainId === BASE_MAINNET.chainId || chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId,
+        // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
+        isCorrectNetwork: hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId),
       });
     } catch (err: any) {
       setError(err.message || 'Failed to connect wallet');
@@ -101,10 +108,13 @@ export const useWeb3 = () => {
       return;
     }
 
+    // Default to Base Sepolia testnet where contracts are deployed
+    const targetNetwork = BASE_TESTNET;
+    
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${BASE_MAINNET.chainId.toString(16)}` }],
+        params: [{ chainId: `0x${targetNetwork.chainId.toString(16)}` }],
       });
     } catch (switchError: any) {
       // This error code indicates that the chain has not been added to MetaMask
@@ -114,10 +124,10 @@ export const useWeb3 = () => {
             method: 'wallet_addEthereumChain',
             params: [
               {
-                chainId: `0x${BASE_MAINNET.chainId.toString(16)}`,
-                chainName: BASE_MAINNET.name,
-                rpcUrls: [BASE_MAINNET.rpcUrl],
-                blockExplorerUrls: [BASE_MAINNET.blockExplorer],
+                chainId: `0x${targetNetwork.chainId.toString(16)}`,
+                chainName: targetNetwork.name,
+                rpcUrls: [targetNetwork.rpcUrl],
+                blockExplorerUrls: [targetNetwork.blockExplorer],
                 nativeCurrency: {
                   name: 'Ethereum',
                   symbol: 'ETH',
@@ -127,10 +137,10 @@ export const useWeb3 = () => {
             ],
           });
         } catch (addError) {
-          setError('Failed to add Base network to MetaMask');
+          setError(`Failed to add ${targetNetwork.name} to MetaMask`);
         }
       } else {
-        setError('Failed to switch to Base network');
+        setError(`Failed to switch to ${targetNetwork.name}`);
       }
     }
   }, []);
@@ -147,6 +157,46 @@ export const useWeb3 = () => {
     setError(null);
   }, []);
 
+  // Auto-reconnect on page load if wallet was previously connected
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (typeof window.ethereum === 'undefined') return;
+      
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send('eth_accounts', []); // This doesn't prompt, just checks existing
+        
+        if (accounts.length > 0) {
+          // Wallet was previously connected, restore connection
+          const signer = await provider.getSigner();
+          const network = await provider.getNetwork();
+          const chainId = Number(network.chainId);
+          
+          // Check if contracts are deployed on this network
+          const contractAddresses = getContractAddresses(chainId);
+          const hasDeployedContracts = 
+            contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
+            contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
+
+          setWeb3State({
+            provider,
+            signer,
+            account: accounts[0],
+            chainId,
+            isConnected: true,
+            // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
+            isCorrectNetwork: hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId),
+          });
+        }
+      } catch (err) {
+        // Silently fail - wallet might not be authorized yet
+        console.log('No previous wallet connection found');
+      }
+    };
+
+    checkConnection();
+  }, []);
+
   // Listen for account and chain changes
   useEffect(() => {
     if (typeof window.ethereum === 'undefined') return;
@@ -161,10 +211,17 @@ export const useWeb3 = () => {
 
     const handleChainChanged = (chainId: string) => {
       const newChainId = parseInt(chainId, 16);
+      // Check if contracts are deployed on this network
+      const contractAddresses = getContractAddresses(newChainId);
+      const hasDeployedContracts = 
+        contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
+        contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
+
       setWeb3State(prev => ({
         ...prev,
         chainId: newChainId,
-        isCorrectNetwork: newChainId === BASE_MAINNET.chainId || newChainId === BASE_TESTNET.chainId || newChainId === LOCALHOST.chainId,
+        // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
+        isCorrectNetwork: hasDeployedContracts && (newChainId === BASE_TESTNET.chainId || newChainId === LOCALHOST.chainId),
       }));
     };
 

@@ -55,6 +55,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "GRACE_PERIOD"
       | "MAX_USERS_PER_CLEAR"
       | "MIN_STAKING_DURATION"
+      | "WETH"
       | "addFileToTierBatch"
       | "addFileToUserBatch"
       | "addTier"
@@ -77,12 +78,12 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "grantRole"
       | "hasAccess"
       | "hasRole"
-      | "initialize"
       | "lastUnstakeTimestamp"
       | "logFileAccess"
       | "meetsTierRequirement"
       | "owner"
       | "pause"
+      | "paused"
       | "primaryPriceOracle"
       | "removeTier"
       | "renounceOwnership"
@@ -92,6 +93,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "setGasRefundReward"
       | "setPrimaryPriceOracle"
       | "setStakingToken"
+      | "setUniswapPair"
       | "stake"
       | "stakeBatch"
       | "stakeTimestamp"
@@ -99,6 +101,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "supportsInterface"
       | "tiers"
       | "transferOwnership"
+      | "uniswapPair"
       | "unpause"
       | "unstake"
       | "unstakeBatch"
@@ -112,7 +115,6 @@ export interface FlexibleTieredStakingInterface extends Interface {
     nameOrSignatureOrTopic:
       | "FileAccessLogged"
       | "GasRefundRewardSet"
-      | "Initialized"
       | "OwnershipTransferred"
       | "Paused"
       | "RoleAdminChanged"
@@ -124,6 +126,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "TierModified"
       | "TierRemoved"
       | "TierUpdated"
+      | "UniswapPairSet"
       | "Unpaused"
       | "Unstaked"
       | "UserFileAdded"
@@ -149,6 +152,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "MIN_STAKING_DURATION",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "WETH", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "addFileToTierBatch",
     values: [BigNumberish, string[], string[], string[], BigNumberish[]]
@@ -238,10 +242,6 @@ export interface FlexibleTieredStakingInterface extends Interface {
     values: [BytesLike, AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "initialize",
-    values: [AddressLike, AddressLike, AddressLike]
-  ): string;
-  encodeFunctionData(
     functionFragment: "lastUnstakeTimestamp",
     values: [AddressLike]
   ): string;
@@ -255,6 +255,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
+  encodeFunctionData(functionFragment: "paused", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "primaryPriceOracle",
     values?: undefined
@@ -291,6 +292,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "setStakingToken",
     values: [AddressLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "setUniswapPair",
+    values: [AddressLike]
+  ): string;
   encodeFunctionData(functionFragment: "stake", values: [BigNumberish]): string;
   encodeFunctionData(
     functionFragment: "stakeBatch",
@@ -312,6 +317,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   encodeFunctionData(
     functionFragment: "transferOwnership",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "uniswapPair",
+    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
   encodeFunctionData(
@@ -359,6 +368,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "MIN_STAKING_DURATION",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "WETH", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "addFileToTierBatch",
     data: BytesLike
@@ -429,7 +439,6 @@ export interface FlexibleTieredStakingInterface extends Interface {
   decodeFunctionResult(functionFragment: "grantRole", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "hasAccess", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "hasRole", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "lastUnstakeTimestamp",
     data: BytesLike
@@ -444,6 +453,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "primaryPriceOracle",
     data: BytesLike
@@ -474,6 +484,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "setStakingToken",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "setUniswapPair",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "stakeBatch", data: BytesLike): Result;
   decodeFunctionResult(
@@ -491,6 +505,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   decodeFunctionResult(functionFragment: "tiers", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "uniswapPair",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
@@ -544,18 +562,6 @@ export namespace GasRefundRewardSetEvent {
   export type OutputTuple = [gasRefundReward: bigint];
   export interface OutputObject {
     gasRefundReward: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace InitializedEvent {
-  export type InputTuple = [version: BigNumberish];
-  export type OutputTuple = [version: bigint];
-  export interface OutputObject {
-    version: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -759,6 +765,18 @@ export namespace TierUpdatedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace UniswapPairSetEvent {
+  export type InputTuple = [pairAddress: AddressLike];
+  export type OutputTuple = [pairAddress: string];
+  export interface OutputObject {
+    pairAddress: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace UnpausedEvent {
   export type InputTuple = [account: AddressLike];
   export type OutputTuple = [account: string];
@@ -868,6 +886,8 @@ export interface FlexibleTieredStaking extends BaseContract {
 
   MIN_STAKING_DURATION: TypedContractMethod<[], [bigint], "view">;
 
+  WETH: TypedContractMethod<[], [string], "view">;
+
   addFileToTierBatch: TypedContractMethod<
     [
       tierIndex: BigNumberish,
@@ -935,10 +955,11 @@ export interface FlexibleTieredStaking extends BaseContract {
   getOracleInfo: TypedContractMethod<
     [],
     [
-      [string, string, bigint] & {
+      [string, string, bigint, string] & {
         primaryOracle: string;
         backupOracle: string;
         currentGasRefundReward: bigint;
+        pairAddress: string;
       }
     ],
     "view"
@@ -1001,16 +1022,6 @@ export interface FlexibleTieredStaking extends BaseContract {
     "view"
   >;
 
-  initialize: TypedContractMethod<
-    [
-      _stakingToken: AddressLike,
-      _primaryPriceOracle: AddressLike,
-      _backupPriceOracle: AddressLike
-    ],
-    [void],
-    "nonpayable"
-  >;
-
   lastUnstakeTimestamp: TypedContractMethod<
     [arg0: AddressLike],
     [bigint],
@@ -1032,6 +1043,8 @@ export interface FlexibleTieredStaking extends BaseContract {
   owner: TypedContractMethod<[], [string], "view">;
 
   pause: TypedContractMethod<[], [void], "nonpayable">;
+
+  paused: TypedContractMethod<[], [boolean], "view">;
 
   primaryPriceOracle: TypedContractMethod<[], [string], "view">;
 
@@ -1079,6 +1092,12 @@ export interface FlexibleTieredStaking extends BaseContract {
     "nonpayable"
   >;
 
+  setUniswapPair: TypedContractMethod<
+    [_uniswapPair: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
   stake: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
   stakeBatch: TypedContractMethod<
@@ -1108,6 +1127,8 @@ export interface FlexibleTieredStaking extends BaseContract {
     [void],
     "nonpayable"
   >;
+
+  uniswapPair: TypedContractMethod<[], [string], "view">;
 
   unpause: TypedContractMethod<[], [void], "nonpayable">;
 
@@ -1158,6 +1179,9 @@ export interface FlexibleTieredStaking extends BaseContract {
   getFunction(
     nameOrSignature: "MIN_STAKING_DURATION"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "WETH"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "addFileToTierBatch"
   ): TypedContractMethod<
@@ -1233,10 +1257,11 @@ export interface FlexibleTieredStaking extends BaseContract {
   ): TypedContractMethod<
     [],
     [
-      [string, string, bigint] & {
+      [string, string, bigint, string] & {
         primaryOracle: string;
         backupOracle: string;
         currentGasRefundReward: bigint;
+        pairAddress: string;
       }
     ],
     "view"
@@ -1310,17 +1335,6 @@ export interface FlexibleTieredStaking extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "initialize"
-  ): TypedContractMethod<
-    [
-      _stakingToken: AddressLike,
-      _primaryPriceOracle: AddressLike,
-      _backupPriceOracle: AddressLike
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
     nameOrSignature: "lastUnstakeTimestamp"
   ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
   getFunction(
@@ -1343,6 +1357,9 @@ export interface FlexibleTieredStaking extends BaseContract {
   getFunction(
     nameOrSignature: "pause"
   ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "paused"
+  ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
     nameOrSignature: "primaryPriceOracle"
   ): TypedContractMethod<[], [string], "view">;
@@ -1391,6 +1408,9 @@ export interface FlexibleTieredStaking extends BaseContract {
     nameOrSignature: "setStakingToken"
   ): TypedContractMethod<[_stakingToken: AddressLike], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setUniswapPair"
+  ): TypedContractMethod<[_uniswapPair: AddressLike], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "stake"
   ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
   getFunction(
@@ -1415,6 +1435,9 @@ export interface FlexibleTieredStaking extends BaseContract {
   getFunction(
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "uniswapPair"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "unpause"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -1458,13 +1481,6 @@ export interface FlexibleTieredStaking extends BaseContract {
     GasRefundRewardSetEvent.InputTuple,
     GasRefundRewardSetEvent.OutputTuple,
     GasRefundRewardSetEvent.OutputObject
-  >;
-  getEvent(
-    key: "Initialized"
-  ): TypedContractEvent<
-    InitializedEvent.InputTuple,
-    InitializedEvent.OutputTuple,
-    InitializedEvent.OutputObject
   >;
   getEvent(
     key: "OwnershipTransferred"
@@ -1544,6 +1560,13 @@ export interface FlexibleTieredStaking extends BaseContract {
     TierUpdatedEvent.OutputObject
   >;
   getEvent(
+    key: "UniswapPairSet"
+  ): TypedContractEvent<
+    UniswapPairSetEvent.InputTuple,
+    UniswapPairSetEvent.OutputTuple,
+    UniswapPairSetEvent.OutputObject
+  >;
+  getEvent(
     key: "Unpaused"
   ): TypedContractEvent<
     UnpausedEvent.InputTuple,
@@ -1586,17 +1609,6 @@ export interface FlexibleTieredStaking extends BaseContract {
       GasRefundRewardSetEvent.InputTuple,
       GasRefundRewardSetEvent.OutputTuple,
       GasRefundRewardSetEvent.OutputObject
-    >;
-
-    "Initialized(uint64)": TypedContractEvent<
-      InitializedEvent.InputTuple,
-      InitializedEvent.OutputTuple,
-      InitializedEvent.OutputObject
-    >;
-    Initialized: TypedContractEvent<
-      InitializedEvent.InputTuple,
-      InitializedEvent.OutputTuple,
-      InitializedEvent.OutputObject
     >;
 
     "OwnershipTransferred(address,address)": TypedContractEvent<
@@ -1718,6 +1730,17 @@ export interface FlexibleTieredStaking extends BaseContract {
       TierUpdatedEvent.InputTuple,
       TierUpdatedEvent.OutputTuple,
       TierUpdatedEvent.OutputObject
+    >;
+
+    "UniswapPairSet(address)": TypedContractEvent<
+      UniswapPairSetEvent.InputTuple,
+      UniswapPairSetEvent.OutputTuple,
+      UniswapPairSetEvent.OutputObject
+    >;
+    UniswapPairSet: TypedContractEvent<
+      UniswapPairSetEvent.InputTuple,
+      UniswapPairSetEvent.OutputTuple,
+      UniswapPairSetEvent.OutputObject
     >;
 
     "Unpaused(address)": TypedContractEvent<
