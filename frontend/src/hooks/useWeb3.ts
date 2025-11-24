@@ -26,7 +26,7 @@ export const useWeb3 = () => {
 
   const connectWallet = useCallback(async () => {
     if (typeof window.ethereum === 'undefined') {
-      setError('MetaMask is not installed. Please install MetaMask to continue.');
+      setError('No wallet detected. Please install MetaMask or another Web3 wallet.');
       return;
     }
 
@@ -34,13 +34,17 @@ export const useWeb3 = () => {
     setError(null);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
+      // Request account access
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
       
-      if (accounts.length === 0) {
-        throw new Error('No accounts found');
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found. Please unlock your wallet.');
       }
 
+      // Create provider and get signer
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const network = await provider.getNetwork();
       const chainId = Number(network.chainId);
@@ -61,7 +65,16 @@ export const useWeb3 = () => {
         isCorrectNetwork: hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId),
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to connect wallet');
+      console.error('Wallet connection error:', err);
+      
+      // Provide more specific error messages
+      if (err.code === 4001) {
+        setError('Connection rejected. Please approve the connection request in your wallet.');
+      } else if (err.code === -32002) {
+        setError('Connection request already pending. Please check your wallet.');
+      } else {
+        setError(err.message || 'Failed to connect wallet. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -163,11 +176,14 @@ export const useWeb3 = () => {
       if (typeof window.ethereum === 'undefined') return;
       
       try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send('eth_accounts', []); // This doesn't prompt, just checks existing
+        // Use the safer window.ethereum.request method
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_accounts' 
+        }); // This doesn't prompt, just checks existing
         
-        if (accounts.length > 0) {
+        if (accounts && accounts.length > 0) {
           // Wallet was previously connected, restore connection
+          const provider = new ethers.BrowserProvider(window.ethereum);
           const signer = await provider.getSigner();
           const network = await provider.getNetwork();
           const chainId = Number(network.chainId);

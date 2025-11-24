@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { useWeb3 } from './hooks/useWeb3';
 import { useWeb3Store } from './hooks/useWeb3Store';
 import { useContractsStore } from './hooks/useContractsStore';
@@ -17,9 +18,10 @@ import { RefreshIndicator } from './components/RefreshIndicator';
 import { RefreshButton } from './components/RefreshButton';
 import { ToastProvider } from './contexts/ToastContext';
 import { ToastContainer } from './components/ToastContainer';
+import AdminRoute from './AdminRoute';
 import { BookOpen, Users, TrendingUp, Gift } from 'lucide-react';
 
-function App() {
+function MainApp() {
   const {
     provider,
     signer,
@@ -310,4 +312,11 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/admin/*" element={<AdminRoute />} />
+      <Route path="/*" element={<MainApp />} />
+    </Routes>
+  );
+}
