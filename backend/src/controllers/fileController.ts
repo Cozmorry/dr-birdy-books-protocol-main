@@ -288,8 +288,15 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
     }
     
     // Download file from MongoDB GridFS
+    console.log('📥 Download request:', {
+      fileId: id,
+      storagePath: file.storagePath,
+      storageType: file.storageType,
+    });
+    
     const exists = await fileExistsInGridFS(file.storagePath);
     if (!exists) {
+      console.error('❌ File not found in GridFS:', file.storagePath);
       res.status(404).json({
         success: false,
         message: 'File not found in database',
@@ -298,7 +305,20 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
     }
     
     // Download from GridFS
-    const fileBuffer = await downloadFromGridFS(file.storagePath);
+    let fileBuffer: Buffer;
+    try {
+      console.log('📤 Downloading from GridFS...');
+      fileBuffer = await downloadFromGridFS(file.storagePath);
+      console.log('✅ File downloaded, size:', fileBuffer.length);
+    } catch (gridFSError: any) {
+      console.error('❌ GridFS download error:', gridFSError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to download file from storage',
+        error: gridFSError.message,
+      });
+      return;
+    }
     
     // Get metadata to ensure correct mime type
     let mimeType = file.mimeType;
@@ -309,6 +329,7 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       }
     } catch (error) {
       // Use stored mime type if metadata fetch fails
+      console.warn('⚠️ Could not fetch metadata, using stored mime type');
     }
     
     // Increment download count

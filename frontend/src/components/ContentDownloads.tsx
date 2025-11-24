@@ -11,6 +11,7 @@ interface ContentFile {
   uploadDate: string;
   fileSize?: number;
   fileData?: string; // Base64 data for local files
+  downloadUrl?: string; // API download URL
 }
 
 interface ContentDownloadsProps {
@@ -41,38 +42,100 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
 
   const loadAvailableFiles = async () => {
     try {
-      // Load from localStorage (temporary - will be replaced with API)
-      const storedFiles = JSON.parse(localStorage.getItem('userFiles') || '[]');
-      const tierFiles = JSON.parse(localStorage.getItem('tierFiles') || '[]');
+      // Fetch files from backend API
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      const walletAddress = userInfo?.address;
       
-      // Combine and format files
-      const allFiles: ContentFile[] = [
-        ...storedFiles.map((f: any) => ({
-          id: f.txId || f.id,
-          txId: f.txId,
-          fileName: f.fileName || 'Untitled',
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (walletAddress) {
+        params.append('walletAddress', walletAddress);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/files?${params.toString()}`);
+      const data = await response.json();
+      
+      if (data.success && data.data?.files) {
+        // Format files from API response
+        const allFiles: ContentFile[] = data.data.files.map((f: any) => ({
+          id: f._id || f.id,
+          txId: f.arweaveTxId || f._id,
+          fileName: f.originalName || f.fileName || 'Untitled',
           fileType: f.fileType || 'unknown',
           description: f.description || '',
-          tier: -1, // User files
-          uploadDate: f.uploadDate || new Date().toISOString(),
-          fileSize: f.fileSize,
-          fileData: f.fileData,
-        })),
-        ...tierFiles.map((f: any) => ({
-          id: f.txId || f.id,
-          txId: f.txId,
-          fileName: f.fileName || 'Untitled',
-          fileType: f.fileType || 'unknown',
-          description: f.description || '',
-          tier: f.tier || 0,
-          uploadDate: f.uploadDate || new Date().toISOString(),
-          fileSize: f.fileSize,
-        })),
-      ];
-
-      setAvailableFiles(allFiles);
+          tier: f.tier || -1,
+          uploadDate: f.createdAt || new Date().toISOString(),
+          fileSize: f.fileSize || 0,
+          downloadUrl: `${API_BASE_URL}/files/${f._id}/download`, // Don't include walletAddress here
+        }));
+        
+        setAvailableFiles(allFiles);
+      } else {
+        // Fallback to localStorage if API fails
+        const storedFiles = JSON.parse(localStorage.getItem('userFiles') || '[]');
+        const tierFiles = JSON.parse(localStorage.getItem('tierFiles') || '[]');
+        
+        const allFiles: ContentFile[] = [
+          ...storedFiles.map((f: any) => ({
+            id: f.txId || f.id,
+            txId: f.txId,
+            fileName: f.fileName || 'Untitled',
+            fileType: f.fileType || 'unknown',
+            description: f.description || '',
+            tier: -1,
+            uploadDate: f.uploadDate || new Date().toISOString(),
+            fileSize: f.fileSize,
+            fileData: f.fileData,
+          })),
+          ...tierFiles.map((f: any) => ({
+            id: f.txId || f.id,
+            txId: f.txId,
+            fileName: f.fileName || 'Untitled',
+            fileType: f.fileType || 'unknown',
+            description: f.description || '',
+            tier: f.tier || 0,
+            uploadDate: f.uploadDate || new Date().toISOString(),
+            fileSize: f.fileSize,
+          })),
+        ];
+        
+        setAvailableFiles(allFiles);
+      }
     } catch (err: any) {
-      console.error('Failed to load files:', err);
+      console.error('Failed to load files from API:', err);
+      // Fallback to localStorage
+      try {
+        const storedFiles = JSON.parse(localStorage.getItem('userFiles') || '[]');
+        const tierFiles = JSON.parse(localStorage.getItem('tierFiles') || '[]');
+        
+        const allFiles: ContentFile[] = [
+          ...storedFiles.map((f: any) => ({
+            id: f.txId || f.id,
+            txId: f.txId,
+            fileName: f.fileName || 'Untitled',
+            fileType: f.fileType || 'unknown',
+            description: f.description || '',
+            tier: -1,
+            uploadDate: f.uploadDate || new Date().toISOString(),
+            fileSize: f.fileSize,
+            fileData: f.fileData,
+          })),
+          ...tierFiles.map((f: any) => ({
+            id: f.txId || f.id,
+            txId: f.txId,
+            fileName: f.fileName || 'Untitled',
+            fileType: f.fileType || 'unknown',
+            description: f.description || '',
+            tier: f.tier || 0,
+            uploadDate: f.uploadDate || new Date().toISOString(),
+            fileSize: f.fileSize,
+          })),
+        ];
+        
+        setAvailableFiles(allFiles);
+      } catch (localErr) {
+        console.error('Failed to load files from localStorage:', localErr);
+      }
     }
   };
 
@@ -109,18 +172,44 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     setFilteredFiles(filtered);
   };
 
-  const handleDownload = (file: ContentFile) => {
-    if (file.fileData) {
-      // Download from base64 data
-      const link = document.createElement('a');
-      link.href = file.fileData;
-      link.download = file.fileName || `file.${file.fileType}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else if (file.txId) {
-      // Open Arweave URL
-      window.open(`https://arweave.net/${file.txId}`, '_blank');
+  const handleDownload = async (file: ContentFile) => {
+    try {
+      if (file.fileData) {
+        // Download from base64 data (local files)
+        const link = document.createElement('a');
+        link.href = file.fileData;
+        link.download = file.fileName || `file.${file.fileType}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (file.downloadUrl) {
+        // Download from API endpoint
+        const walletAddress = userInfo?.address;
+        const url = walletAddress 
+          ? `${file.downloadUrl}?walletAddress=${walletAddress}`
+          : file.downloadUrl;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to download file');
+        }
+        
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = file.fileName || `file.${file.fileType}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      } else if (file.txId) {
+        // Open Arweave URL
+        window.open(`https://arweave.net/${file.txId}`, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Download error:', error);
+      alert(error.message || 'Failed to download file');
     }
   };
 
