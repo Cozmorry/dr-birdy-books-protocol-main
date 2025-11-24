@@ -31,23 +31,36 @@ export const uploadToGridFS = (
   metadata?: any
 ): Promise<ObjectId> => {
   return new Promise((resolve, reject) => {
-    const bucket = getGridFSBucket();
-    const uploadStream = bucket.openUploadStream(filename, {
-      metadata: metadata || {},
-    });
+    try {
+      const bucket = getGridFSBucket();
+      const uploadStream = bucket.openUploadStream(filename, {
+        metadata: metadata || {},
+      });
 
-    const readable = new Readable();
-    readable.push(fileBuffer);
-    readable.push(null);
+      const readable = new Readable();
+      readable.push(fileBuffer);
+      readable.push(null);
 
-    readable
-      .pipe(uploadStream)
-      .on('error', (error) => {
+      uploadStream.on('error', (error) => {
+        console.error('GridFS upload stream error:', error);
         reject(error);
-      })
-      .on('finish', () => {
+      });
+
+      uploadStream.on('finish', () => {
+        console.log('GridFS upload finished, file ID:', uploadStream.id);
         resolve(uploadStream.id);
       });
+
+      readable.on('error', (error) => {
+        console.error('Readable stream error:', error);
+        reject(error);
+      });
+
+      readable.pipe(uploadStream);
+    } catch (error) {
+      console.error('GridFS upload setup error:', error);
+      reject(error);
+    }
   });
 };
 
@@ -88,19 +101,11 @@ export const getFileMetadata = async (fileId: string): Promise<any> => {
 };
 
 // Delete file from GridFS
-export const deleteFromGridFS = (fileId: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const bucket = getGridFSBucket();
-    const objectId = new mongoose.Types.ObjectId(fileId);
-    
-    bucket.delete(objectId, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
+export const deleteFromGridFS = async (fileId: string): Promise<void> => {
+  const bucket = getGridFSBucket();
+  const objectId = new mongoose.Types.ObjectId(fileId);
+  
+  await bucket.delete(objectId);
 };
 
 // Check if file exists in GridFS

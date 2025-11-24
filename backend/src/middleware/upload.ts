@@ -1,38 +1,9 @@
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '52428800'); // 50MB default
-const STORAGE_TYPE = process.env.STORAGE_TYPE || 'local';
 
-// Ensure uploads directory exists (for local storage)
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure storage based on STORAGE_TYPE
-let storage: multer.StorageEngine;
-
-if (STORAGE_TYPE === 'mongodb') {
-  // Use memory storage for MongoDB GridFS
-  storage = multer.memoryStorage();
-} else {
-  // Use disk storage for local files
-  storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-      // Generate unique filename: timestamp-randomstring-originalname
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(file.originalname);
-      const nameWithoutExt = path.basename(file.originalname, ext);
-      const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
-      cb(null, `${uniqueSuffix}-${sanitizedName}${ext}`);
-    },
-  });
-}
+// Always use memory storage for MongoDB GridFS
+const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {

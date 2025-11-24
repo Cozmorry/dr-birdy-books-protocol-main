@@ -10,8 +10,8 @@ import { connectDatabase } from './config/database';
 import { initializeBlockchain } from './config/blockchain';
 import Admin from './models/Admin';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from backend directory
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -68,8 +68,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Serve static files (uploads)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Files are stored in MongoDB GridFS, no static file serving needed
 
 // API Routes
 app.use('/api/auth', authRoutes);

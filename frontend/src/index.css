@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Admin dashboard primary colors */
+@layer utilities {
+  .bg-primary-50 {
+    background-color: #f0f9ff;
+  }
+  .bg-primary-100 {
+    background-color: #dbeafe;
+  }
+  .bg-primary-600 {
+    background-color: #2563eb;
+  }
+  .text-primary-600 {
+    color: #2563eb;
+  }
+  .text-primary-700 {
+    color: #1d4ed8;
+  }
+  .border-primary-600 {
+    border-color: #2563eb;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

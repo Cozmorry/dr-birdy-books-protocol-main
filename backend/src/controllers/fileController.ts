@@ -4,7 +4,6 @@ import Analytics from '../models/Analytics';
 import { AuthRequest } from '../middleware/auth';
 import { verifyUserAccess, getUserTier } from '../config/blockchain';
 import { uploadToGridFS, downloadFromGridFS, deleteFromGridFS, fileExistsInGridFS, getFileMetadata } from '../services/gridfsService';
-import fs from 'fs';
 import path from 'path';
 
 // @desc    Upload file
@@ -21,7 +20,13 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
     }
     
     const { description, tier = -1 } = req.body;
-    const STORAGE_TYPE = process.env.STORAGE_TYPE || 'local';
+    
+    console.log('📝 File upload request:', {
+      hasFile: !!req.file,
+      hasBuffer: !!req.file?.buffer,
+      fileSize: req.file?.size,
+      originalName: req.file?.originalname,
+    });
     
     if (!description) {
       res.status(400).json({
@@ -34,27 +39,22 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
     // Get file extension
     const fileType = path.extname(req.file.originalname).substring(1).toLowerCase();
     
-    let storagePath: string;
-    let storageType: 'local' | 'mongodb' = STORAGE_TYPE === 'mongodb' ? 'mongodb' : 'local';
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(req.file.originalname);
+    const nameWithoutExt = path.basename(req.file.originalname, ext);
+    const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
+    const filename = `${uniqueSuffix}-${sanitizedName}${ext}`;
     
-    // Handle MongoDB GridFS storage
-    if (STORAGE_TYPE === 'mongodb') {
-      if (!req.file.buffer) {
-        res.status(400).json({
-          success: false,
-          message: 'File buffer not available',
-        });
-        return;
-      }
+    // Upload to MongoDB GridFS
+    let storagePath: string;
+    try {
+      console.log('📤 Uploading file to MongoDB GridFS...', {
+        filename,
+        size: req.file.size,
+        mimeType: req.file.mimetype,
+      });
       
-      // Generate unique filename
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(req.file.originalname);
-      const nameWithoutExt = path.basename(req.file.originalname, ext);
-      const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
-      const filename = `${uniqueSuffix}-${sanitizedName}${ext}`;
-      
-      // Upload to GridFS
       const gridFSFileId = await uploadToGridFS(req.file.buffer, filename, {
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
@@ -62,32 +62,60 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
         uploadedByName: req.admin?.username || 'Admin',
       });
       
+      console.log('✅ File uploaded to GridFS with ID:', gridFSFileId.toString());
       storagePath = gridFSFileId.toString();
-    } else {
-      // Local storage
-      if (!req.file.path) {
-        res.status(400).json({
-          success: false,
-          message: 'File path not available',
-        });
-        return;
-      }
-      storagePath = req.file.path;
+    } catch (gridFSError: any) {
+      console.error('❌ GridFS upload error:', gridFSError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload file to MongoDB',
+        error: gridFSError.message,
+      });
+      return;
     }
     
     // Create file record
-    const file = await File.create({
-      fileName: req.file.filename || req.file.originalname,
+    console.log('📝 Creating File document in database...', {
+      fileName: req.file.originalname,
+      storagePath,
+      uploadedBy: req.admin?.id,
+    });
+    
+    const fileData = {
+      fileName: req.file.originalname,
       originalName: req.file.originalname,
       fileType,
       mimeType: req.file.mimetype,
       fileSize: req.file.size,
       description,
       tier: Number(tier),
-      storageType,
+      storageType: 'mongodb' as const,
       storagePath,
       uploadedBy: req.admin?.id,
       uploadedByName: req.admin?.username || 'Admin',
+    };
+    
+    console.log('📋 File data to save:', fileData);
+    
+    const file = await File.create(fileData);
+    
+    // Verify the document was saved
+    const savedFile = await File.findById(file._id);
+    if (!savedFile) {
+      console.error('❌ File document was not saved to database!');
+    } else {
+      console.log('✅ Verified: File document exists in database');
+    }
+    
+    // Count total files in collection
+    const totalFiles = await File.countDocuments();
+    console.log(`📊 Total files in '${File.collection.name}' collection: ${totalFiles}`);
+    
+    console.log('✅ File document created successfully:', {
+      id: file._id,
+      fileName: file.fileName,
+      collection: File.collection.name,
+      database: File.db?.name || 'unknown',
     });
     
     // Track analytics
@@ -110,14 +138,7 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
   } catch (error: any) {
     console.error('Upload file error:', error);
     
-    // Clean up uploaded file on error (only for local storage)
-    if (req.file && req.file.path && process.env.STORAGE_TYPE !== 'mongodb') {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (unlinkError) {
-        console.error('Failed to delete file:', unlinkError);
-      }
-    }
+    // No cleanup needed for MongoDB storage (files are in GridFS)
     
     res.status(500).json({
       success: false,
@@ -266,44 +287,28 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       }
     }
     
-    // Handle file retrieval based on storage type
-    let fileBuffer: Buffer;
-    let mimeType = file.mimeType;
+    // Download file from MongoDB GridFS
+    const exists = await fileExistsInGridFS(file.storagePath);
+    if (!exists) {
+      res.status(404).json({
+        success: false,
+        message: 'File not found in database',
+      });
+      return;
+    }
     
-    if (file.storageType === 'mongodb') {
-      // Check if file exists in GridFS
-      const exists = await fileExistsInGridFS(file.storagePath);
-      if (!exists) {
-        res.status(404).json({
-          success: false,
-          message: 'File not found in database',
-        });
-        return;
+    // Download from GridFS
+    const fileBuffer = await downloadFromGridFS(file.storagePath);
+    
+    // Get metadata to ensure correct mime type
+    let mimeType = file.mimeType;
+    try {
+      const metadata = await getFileMetadata(file.storagePath);
+      if (metadata.metadata?.mimeType) {
+        mimeType = metadata.metadata.mimeType;
       }
-      
-      // Download from GridFS
-      fileBuffer = await downloadFromGridFS(file.storagePath);
-      
-      // Get metadata to ensure correct mime type
-      try {
-        const metadata = await getFileMetadata(file.storagePath);
-        if (metadata.metadata?.mimeType) {
-          mimeType = metadata.metadata.mimeType;
-        }
-      } catch (error) {
-        // Use stored mime type if metadata fetch fails
-      }
-    } else {
-      // Local storage
-      if (!fs.existsSync(file.storagePath)) {
-        res.status(404).json({
-          success: false,
-          message: 'File not found on server',
-        });
-        return;
-      }
-      
-      fileBuffer = fs.readFileSync(file.storagePath);
+    } catch (error) {
+      // Use stored mime type if metadata fetch fails
     }
     
     // Increment download count
@@ -396,19 +401,12 @@ export const deleteFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     
-    // Delete file based on storage type
-    if (file.storageType === 'mongodb') {
-      try {
-        await deleteFromGridFS(file.storagePath);
-      } catch (error) {
-        console.error('Failed to delete file from GridFS:', error);
-        // Continue with database record deletion even if GridFS deletion fails
-      }
-    } else {
-      // Delete file from disk
-      if (fs.existsSync(file.storagePath)) {
-        fs.unlinkSync(file.storagePath);
-      }
+    // Delete file from MongoDB GridFS
+    try {
+      await deleteFromGridFS(file.storagePath);
+    } catch (error) {
+      console.error('Failed to delete file from GridFS:', error);
+      // Continue with database record deletion even if GridFS deletion fails
     }
     
     // Delete database record

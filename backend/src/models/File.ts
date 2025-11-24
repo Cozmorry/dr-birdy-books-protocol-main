@@ -104,5 +104,8 @@ FileSchema.index({ tier: 1, isActive: 1 });
 FileSchema.index({ fileType: 1 });
 FileSchema.index({ uploadedBy: 1 });
 
-export default mongoose.model<IFile>('File', FileSchema);
+// Explicitly set collection name
+const FileModel = mongoose.model<IFile>('File', FileSchema, 'files');
+
+export default FileModel;
 
