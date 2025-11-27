@@ -58,8 +58,17 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Compression middleware
-app.use(compression());
+// Compression middleware (but skip for file downloads to enable streaming)
+app.use(compression({
+  filter: (req: express.Request, res: express.Response) => {
+    // Don't compress file downloads - they need to stream
+    if (req.path?.includes('/files/') && req.path?.includes('/download')) {
+      return false;
+    }
+    // Use default compression filter for other requests
+    return compression.filter(req, res);
+  }
+}));
 
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {

@@ -1,9 +1,24 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import File from '../models/File';
 import Analytics from '../models/Analytics';
 import { AuthRequest } from '../middleware/auth';
 import { verifyUserAccess, getUserTier } from '../config/blockchain';
-import { uploadToGridFS, downloadFromGridFS, deleteFromGridFS, fileExistsInGridFS, getFileMetadata } from '../services/gridfsService';
+import { uploadToGridFS, downloadFromGridFS, deleteFromGridFS, fileExistsInGridFS, getFileMetadata, getGridFSBucket } from '../services/gridfsService';
+import {
+  checkDailyLimit,
+  checkMonthlyQuota,
+  recordDownload,
+  markQuotaWarningSent,
+  generatePreSignedUrlToken,
+  verifyPreSignedUrlToken,
+  getUserDownloadStats,
+} from '../services/downloadControlService';
+
+// Constants
+const MAX_DAILY_DOWNLOADS = 20;
+const MAX_MONTHLY_BYTES = 1024 * 1024 * 1024; // 1GB
+
 import path from 'path';
 
 // @desc    Upload file
@@ -247,13 +262,59 @@ export const getFile = async (req: AuthRequest, res: Response): Promise<void> =>
   }
 };
 
-// @desc    Download file
-// @route   GET /api/files/:id/download
+// @desc    Get download statistics for a user
+// @route   GET /api/files/stats/download
+// @access  Public
+export const getDownloadStats = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { walletAddress } = req.query;
+    
+    if (!walletAddress || typeof walletAddress !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Wallet address is required',
+      });
+      return;
+    }
+    
+    const stats = await getUserDownloadStats(walletAddress);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        ...stats,
+        dailyLimit: MAX_DAILY_DOWNLOADS,
+        monthlyLimit: MAX_MONTHLY_BYTES,
+        monthlyLimitGB: (MAX_MONTHLY_BYTES / (1024 * 1024 * 1024)).toFixed(2),
+        monthlyUsedGB: (stats.monthlyBytesUsed / (1024 * 1024 * 1024)).toFixed(2),
+        monthlyRemainingGB: (stats.monthlyBytesRemaining / (1024 * 1024 * 1024)).toFixed(2),
+      },
+    });
+  } catch (error: any) {
+    console.error('Get download stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch download statistics',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Generate pre-signed URL for file download
+// @route   GET /api/files/:id/presigned
 // @access  Public (with wallet verification)
-export const downloadFile = async (req: AuthRequest, res: Response): Promise<void> => {
+export const generatePreSignedUrl = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { walletAddress } = req.query;
+    
+    if (!walletAddress || typeof walletAddress !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Wallet address is required',
+      });
+      return;
+    }
     
     const file = await File.findById(id);
     
@@ -266,7 +327,7 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
     }
     
     // Verify access if tier-restricted
-    if (file.tier >= 0 && walletAddress && typeof walletAddress === 'string') {
+    if (file.tier >= 0) {
       try {
         const userTier = await getUserTier(walletAddress);
         if (userTier < file.tier) {
@@ -287,74 +348,244 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       }
     }
     
-    // Download file from MongoDB GridFS
+    // Check daily download limit
+    const dailyCheck = await checkDailyLimit(walletAddress);
+    if (!dailyCheck.allowed) {
+      res.status(429).json({
+        success: false,
+        message: 'Daily download limit exceeded',
+        limit: MAX_DAILY_DOWNLOADS,
+        remaining: 0,
+        resetTime: 'Tomorrow',
+      });
+      return;
+    }
+    
+    // Check monthly quota
+    const quotaCheck = await checkMonthlyQuota(walletAddress, file.fileSize);
+    if (!quotaCheck.allowed) {
+      res.status(429).json({
+        success: false,
+        message: 'Monthly download quota exceeded',
+        used: quotaCheck.used,
+        limit: MAX_MONTHLY_BYTES,
+        remaining: quotaCheck.remaining,
+        resetTime: 'Next month',
+      });
+      return;
+    }
+    
+    // Send quota warning if needed
+    if (quotaCheck.warningNeeded) {
+      await markQuotaWarningSent(walletAddress);
+      res.status(200).json({
+        success: true,
+        message: 'Quota warning: You have used 80% of your monthly download quota',
+        token: generatePreSignedUrlToken(id, walletAddress),
+        expiresIn: 900, // 15 minutes in seconds
+        downloadUrl: `/files/${id}/download?token=${generatePreSignedUrlToken(id, walletAddress)}`,
+        warning: {
+          used: quotaCheck.used,
+          limit: MAX_MONTHLY_BYTES,
+          percentage: quotaCheck.percentage,
+        },
+      });
+      return;
+    }
+    
+    // Generate pre-signed URL token
+    const token = generatePreSignedUrlToken(id, walletAddress);
+    
+    res.status(200).json({
+      success: true,
+      token,
+      expiresIn: 900, // 15 minutes in seconds
+      downloadUrl: `/files/${id}/download?token=${token}`,
+    });
+  } catch (error: any) {
+    console.error('Generate pre-signed URL error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate pre-signed URL',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Download file (with pre-signed token or direct access)
+// @route   GET /api/files/:id/download
+// @access  Public (with wallet verification)
+export const downloadFile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { walletAddress, token } = req.query;
+    
+    let verifiedWalletAddress: string | null = null;
+    
+    // If token is provided, verify it
+    if (token && typeof token === 'string') {
+      const decoded = verifyPreSignedUrlToken(token);
+      if (!decoded || decoded.fileId !== id) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid or expired download token',
+        });
+        return;
+      }
+      verifiedWalletAddress = decoded.walletAddress;
+    } else if (walletAddress && typeof walletAddress === 'string') {
+      verifiedWalletAddress = walletAddress.toLowerCase();
+      
+      // Check daily download limit (only if not using pre-signed token)
+      const dailyCheck = await checkDailyLimit(verifiedWalletAddress);
+      if (!dailyCheck.allowed) {
+        res.status(429).json({
+          success: false,
+          message: 'Daily download limit exceeded',
+          limit: MAX_DAILY_DOWNLOADS,
+          remaining: 0,
+          resetTime: 'Tomorrow',
+        });
+        return;
+      }
+    }
+    
+    const file = await File.findById(id);
+    
+    if (!file || !file.isActive) {
+      res.status(404).json({
+        success: false,
+        message: 'File not found',
+      });
+      return;
+    }
+    
+    // Verify access if tier-restricted
+    if (file.tier >= 0 && verifiedWalletAddress) {
+      try {
+        const userTier = await getUserTier(verifiedWalletAddress);
+        if (userTier < file.tier) {
+          res.status(403).json({
+            success: false,
+            message: 'Insufficient tier access',
+            requiredTier: file.tier,
+            userTier,
+          });
+          return;
+        }
+      } catch (error) {
+        res.status(403).json({
+          success: false,
+          message: 'Unable to verify access',
+        });
+        return;
+      }
+    }
+    
+    // Check monthly quota if wallet address is available
+    if (verifiedWalletAddress) {
+      const quotaCheck = await checkMonthlyQuota(verifiedWalletAddress, file.fileSize);
+      if (!quotaCheck.allowed) {
+        res.status(429).json({
+          success: false,
+          message: 'Monthly download quota exceeded',
+          used: quotaCheck.used,
+          limit: MAX_MONTHLY_BYTES,
+          remaining: quotaCheck.remaining,
+          resetTime: 'Next month',
+        });
+        return;
+      }
+    }
+    
+    // Download file from MongoDB GridFS using streaming for better performance
     console.log('📥 Download request:', {
       fileId: id,
       storagePath: file.storagePath,
       storageType: file.storageType,
     });
     
-    const exists = await fileExistsInGridFS(file.storagePath);
-    if (!exists) {
-      console.error('❌ File not found in GridFS:', file.storagePath);
-      res.status(404).json({
-        success: false,
-        message: 'File not found in database',
-      });
-      return;
-    }
+    // Set headers immediately (before any async operations)
+    // Important: Set these headers before streaming starts
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+    res.setHeader('Content-Length', file.fileSize);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     
-    // Download from GridFS
-    let fileBuffer: Buffer;
+    // Ensure response is not buffered
+    res.flushHeaders();
+    
+    // Stream file directly from GridFS (don't load into memory)
+    // Start streaming immediately - don't wait for existence check
     try {
-      console.log('📤 Downloading from GridFS...');
-      fileBuffer = await downloadFromGridFS(file.storagePath);
-      console.log('✅ File downloaded, size:', fileBuffer.length);
+      console.log('📤 Streaming file from GridFS...');
+      const bucket = getGridFSBucket();
+      const objectId = new mongoose.Types.ObjectId(file.storagePath);
+      const downloadStream = bucket.openDownloadStream(objectId);
+      
+      // Handle stream errors early
+      downloadStream.on('error', (error: any) => {
+        console.error('❌ GridFS stream error:', error);
+        if (!res.headersSent) {
+          res.status(404).json({
+            success: false,
+            message: 'File not found in storage',
+          });
+        } else {
+          res.end();
+        }
+      });
+      
+      // Pipe the stream directly to response (starts immediately)
+      downloadStream.pipe(res);
+      
+      // Record download stats AFTER streaming starts (non-blocking)
+      let downloadRecorded = false;
+      downloadStream.once('data', () => {
+        // Once we start receiving data, record the download in background (only once)
+        if (verifiedWalletAddress && !downloadRecorded) {
+          downloadRecorded = true;
+          
+          // Record download asynchronously (don't block the stream)
+          Promise.all([
+            recordDownload(verifiedWalletAddress, file.fileSize),
+            file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
+            Analytics.create({
+              eventType: 'file_download',
+              userId: verifiedWalletAddress || (walletAddress as string) || undefined,
+              fileId: file._id,
+              metadata: {
+                tier: file.tier,
+                fileType: file.fileType,
+                fileSize: file.fileSize,
+              },
+              timestamp: new Date(),
+            }),
+          ]).catch((err) => {
+            console.error('Error recording download stats:', err);
+            // Don't fail the download if stats recording fails
+          });
+        }
+      });
+      
+      // Log completion
+      downloadStream.on('end', () => {
+        console.log('✅ File stream completed');
+      });
+      
     } catch (gridFSError: any) {
-      console.error('❌ GridFS download error:', gridFSError);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to download file from storage',
-        error: gridFSError.message,
-      });
+      console.error('❌ GridFS stream setup error:', gridFSError);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to download file from storage',
+          error: gridFSError.message,
+        });
+      }
       return;
     }
-    
-    // Get metadata to ensure correct mime type
-    let mimeType = file.mimeType;
-    try {
-      const metadata = await getFileMetadata(file.storagePath);
-      if (metadata.metadata?.mimeType) {
-        mimeType = metadata.metadata.mimeType;
-      }
-    } catch (error) {
-      // Use stored mime type if metadata fetch fails
-      console.warn('⚠️ Could not fetch metadata, using stored mime type');
-    }
-    
-    // Increment download count
-    file.downloads += 1;
-    await file.save();
-    
-    // Track analytics
-    await Analytics.create({
-      eventType: 'file_download',
-      userId: walletAddress as string || undefined,
-      fileId: file._id,
-      metadata: {
-        tier: file.tier,
-        fileType: file.fileType,
-      },
-      timestamp: new Date(),
-    });
-    
-    // Set headers and send file
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
-    res.setHeader('Content-Length', fileBuffer.length);
-    
-    // Send file buffer
-    res.send(fileBuffer);
   } catch (error: any) {
     console.error('Download file error:', error);
     res.status(500).json({

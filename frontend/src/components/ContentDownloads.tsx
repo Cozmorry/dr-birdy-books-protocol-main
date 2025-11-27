@@ -31,10 +31,13 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const [filteredFiles, setFilteredFiles] = useState<ContentFile[]>([]);
   const [selectedTier, setSelectedTier] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [downloadStats, setDownloadStats] = useState<any>(null);
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
 
   useEffect(() => {
     loadAvailableFiles();
-  }, [userTier, hasAccess]);
+    loadDownloadStats();
+  }, [userTier, hasAccess, userInfo?.address]);
 
   useEffect(() => {
     filterFiles();
@@ -172,7 +175,34 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     setFilteredFiles(filtered);
   };
 
+  const loadDownloadStats = async () => {
+    if (!userInfo?.address) return;
+    
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(
+        `${API_BASE_URL}/files/stats/download?walletAddress=${userInfo.address}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setDownloadStats(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load download stats:', error);
+    }
+  };
+
   const handleDownload = async (file: ContentFile) => {
+    if (!userInfo?.address) {
+      alert('Please connect your wallet to download files');
+      return;
+    }
+
+    setDownloadingFileId(file.id);
+    
     try {
       if (file.fileData) {
         // Download from base64 data (local files)
@@ -182,34 +212,84 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } else if (file.downloadUrl) {
-        // Download from API endpoint
-        const walletAddress = userInfo?.address;
-        const url = walletAddress 
-          ? `${file.downloadUrl}?walletAddress=${walletAddress}`
-          : file.downloadUrl;
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('Failed to download file');
-        }
-        
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = file.fileName || `file.${file.fileType}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-      } else if (file.txId) {
+        setDownloadingFileId(null);
+        return;
+      }
+
+      if (file.txId && !file.downloadUrl) {
         // Open Arweave URL
         window.open(`https://arweave.net/${file.txId}`, '_blank');
+        setDownloadingFileId(null);
+        return;
       }
+
+      // Use pre-signed URL for secure download
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      
+      // Step 1: Request pre-signed URL
+      const presignedResponse = await fetch(
+        `${API_BASE_URL}/files/${file.id}/presigned?walletAddress=${userInfo.address}`
+      );
+      
+      if (!presignedResponse.ok) {
+        const errorData = await presignedResponse.json();
+        
+        if (presignedResponse.status === 429) {
+          // Rate limit or quota exceeded
+          alert(
+            errorData.message + 
+            (errorData.remaining !== undefined ? `\nRemaining: ${errorData.remaining}` : '') +
+            (errorData.resetTime ? `\nResets: ${errorData.resetTime}` : '')
+          );
+        } else {
+          alert(errorData.message || 'Failed to generate download link');
+        }
+        setDownloadingFileId(null);
+        return;
+      }
+
+      const presignedData = await presignedResponse.json();
+      
+      // Show quota warning if present
+      if (presignedData.warning) {
+        const warningMsg = `⚠️ ${presignedData.message}\n\n` +
+          `Used: ${(presignedData.warning.used / (1024 * 1024 * 1024)).toFixed(2)} GB / ` +
+          `${(presignedData.warning.limit / (1024 * 1024 * 1024)).toFixed(2)} GB\n` +
+          `Percentage: ${presignedData.warning.percentage.toFixed(1)}%`;
+        
+        if (!window.confirm(warningMsg + '\n\nContinue with download?')) {
+          setDownloadingFileId(null);
+          return;
+        }
+      }
+
+      // Step 2: Directly navigate to download URL (browser handles download natively)
+      // This avoids loading the entire file into memory first
+      const downloadUrl = `${API_BASE_URL}${presignedData.downloadUrl}`;
+      
+      // Create a hidden link and trigger download
+      // The browser will handle the download directly without loading into memory
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = file.fileName || `file.${file.fileType}`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Reset loading state immediately (download happens in background)
+      setDownloadingFileId(null);
+      
+      // Refresh stats after a short delay to allow download to complete
+      setTimeout(() => {
+        loadDownloadStats();
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Download error:', error);
       alert(error.message || 'Failed to download file');
+    } finally {
+      setDownloadingFileId(null);
     }
   };
 
@@ -297,6 +377,58 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           </span>
         </div>
       </div>
+
+      {/* Download Statistics */}
+      {downloadStats && userInfo?.address && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Download Limits</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600">Daily Downloads</span>
+                <span className="text-xs font-medium text-gray-900">
+                  {downloadStats.dailyDownloads} / {downloadStats.dailyLimit}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  style={{
+                    width: `${(downloadStats.dailyDownloads / downloadStats.dailyLimit) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600">Monthly Quota</span>
+                <span className="text-xs font-medium text-gray-900">
+                  {downloadStats.monthlyUsedGB} GB / {downloadStats.monthlyLimitGB} GB
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    downloadStats.monthlyPercentage >= 80
+                      ? 'bg-red-600'
+                      : downloadStats.monthlyPercentage >= 60
+                      ? 'bg-yellow-600'
+                      : 'bg-green-600'
+                  }`}
+                  style={{
+                    width: `${Math.min(downloadStats.monthlyPercentage, 100)}%`,
+                  }}
+                />
+              </div>
+              {downloadStats.monthlyPercentage >= 80 && (
+                <p className="text-xs text-red-600 mt-1">
+                  ⚠️ You've used {downloadStats.monthlyPercentage.toFixed(1)}% of your monthly quota
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filter */}
       <div className="mb-6 space-y-4">
@@ -389,10 +521,17 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                   )}
                   <button
                     onClick={() => handleDownload(file)}
-                    className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center"
+                    disabled={downloadingFileId === file.id}
+                    className={`p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center ${
+                      downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     title="Download"
                   >
-                    <Download className="h-4 w-4" />
+                    {downloadingFileId === file.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
