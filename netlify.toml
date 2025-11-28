@@ -1,7 +1,8 @@
 [build]
   # Build command - runs from root, changes to frontend directory
   # Explicitly skip Python dependency installation (requirements.txt is for smart contracts)
-  command = "cd frontend && npm ci && npm run build"
+  # CI=false prevents ESLint warnings from being treated as errors in CI environments
+  command = "cd frontend && npm ci && CI=false npm run build"
   
   # Publish directory - where the built files are located
   publish = "frontend/build"
