@@ -13,6 +13,7 @@ interface ContentFile {
   fileSize?: number;
   fileData?: string; // Base64 data for local files
   downloadUrl?: string; // API download URL
+  downloads?: number; // Download count
 }
 
 interface ContentDownloadsProps {
@@ -35,15 +36,26 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadStats, setDownloadStats] = useState<any>(null);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filesPerPage, setFilesPerPage] = useState(12);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'downloads'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     loadAvailableFiles();
     loadDownloadStats();
-  }, [userTier, hasAccess, userInfo?.address]);
+  }, [userTier, hasAccess, userInfo?.address, currentPage, filesPerPage, sortBy, sortOrder]);
 
   useEffect(() => {
     filterFiles();
-  }, [availableFiles, selectedTier, searchQuery, userTier]);
+  }, [availableFiles, selectedTier, searchQuery, userTier, sortBy, sortOrder]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTier]);
 
   const loadAvailableFiles = async () => {
     try {
@@ -56,6 +68,8 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       if (walletAddress) {
         params.append('walletAddress', walletAddress);
       }
+      params.append('page', currentPage.toString());
+      params.append('limit', filesPerPage.toString());
       
       const response = await fetch(`${API_BASE_URL}/files?${params.toString()}`);
       
@@ -85,8 +99,15 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           tier: f.tier || -1,
           uploadDate: f.createdAt || new Date().toISOString(),
           fileSize: f.fileSize || 0,
+          downloads: f.downloads || 0,
           downloadUrl: `${API_BASE_URL}/files/${f._id}/download`, // Don't include walletAddress here
         }));
+        
+        // Update pagination info
+        if (data.data.pagination) {
+          setTotalFiles(data.data.pagination.total);
+          setTotalPages(data.data.pagination.pages);
+        }
         
         setAvailableFiles(allFiles);
       } else {
@@ -187,6 +208,27 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           file.fileType.toLowerCase().includes(query)
       );
     }
+
+    // Sort files
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.fileName.localeCompare(b.fileName);
+          break;
+        case 'date':
+          comparison = new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime();
+          break;
+        case 'downloads':
+          comparison = (a.downloads || 0) - (b.downloads || 0);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
     setFilteredFiles(filtered);
   };
@@ -511,6 +553,58 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="text-sm text-gray-600">
+            Showing {((currentPage - 1) * filesPerPage) + 1} to {Math.min(currentPage * filesPerPage, totalFiles)} of {totalFiles} files
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-3 py-2 border rounded-md text-sm ${
+                      currentPage === pageNum
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
