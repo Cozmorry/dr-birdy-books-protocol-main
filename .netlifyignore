@@ -1,5 +1,7 @@
 # Ignore Python requirements (for smart contracts, not frontend)
+# Note: requirements.txt has been moved to contracts/ directory
 requirements.txt
+contracts/requirements.txt
 
 # Ignore contract files
 contracts/

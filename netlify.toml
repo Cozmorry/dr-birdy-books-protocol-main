@@ -3,6 +3,7 @@
   base = "."
   
   # Build command - runs from frontend directory
+  # Explicitly skip Python dependency installation (requirements.txt is for smart contracts)
   command = "cd frontend && npm ci && npm run build"
   
   # Publish directory - where the built files are located
@@ -12,7 +13,8 @@
 [build.environment]
   NODE_VERSION = "18.20.4"
   
-  # Explicitly disable Python to prevent Netlify from detecting requirements.txt
+  # Explicitly disable Python to prevent Netlify from auto-detecting requirements.txt
+  # Note: requirements.txt has been moved to contracts/ directory
   PYTHON_VERSION = ""
 
 # Redirect rules for React Router

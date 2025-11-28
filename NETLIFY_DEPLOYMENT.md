@@ -15,9 +15,10 @@
    - **Build command**: `cd frontend && npm ci && npm run build`
    - **Publish directory**: `frontend/build`
    - **Node version**: `18.20.4` (set in `.nvmrc`)
-   - **⚠️ IMPORTANT**: Disable Python in Build & Deploy → Environment
-     - Set `PYTHON_VERSION` to empty or unset it
-     - This prevents Netlify from trying to install `requirements.txt` (which is for smart contracts, not frontend)
+   - **⚠️ IMPORTANT**: Python dependencies are disabled
+     - `requirements.txt` has been moved to `contracts/` directory (where it belongs for smart contract development)
+     - Netlify will no longer auto-detect and try to install Python dependencies
+     - If you still see Python errors, manually disable Python in Build & Deploy → Environment
 
 3. **Environment Variables**
 
@@ -38,10 +39,12 @@
 **Error**: `error: rustup could not choose a version of cargo to run` or `Error installing pip dependencies`
 
 **Solution**: 
-- Netlify is trying to install Python dependencies from `requirements.txt` (which is for smart contracts)
-- Go to Site Settings → Build & Deploy → Environment
-- Set `PYTHON_VERSION` to empty/unset, or disable Python entirely
-- The `.netlifyignore` file should prevent this, but you can also manually disable Python in Netlify dashboard
+- ✅ **FIXED**: `requirements.txt` has been moved to `contracts/` directory
+- Netlify should no longer auto-detect Python dependencies
+- If you still see this error:
+  1. Go to Site Settings → Build & Deploy → Environment
+  2. Set `PYTHON_VERSION` to empty/unset, or disable Python entirely
+  3. Clear Netlify build cache and redeploy
 
 ### Build Fails with "Cannot find module"
 
