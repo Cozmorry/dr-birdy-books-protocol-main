@@ -540,7 +540,7 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       
       // Pipe the stream directly to response (starts immediately)
       downloadStream.pipe(res);
-      
+    
       // Record download stats AFTER streaming starts (non-blocking)
       let downloadRecorded = false;
       downloadStream.once('data', () => {
@@ -553,15 +553,15 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
             recordDownload(verifiedWalletAddress, file.fileSize),
             file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
             Analytics.create({
-              eventType: 'file_download',
+      eventType: 'file_download',
               userId: verifiedWalletAddress || (walletAddress as string) || undefined,
-              fileId: file._id,
-              metadata: {
-                tier: file.tier,
-                fileType: file.fileType,
+      fileId: file._id,
+      metadata: {
+        tier: file.tier,
+        fileType: file.fileType,
                 fileSize: file.fileSize,
-              },
-              timestamp: new Date(),
+      },
+      timestamp: new Date(),
             }),
           ]).catch((err) => {
             console.error('Error recording download stats:', err);

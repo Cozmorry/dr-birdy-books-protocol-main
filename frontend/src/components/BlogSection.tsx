@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Calendar, User, ArrowRight, Loader } from 'lucide-react';
 
 interface BlogPost {
@@ -21,51 +21,88 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const trackedViewsRef = useRef<Set<string>>(new Set());
 
   // Load blog posts from API or local storage
   useEffect(() => {
     loadBlogPosts();
   }, []);
 
+  // Track blog view when a post is selected (only once per session)
+  useEffect(() => {
+    if (selectedPost && !trackedViewsRef.current.has(selectedPost.id)) {
+      trackBlogView(selectedPost.id);
+      trackedViewsRef.current.add(selectedPost.id);
+    }
+  }, [selectedPost]);
+
+  const trackBlogView = async (postId: string) => {
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      // Call the API endpoint which tracks the view and increments view count
+      const response = await fetch(`${API_BASE_URL}/blog/${postId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Update the post's view count in the local state if needed
+        if (data.success && data.data && selectedPost) {
+          // Optionally update the post in the list with new view count
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === postId 
+                ? { ...post, views: data.data.views } 
+                : post
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to track blog view:', error);
+      // Don't show error to user, just log it
+    }
+  };
+
   const loadBlogPosts = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // TODO: Replace with actual API call when backend is ready
-      // For now, load from localStorage or use mock data
-      const storedPosts = localStorage.getItem('blogPosts');
+      // Fetch blog posts from API
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${API_BASE_URL}/blog?status=published`);
       
-      if (storedPosts) {
-        const parsedPosts = JSON.parse(storedPosts);
-        setPosts(parsedPosts);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch blog posts: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data && data.data.posts) {
+        // Transform API response to match component interface
+        const transformedPosts: BlogPost[] = data.data.posts.map((post: any) => ({
+          id: post._id || post.id,
+          title: post.title,
+          content: post.content,
+          excerpt: post.excerpt,
+          author: post.author,
+          publishedAt: post.publishedAt || post.createdAt,
+          imageUrl: post.imageUrl,
+          tags: post.tags || [],
+        }));
+        
+        setPosts(transformedPosts);
       } else {
-        // Mock data for demonstration
-        const mockPosts: BlogPost[] = [
-          {
-            id: '1',
-            title: 'Welcome to Dr. Birdy Books Protocol',
-            excerpt: 'Learn about our revolutionary approach to decentralized education and content access through tokenized staking.',
-            content: 'The Dr. Birdy Books Protocol represents a new paradigm in educational content distribution. By leveraging blockchain technology and tokenized staking mechanisms, we create a sustainable ecosystem where learners can access premium educational materials while supporting content creators.',
-            author: 'Dr. Birdy Team',
-            publishedAt: new Date().toISOString(),
-            tags: ['Education', 'DeFi', 'Blockchain'],
-          },
-          {
-            id: '2',
-            title: 'Understanding Tier-Based Access',
-            excerpt: 'Discover how our tiered staking system works and what content is available at each level.',
-            content: 'Our platform uses a flexible tiered staking system that grants access based on the USD value of staked tokens. Tier 1 ($24) provides basic access, Tier 2 ($50) offers advanced materials, and Tier 3 ($1000) unlocks premium content including masterclasses and exclusive research.',
-            author: 'Dr. Birdy Team',
-            publishedAt: new Date(Date.now() - 86400000).toISOString(),
-            tags: ['Staking', 'Tiers', 'Access'],
-          },
-        ];
-        setPosts(mockPosts);
-        localStorage.setItem('blogPosts', JSON.stringify(mockPosts));
+        setPosts([]);
       }
     } catch (err: any) {
+      console.error('Failed to load blog posts:', err);
       setError('Failed to load blog posts: ' + err.message);
+      setPosts([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }

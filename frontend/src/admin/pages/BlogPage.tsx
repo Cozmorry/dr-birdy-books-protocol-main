@@ -20,12 +20,21 @@ export default function BlogPage() {
 
   const loadPosts = async () => {
     try {
+      setIsLoading(true);
+      console.log('Loading blog posts...');
       const response = await api.getBlogPosts({ status: 'all' });
+      console.log('Blog posts response:', response);
       if (response.success) {
-        setPosts(response.data.posts);
+        console.log('Setting posts:', response.data.posts);
+        setPosts(response.data.posts || []);
+      } else {
+        console.error('API returned success:false', response);
+        setPosts([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load posts:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      setPosts([]);
     } finally {
       setIsLoading(false);
     }
@@ -48,13 +57,23 @@ export default function BlogPage() {
     setIsSubmitting(true);
 
     try {
-      await api.createBlogPost(formData);
-      setShowCreateModal(false);
-      setFormData({ title: '', excerpt: '', content: '', status: 'draft' });
-      loadPosts();
+      console.log('Creating blog post:', formData);
+      const response = await api.createBlogPost(formData);
+      console.log('Create post response:', response);
+      if (response.success) {
+        setShowCreateModal(false);
+        setFormData({ title: '', excerpt: '', content: '', status: 'draft' });
+        // Reload posts after a short delay to ensure DB is updated
+        setTimeout(() => {
+          loadPosts();
+        }, 500);
+      } else {
+        alert(response.message || 'Failed to create post');
+      }
     } catch (error: any) {
       console.error('Failed to create post:', error);
-      alert(error.response?.data?.message || 'Failed to create post');
+      console.error('Error details:', error.response?.data || error.message);
+      alert(error.response?.data?.message || error.message || 'Failed to create post');
     } finally {
       setIsSubmitting(false);
     }

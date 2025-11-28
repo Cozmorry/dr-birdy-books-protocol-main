@@ -12,13 +12,16 @@ export const getBlogPosts = async (req: AuthRequest, res: Response): Promise<voi
     
     const query: any = {};
     
-    // Filter by status (default to published for public access)
-    if (status) {
+    // Filter by status
+    if (status && status !== 'all') {
       query.status = status;
-    } else if (!req.admin) {
-      // Non-admin users can only see published posts
+    } else if (!status && !req.admin) {
+      // Non-admin users can only see published posts (if no status specified)
       query.status = 'published';
     }
+    // If status is 'all' or admin is requesting without status, don't filter by status (show all)
+    
+    console.log('📝 Blog posts query:', { query, isAdmin: !!req.admin, status });
     
     // Filter by tag
     if (tag) {
@@ -44,6 +47,8 @@ export const getBlogPosts = async (req: AuthRequest, res: Response): Promise<voi
         .lean(),
       BlogPost.countDocuments(query),
     ]);
+    
+    console.log(`✅ Found ${posts.length} blog posts (total: ${total})`);
     
     res.status(200).json({
       success: true,
@@ -159,6 +164,13 @@ export const createBlogPost = async (req: AuthRequest, res: Response): Promise<v
       imageUrl,
       tags: tags || [],
       status: status || 'draft',
+    });
+    
+    console.log('✅ Blog post created:', {
+      id: post._id,
+      title: post.title,
+      status: post.status,
+      publishedAt: post.publishedAt,
     });
     
     res.status(201).json({
