@@ -13,6 +13,13 @@ export default function BlogPage() {
     status: 'draft' as 'draft' | 'published',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    excerpt: '',
+    content: '',
+    status: 'draft' as 'draft' | 'published',
+  });
 
   useEffect(() => {
     loadPosts();
@@ -37,6 +44,37 @@ export default function BlogPage() {
       setPosts([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEdit = (post: any) => {
+    setEditingPost(post);
+    setEditFormData({
+      title: post.title || '',
+      excerpt: post.excerpt || '',
+      content: post.content || '',
+      status: post.status || 'draft',
+    });
+  };
+
+  const handleUpdatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPost) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await api.updateBlogPost(editingPost._id, editFormData);
+      if (response.success) {
+        setEditingPost(null);
+        loadPosts();
+      } else {
+        alert(response.message || 'Failed to update post');
+      }
+    } catch (error: any) {
+      console.error('Failed to update post:', error);
+      alert(error.response?.data?.message || error.message || 'Failed to update post');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -126,12 +164,17 @@ export default function BlogPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded">
+                    <button
+                      onClick={() => handleEdit(post)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      title="Edit post"
+                    >
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(post._id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      title="Delete post"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -228,6 +271,98 @@ export default function BlogPage() {
                   className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Post'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Edit Post</h2>
+              <button
+                onClick={() => setEditingPost(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePost} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter post title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Excerpt
+                </label>
+                <textarea
+                  required
+                  value={editFormData.excerpt}
+                  onChange={(e) => setEditFormData({ ...editFormData, excerpt: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter a brief excerpt"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Content
+                </label>
+                <textarea
+                  required
+                  value={editFormData.content}
+                  onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter post content"
+                  rows={10}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as 'draft' | 'published' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingPost(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Updating...' : 'Update Post'}
                 </button>
               </div>
             </form>

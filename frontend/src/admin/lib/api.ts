@@ -146,6 +146,22 @@ class ApiClient {
     return response.data;
   }
 
+  // Feedback endpoints
+  async getFeedback(params?: any) {
+    const response = await this.client.get('/feedback', { params });
+    return response.data;
+  }
+
+  async getFeedbackStats() {
+    const response = await this.client.get('/feedback/stats');
+    return response.data;
+  }
+
+  async updateFeedbackStatus(id: string, status: string, adminNotes?: string) {
+    const response = await this.client.patch(`/feedback/${id}`, { status, adminNotes });
+    return response.data;
+  }
+
   // Health check
   async healthCheck() {
     const response = await this.client.get('/health');

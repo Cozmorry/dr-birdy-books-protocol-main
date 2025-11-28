@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { Upload, Download, Trash2, Edit, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, Download, Trash2, Edit, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<any[]>([]);
@@ -10,6 +10,9 @@ export default function FilesPage() {
   const [description, setDescription] = useState('');
   const [tier, setTier] = useState(-1);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [editingFile, setEditingFile] = useState<any | null>(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editTier, setEditTier] = useState(-1);
 
   useEffect(() => {
     loadFiles();
@@ -66,6 +69,33 @@ export default function FilesPage() {
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleEdit = (file: any) => {
+    setEditingFile(file);
+    setEditDescription(file.description || '');
+    setEditTier(file.tier !== undefined ? file.tier : -1);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingFile) return;
+
+    try {
+      await api.updateFile(editingFile._id, {
+        description: editDescription,
+        tier: editTier,
+      });
+      setMessage({ type: 'success', text: 'File updated successfully' });
+      setEditingFile(null);
+      loadFiles();
+    } catch (error: any) {
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Failed to update file',
+      });
     }
   };
 
@@ -254,12 +284,22 @@ export default function FilesPage() {
                       {file.downloads}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleDelete(file._id)}
-                        className="text-red-600 hover:text-red-900 ml-4"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEdit(file)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Edit file"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(file._id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete file"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -268,6 +308,83 @@ export default function FilesPage() {
           </div>
         )}
       </div>
+
+      {/* Edit File Modal */}
+      {editingFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Edit File</h2>
+              <button
+                onClick={() => setEditingFile(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  File Name
+                </label>
+                <input
+                  type="text"
+                  value={editingFile.originalName}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Enter file description..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Access Tier
+                </label>
+                <select
+                  value={editTier}
+                  onChange={(e) => setEditTier(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value={-1}>Admin Only</option>
+                  <option value={0}>Tier 1 ($24)</option>
+                  <option value={1}>Tier 2 ($50)</option>
+                  <option value={2}>Tier 3 ($1000)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingFile(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                >
+                  Update File
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

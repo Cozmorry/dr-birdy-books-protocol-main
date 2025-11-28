@@ -6,6 +6,7 @@ import DashboardLayout from './admin/components/DashboardLayout';
 import DashboardPage from './admin/pages/DashboardPage';
 import FilesPage from './admin/pages/FilesPage';
 import BlogPage from './admin/pages/BlogPage';
+import FeedbackPage from './admin/pages/FeedbackPage';
 import AnalyticsPage from './admin/pages/AnalyticsPage';
 import SettingsPage from './admin/pages/SettingsPage';
 
@@ -42,6 +43,7 @@ export default function AdminApp() {
         <Route index element={<DashboardPage />} />
         <Route path="files" element={<FilesPage />} />
         <Route path="blog" element={<BlogPage />} />
+        <Route path="feedback" element={<FeedbackPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

@@ -18,6 +18,7 @@ import authRoutes from './routes/authRoutes';
 import blogRoutes from './routes/blogRoutes';
 import fileRoutes from './routes/fileRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import feedbackRoutes from './routes/feedbackRoutes';
 
 const app: Application = express();
 const PORT = parseInt(process.env.PORT || '5001', 10);
@@ -46,13 +47,47 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Rate limiting
+// Rate limiting - General API routes
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
   message: 'Too many requests from this IP, please try again later.',
 });
-app.use('/api/', limiter);
+
+// More lenient rate limiter for feedback routes (admin dashboard needs frequent updates)
+const feedbackLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  message: 'Too many feedback requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// More lenient rate limiter for files and blog routes (user-facing content)
+const contentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute (more lenient for content browsing)
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters based on route
+app.use('/api/', (req, res, next) => {
+  const path = req.path;
+  
+  if (path.startsWith('/feedback')) {
+    return feedbackLimiter(req, res, next);
+  }
+  
+  // Files and blog routes get more lenient rate limiting
+  if (path.startsWith('/files') || path.startsWith('/blog')) {
+    return contentLimiter(req, res, next);
+  }
+  
+  // All other routes use general limiter
+  return limiter(req, res, next);
+});
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
@@ -84,6 +119,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {

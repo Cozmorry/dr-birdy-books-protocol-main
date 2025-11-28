@@ -13,6 +13,8 @@ import BlogPage from './pages/BlogPage';
 import TierPage from './pages/TierPage';
 import { ToastProvider } from './contexts/ToastContext';
 import { ToastContainer } from './components/ToastContainer';
+import { Onboarding } from './components/Onboarding';
+import { useOnboarding } from './hooks/useOnboarding';
 import AdminRoute from './AdminRoute';
 
 function MainApp() {
@@ -62,9 +64,16 @@ function MainApp() {
 
   const isLoading = web3Loading || contractsLoading;
   const error = web3Error || contractsError;
+  
+  // Onboarding hook
+  const { isFirstTime, completeOnboarding } = useOnboarding();
 
   return (
     <ToastProvider>
+      {/* Onboarding for first-time users */}
+      {isConnected && isCorrectNetwork && (
+        <Onboarding isFirstTime={isFirstTime} onComplete={completeOnboarding} />
+      )}
       <Routes>
         <Route
           path="/*"

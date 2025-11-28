@@ -243,23 +243,39 @@ export const StakingPanelStore: React.FC = () => {
       // MIN_STAKING_DURATION is 1 day (86400 seconds)
       const MIN_STAKING_DURATION = 86400;
       
-      // Get the stake timestamp from the contract
-      const stakeTimestamp = await contracts.flexibleTieredStaking.stakeTimestamp(userInfo.address);
+      // Get user staking info which includes canUnstake flag
+      const stakingInfo = await contracts.flexibleTieredStaking.getUserStakingInfo(userInfo.address);
       
-      if (stakeTimestamp && stakeTimestamp > 0) {
-        // Calculate when unstaking will be available
-        const unstakeTimestamp = Number(stakeTimestamp) + MIN_STAKING_DURATION;
-        const now = Math.floor(Date.now() / 1000);
-        
-        if (unstakeTimestamp > now) {
-          // Unstaking not yet available
-          setUnstakeAvailableAt(new Date(unstakeTimestamp * 1000));
-        } else {
-          // Unstaking should be available
+      // stakingInfo returns: [stakedAmount, usdValue, userHasAccess, canUnstake]
+      const canUnstake = stakingInfo[3];
+      
+      if (canUnstake) {
+        // User can unstake now
+        setUnstakeAvailableAt(null);
+      } else {
+        // Try to get the first stake timestamp
+        try {
+          const stakeTimestamp = await contracts.flexibleTieredStaking.firstStakeTimestamp(userInfo.address);
+          
+          if (stakeTimestamp && Number(stakeTimestamp) > 0) {
+            // Calculate when unstaking will be available
+            const unstakeTimestamp = Number(stakeTimestamp) + MIN_STAKING_DURATION;
+            const now = Math.floor(Date.now() / 1000);
+            
+            if (unstakeTimestamp > now) {
+              // Unstaking not yet available
+              setUnstakeAvailableAt(new Date(unstakeTimestamp * 1000));
+            } else {
+              setUnstakeAvailableAt(null);
+            }
+          } else {
+            setUnstakeAvailableAt(null);
+          }
+        } catch (timestampError) {
+          // If we can't get the timestamp, just use the canUnstake flag
+          console.warn('Could not get stake timestamp:', timestampError);
           setUnstakeAvailableAt(null);
         }
-      } else {
-        setUnstakeAvailableAt(null);
       }
     } catch (error) {
       console.error('Failed to check unstake availability:', error);
@@ -590,48 +606,50 @@ export const StakingPanelStore: React.FC = () => {
         {/* Single Stake */}
         <div className="border border-gray-200 rounded-lg p-4">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Stake Tokens</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="number"
               value={stakeAmount}
               onChange={(e) => setStakeAmount(e.target.value)}
               placeholder="Amount to stake"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               disabled={isProcessing || isLoading}
             />
-            <button
-              onClick={handleStake}
-              disabled={isProcessing || isLoading || !stakeAmount}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? 'Staking...' : 'Stake'}
-            </button>
-            <button
-              onClick={handleApprove}
-              disabled={isProcessing || isLoading || !stakeAmount}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? 'Approving...' : 'Approve'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleStake}
+                disabled={isProcessing || isLoading || !stakeAmount}
+                className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              >
+                {isProcessing ? 'Staking...' : 'Stake'}
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={isProcessing || isLoading || !stakeAmount}
+                className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              >
+                {isProcessing ? 'Approving...' : 'Approve'}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Single Unstake */}
         <div className="border border-gray-200 rounded-lg p-4">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Unstake Tokens</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="number"
               value={unstakeAmount}
               onChange={(e) => setUnstakeAmount(e.target.value)}
               placeholder="Amount to unstake"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               disabled={isProcessing || isLoading}
             />
             <button
               onClick={handleUnstake}
               disabled={isProcessing || isLoading || !unstakeAmount || !userInfo.canUnstake}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {isProcessing ? 'Unstaking...' : 'Unstake'}
             </button>
