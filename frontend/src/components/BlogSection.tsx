@@ -215,9 +215,6 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
           <BookOpen className="h-6 w-6 text-blue-600 mr-2" />
           Blog
         </h2>
-        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-          {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}
-        </span>
       </div>
 
       {posts.length === 0 ? (

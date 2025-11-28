@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { api } from '../lib/api';
 import { Settings, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import ContractStatus from '../components/ContractStatus';
 
 export default function SettingsPage() {
   const { admin } = useAuthStore();
@@ -166,6 +167,9 @@ export default function SettingsPage() {
           </button>
         </form>
       </div>
+
+      {/* Contract Status */}
+      <ContractStatus />
 
       {/* System Info */}
       <div className="bg-white rounded-lg shadow-md p-6">

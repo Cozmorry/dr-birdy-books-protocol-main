@@ -8,7 +8,6 @@ interface WalletConnectProps {
   isLoading: boolean;
   error: string | null;
   onConnect: () => void;
-  onConnectLocalhost: () => void;
   onSwitchNetwork: () => void;
   onDisconnect: () => void;
 }
@@ -20,7 +19,6 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({
   isLoading,
   error,
   onConnect,
-  onConnectLocalhost,
   onSwitchNetwork,
   onDisconnect,
 }) => {
@@ -109,29 +107,12 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({
 
           {/* No wallet detected */}
           {typeof window.ethereum === 'undefined' && typeof window.coinbaseWalletExtension === 'undefined' && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
               <p className="text-sm text-yellow-800">
                 No wallet detected. Please install MetaMask or Coinbase Wallet to continue.
               </p>
             </div>
           )}
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">or</span>
-            </div>
-          </div>
-          
-          <button
-            onClick={onConnectLocalhost}
-            disabled={isLoading}
-            className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? 'Connecting...' : 'Connect to Localhost (127.0.0.1:8545)'}
-          </button>
         </div>
       </div>
     );

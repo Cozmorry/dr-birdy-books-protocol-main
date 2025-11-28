@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, File, Image, FileText, Video, Music, AlertCircle, CheckCircle, Eye } from 'lucide-react';
+import { Download, File, Image, FileText, Video, Music, AlertCircle } from 'lucide-react';
 
 interface ContentFile {
   id: string;
@@ -366,87 +366,43 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           <Download className="h-6 w-6 text-blue-600 mr-2" />
           Content Downloads
         </h2>
-        <div className="flex items-center space-x-2">
-          {userTier >= 0 && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-              Tier {userTier + 1} Access
-            </span>
-          )}
-          <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-            {filteredFiles.length} {filteredFiles.length === 1 ? 'File' : 'Files'}
+        {userTier >= 0 && (
+          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+            Tier {userTier + 1}
           </span>
-        </div>
+        )}
       </div>
 
-      {/* Download Statistics */}
+      {/* Download Statistics - Simplified */}
       {downloadStats && userInfo?.address && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Download Limits</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-600">Daily Downloads</span>
-                <span className="text-xs font-medium text-gray-900">
-                  {downloadStats.dailyDownloads} / {downloadStats.dailyLimit}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
-                  style={{
-                    width: `${(downloadStats.dailyDownloads / downloadStats.dailyLimit) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-600">Monthly Quota</span>
-                <span className="text-xs font-medium text-gray-900">
-                  {downloadStats.monthlyUsedGB} GB / {downloadStats.monthlyLimitGB} GB
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    downloadStats.monthlyPercentage >= 80
-                      ? 'bg-red-600'
-                      : downloadStats.monthlyPercentage >= 60
-                      ? 'bg-yellow-600'
-                      : 'bg-green-600'
-                  }`}
-                  style={{
-                    width: `${Math.min(downloadStats.monthlyPercentage, 100)}%`,
-                  }}
-                />
-              </div>
-              {downloadStats.monthlyPercentage >= 80 && (
-                <p className="text-xs text-red-600 mt-1">
-                  ⚠️ You've used {downloadStats.monthlyPercentage.toFixed(1)}% of your monthly quota
-                </p>
-              )}
-            </div>
+        <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">
+              Daily: {downloadStats.dailyDownloads}/{downloadStats.dailyLimit}
+            </span>
+            <span className="text-gray-600">
+              Monthly: {downloadStats.monthlyUsedGB}GB / {downloadStats.monthlyLimitGB}GB
+            </span>
           </div>
         </div>
       )}
 
-      {/* Search and Filter */}
-      <div className="mb-6 space-y-4">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search files..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      {/* Search and Filter - Simplified */}
+      <div className="mb-6 flex items-center space-x-3">
+        <input
+          type="text"
+          placeholder="Search files..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
           {userTier >= 0 && (
             <select
               value={selectedTier}
               onChange={(e) => setSelectedTier(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
               className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Filter by tier"
+              aria-label="Filter files by tier"
             >
               <option value="all">All Tiers</option>
               <option value="0">Tier 1</option>
@@ -454,7 +410,6 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
               <option value="2">Tier 3</option>
             </select>
           )}
-        </div>
       </div>
 
       {/* Files List */}
@@ -478,62 +433,46 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
               key={file.id}
               className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-3 flex-1">
-                  {getFileIcon(file.fileType)}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">
-                      {file.fileName}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                      {file.description || 'No description'}
-                    </p>
+              <div className="flex items-start space-x-3 mb-3">
+                {getFileIcon(file.fileType)}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
+                    {file.fileName}
+                  </h3>
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                    {file.description || 'No description'}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span className="uppercase">{file.fileType}</span>
+                    {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                <span className="uppercase">{file.fileType}</span>
-                {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
-              </div>
 
-              {file.tier >= 0 && (
-                <div className="mb-3">
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
-                    Tier {file.tier + 1}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                <span className="text-xs text-gray-500">
                   {formatDate(file.uploadDate)}
                 </span>
-                <div className="flex items-center space-x-2">
-                  {file.fileData && ['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(file.fileType.toLowerCase()) && (
-                    <button
-                      onClick={() => handlePreview(file)}
-                      className="p-2 text-purple-600 hover:bg-purple-100 rounded-md transition-colors"
-                      title="Preview"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                <button
+                  onClick={() => handleDownload(file)}
+                  disabled={downloadingFileId === file.id}
+                  className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
+                    downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {downloadingFileId === file.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </>
                   )}
-                  <button
-                    onClick={() => handleDownload(file)}
-                    disabled={downloadingFileId === file.id}
-                    className={`p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center ${
-                      downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    title="Download"
-                  >
-                    {downloadingFileId === file.id ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                </button>
               </div>
             </div>
           ))}

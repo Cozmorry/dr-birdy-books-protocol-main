@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useWeb3 } from '../hooks/useWeb3';
 import { useContractsStore } from '../hooks/useContractsStore';
 import { Button } from './ui/button';
@@ -11,19 +12,17 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Separator } from './ui/separator';
-import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw } from 'lucide-react';
+import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield } from 'lucide-react';
 import { ethers } from 'ethers';
 
 interface NavbarProps {
   onConnect: () => void;
-  onConnectLocalhost: () => void;
   onSwitchNetwork: () => void;
   onDisconnect: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onConnect,
-  onConnectLocalhost,
   onSwitchNetwork,
   onDisconnect,
 }) => {
@@ -36,10 +35,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   } = useWeb3();
 
   const { protocolStats } = useContractsStore();
+  const location = useLocation();
 
   const [ethBalance, setEthBalance] = useState<string>('0');
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const isActive = (path: string) => location.pathname === path;
 
   // Fetch ETH balance
   useEffect(() => {
@@ -84,17 +86,88 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center">
             <BookOpen className="h-8 w-8 text-blue-600 mr-3" />
             <div>
               <h1 className="text-xl font-bold text-gray-900">Dr. Birdy Books</h1>
               <p className="text-xs text-gray-600">Protocol</p>
             </div>
-          </div>
+          </Link>
 
-          {/* Protocol Stats */}
-          {isConnected && (
-            <div className="hidden md:flex items-center space-x-6">
+          {/* Navigation Links */}
+          {isConnected && isCorrectNetwork && (
+            <nav className="hidden md:flex items-center space-x-1 ml-8">
+              <Link
+                to="/"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Home className="h-4 w-4 mr-1" />
+                  Home
+                </div>
+              </Link>
+              <Link
+                to="/staking"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/staking') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-1" />
+                  Staking
+                </div>
+              </Link>
+              <Link
+                to="/content"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/content') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Download className="h-4 w-4 mr-1" />
+                  Content
+                </div>
+              </Link>
+              <Link
+                to="/blog"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/blog') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center">
+                  <FileText className="h-4 w-4 mr-1" />
+                  Blog
+                </div>
+              </Link>
+              <Link
+                to="/tier"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/tier') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Shield className="h-4 w-4 mr-1" />
+                  Tier
+                </div>
+              </Link>
+            </nav>
+          )}
+
+          {/* Protocol Stats - Only Total Staked (Stakers removed per user request) */}
+          {isConnected && isCorrectNetwork && (
+            <div className="hidden md:flex items-center">
               <div className="text-center">
                 <p className="text-xs text-gray-500">Total Staked</p>
                 <p className="text-sm font-semibold text-gray-900">
@@ -105,40 +178,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                 </p>
               </div>
-              <Separator orientation="vertical" className="h-8" />
-              <div className="text-center">
-                <p className="text-xs text-gray-500">Stakers</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {protocolStats.isLoading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
-                  ) : (
-                    protocolStats.totalStakers.toLocaleString()
-                  )}
-                </p>
-              </div>
             </div>
           )}
 
           {/* Wallet Section */}
           <div className="flex items-center space-x-4">
             {!isConnected ? (
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={onConnect}
-                  disabled={web3Loading}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Wallet className="h-4 w-4 mr-2" />
-                  {web3Loading ? 'Connecting...' : 'Connect Wallet'}
-                </Button>
-                <Button
-                  onClick={onConnectLocalhost}
-                  variant="outline"
-                  size="sm"
-                >
-                  Localhost
-                </Button>
-              </div>
+              <Button
+                onClick={onConnect}
+                disabled={web3Loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Wallet className="h-4 w-4 mr-2" />
+                {web3Loading ? 'Connecting...' : 'Connect Wallet'}
+              </Button>
             ) : !isCorrectNetwork ? (
               <Button
                 onClick={onSwitchNetwork}

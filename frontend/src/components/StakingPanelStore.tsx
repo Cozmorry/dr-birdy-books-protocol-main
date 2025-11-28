@@ -14,8 +14,6 @@ export const StakingPanelStore: React.FC = () => {
     isLoading,
     stakeTokens,
     unstakeTokens,
-    stakeBatch,
-    unstakeBatch,
     emergencyWithdraw,
     approveTokens,
     loadUserInfo,
@@ -27,7 +25,6 @@ export const StakingPanelStore: React.FC = () => {
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');
-  const [batchAmounts, setBatchAmounts] = useState(['', '', '']);
   const [isProcessing, setIsProcessing] = useState(false);
   const [contractStatus, setContractStatus] = useState<{
     isPaused: boolean;
@@ -36,6 +33,7 @@ export const StakingPanelStore: React.FC = () => {
     backupOracleSet: boolean;
     tierCount: number;
   } | null>(null);
+  const [unstakeAvailableAt, setUnstakeAvailableAt] = useState<Date | null>(null);
 
   const handleStake = async () => {
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
@@ -170,43 +168,6 @@ export const StakingPanelStore: React.FC = () => {
     }
   };
 
-  const handleBatchStake = async () => {
-    const validAmounts = batchAmounts.filter(amount => amount && parseFloat(amount) > 0);
-    if (validAmounts.length === 0) {
-      addToast({ type: 'error', title: 'Invalid Amount', message: 'Please enter at least one valid amount' });
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      await stakeBatch(validAmounts);
-      addToast({ type: 'success', title: 'Batch Stake Successful', message: `Successfully staked ${validAmounts.length} batches` });
-      setBatchAmounts(['', '', '']);
-    } catch (error: any) {
-      addToast({ type: 'error', title: 'Batch Stake Failed', message: `Failed to batch stake: ${error.message}` });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleBatchUnstake = async () => {
-    const validAmounts = batchAmounts.filter(amount => amount && parseFloat(amount) > 0);
-    if (validAmounts.length === 0) {
-      addToast({ type: 'error', title: 'Invalid Amount', message: 'Please enter at least one valid amount' });
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      await unstakeBatch(validAmounts);
-      addToast({ type: 'success', title: 'Batch Unstake Successful', message: `Successfully unstaked ${validAmounts.length} batches` });
-      setBatchAmounts(['', '', '']);
-    } catch (error: any) {
-      addToast({ type: 'error', title: 'Batch Unstake Failed', message: `Failed to batch unstake: ${error.message}` });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleEmergencyWithdraw = async () => {
     setIsProcessing(true);
@@ -237,11 +198,6 @@ export const StakingPanelStore: React.FC = () => {
     }
   };
 
-  const updateBatchAmount = (index: number, value: string) => {
-    const newAmounts = [...batchAmounts];
-    newAmounts[index] = value;
-    setBatchAmounts(newAmounts);
-  };
 
   // Check contract status
   const checkContractStatus = async () => {
@@ -271,10 +227,45 @@ export const StakingPanelStore: React.FC = () => {
     }
   };
 
-  // Check contract status on component mount
+  // Check contract status and unstake availability on component mount
   useEffect(() => {
     checkContractStatus();
-  }, []);
+    checkUnstakeAvailability();
+  }, [userInfo?.address, contracts.flexibleTieredStaking]);
+
+  // Check when unstaking will be available
+  const checkUnstakeAvailability = async () => {
+    if (!contracts.flexibleTieredStaking || !userInfo?.address) {
+      return;
+    }
+
+    try {
+      // MIN_STAKING_DURATION is 1 day (86400 seconds)
+      const MIN_STAKING_DURATION = 86400;
+      
+      // Get the stake timestamp from the contract
+      const stakeTimestamp = await contracts.flexibleTieredStaking.stakeTimestamp(userInfo.address);
+      
+      if (stakeTimestamp && stakeTimestamp > 0) {
+        // Calculate when unstaking will be available
+        const unstakeTimestamp = Number(stakeTimestamp) + MIN_STAKING_DURATION;
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (unstakeTimestamp > now) {
+          // Unstaking not yet available
+          setUnstakeAvailableAt(new Date(unstakeTimestamp * 1000));
+        } else {
+          // Unstaking should be available
+          setUnstakeAvailableAt(null);
+        }
+      } else {
+        setUnstakeAvailableAt(null);
+      }
+    } catch (error) {
+      console.error('Failed to check unstake availability:', error);
+      setUnstakeAvailableAt(null);
+    }
+  };
 
   // Set up staking token
   const setupStakingToken = async () => {
@@ -594,167 +585,6 @@ export const StakingPanelStore: React.FC = () => {
         </div>
       </div>
 
-      {/* Contract Status */}
-      {contractStatus && (
-        <div className="bg-blue-50 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-blue-900 flex items-center">
-              <Shield className="h-5 w-5 mr-2" />
-              Contract Status
-            </h3>
-            <div className="flex gap-2">
-              <button
-                onClick={checkContractStatus}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
-                disabled={isProcessing}
-              >
-                Refresh
-              </button>
-              <button
-                onClick={async () => {
-                  console.log('Manual status check...');
-                  await checkContractStatus();
-                }}
-                className="text-sm text-green-600 hover:text-green-800 underline"
-                disabled={isProcessing}
-              >
-                Debug Status
-              </button>
-              <button
-                onClick={verifyContractSetup}
-                className="text-sm text-purple-600 hover:text-purple-800 underline"
-                disabled={isProcessing}
-              >
-                Verify Setup
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">Contract Status:</span>
-              <div className="flex items-center">
-                {contractStatus.isPaused ? (
-                  <>
-                    <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                    <span className="text-red-600 font-medium">Paused</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600 font-medium">Active</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">Staking Token:</span>
-              <div className="flex items-center">
-                {contractStatus.stakingTokenSet ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600 font-medium">Set</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                    <span className="text-red-600 font-medium">Not Set</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">Price Oracle:</span>
-              <div className="flex items-center">
-                {contractStatus.primaryOracleSet ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600 font-medium">Set</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                    <span className="text-red-600 font-medium">Not Set</span>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">Tiers Configured:</span>
-              <span className="text-blue-600 font-medium">{contractStatus.tierCount}</span>
-            </div>
-          </div>
-          {contractStatus.isPaused && (
-            <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-md">
-              <div className="flex items-center">
-                <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
-                <span className="text-red-700 text-sm">
-                  Staking is currently paused. Please try again later.
-                </span>
-              </div>
-            </div>
-          )}
-          
-          {/* Setup Actions */}
-          {(!contractStatus.stakingTokenSet || !contractStatus.primaryOracleSet) && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-              <div className="flex items-center mb-3">
-                <Settings className="h-4 w-4 text-yellow-600 mr-2" />
-                <span className="text-yellow-800 font-medium text-sm">
-                  Contract Setup Required
-                </span>
-              </div>
-              <div className="space-y-2">
-                <p className="text-yellow-700 text-sm">
-                  The staking contract needs to be configured before it can be used.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {!contractStatus.stakingTokenSet && (
-                    <button
-                      onClick={setupStakingToken}
-                      disabled={isProcessing}
-                      className="px-3 py-1 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      <Wrench className="h-3 w-3 mr-1" />
-                      Set Staking Token
-                    </button>
-                  )}
-                  {!contractStatus.primaryOracleSet && (
-                    <button
-                      onClick={setupPriceOracle}
-                      disabled={isProcessing}
-                      className="px-3 py-1 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      <Wrench className="h-3 w-3 mr-1" />
-                      Set Price Oracle
-                    </button>
-                  )}
-                  {!contractStatus.stakingTokenSet && !contractStatus.primaryOracleSet && (
-                    <button
-                      onClick={setupContract}
-                      disabled={isProcessing}
-                      className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      <Settings className="h-3 w-3 mr-1" />
-                      Setup All
-                    </button>
-                  )}
-                  {contractStatus.stakingTokenSet && !contractStatus.primaryOracleSet && (
-                    <button
-                      onClick={retryOracleSetup}
-                      disabled={isProcessing}
-                      className="px-3 py-1 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      <Wrench className="h-3 w-3 mr-1" />
-                      Retry Oracle
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Staking Actions */}
       <div className="space-y-6">
         {/* Single Stake */}
@@ -807,45 +637,27 @@ export const StakingPanelStore: React.FC = () => {
             </button>
           </div>
           {!userInfo.canUnstake && (
-            <p className="text-sm text-red-600 mt-2">
-              <AlertCircle className="h-4 w-4 inline mr-1" />
-              Unstaking is currently disabled
-            </p>
-          )}
-        </div>
-
-        {/* Batch Operations */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Batch Operations</h3>
-          <div className="space-y-3">
-            {batchAmounts.map((amount, index) => (
-              <input
-                key={index}
-                type="number"
-                value={amount}
-                onChange={(e) => updateBatchAmount(index, e.target.value)}
-                placeholder={`Batch ${index + 1} amount`}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isProcessing || isLoading}
-              />
-            ))}
-            <div className="flex gap-2">
-              <button
-                onClick={handleBatchStake}
-                disabled={isProcessing || isLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isProcessing ? 'Batch Staking...' : 'Batch Stake'}
-              </button>
-              <button
-                onClick={handleBatchUnstake}
-                disabled={isProcessing || isLoading || !userInfo.canUnstake}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isProcessing ? 'Batch Unstaking...' : 'Batch Unstake'}
-              </button>
+            <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <div className="flex items-start">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-800 font-medium mb-1">
+                    Unstaking is currently disabled
+                  </p>
+                  <p className="text-xs text-yellow-700 mb-2">
+                    You must wait for the minimum staking duration (24 hours) to pass before you can unstake your tokens. 
+                    This is a security feature to ensure stable staking pools.
+                  </p>
+                  {unstakeAvailableAt && unstakeAvailableAt > new Date() && (
+                    <p className="text-xs text-yellow-800 font-medium">
+                      <Clock className="h-3 w-3 inline mr-1" />
+                      Unstaking will be available: {unstakeAvailableAt.toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Emergency Actions */}
