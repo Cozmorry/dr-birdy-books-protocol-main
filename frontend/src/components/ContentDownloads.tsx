@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Download, File, Image, FileText, Video, Music, AlertCircle } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { trackFileDownload } from '../utils/analytics';
 
 interface ContentFile {
   id: string;
@@ -349,6 +350,9 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Track download in Google Analytics
+      trackFileDownload(file.id, file.fileName, file.tier);
       
       // Reset loading state immediately (download happens in background)
       setDownloadingFileId(null);

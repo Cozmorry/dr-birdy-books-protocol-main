@@ -3,6 +3,7 @@ import { ShoppingCart, CreditCard, CheckCircle, Star, Lock, Unlock } from 'lucid
 import { useToast } from '../contexts/ToastContext';
 import { useContractsStore } from '../hooks/useContractsStore';
 import { formatTokenAmount } from '../utils/formatNumbers';
+import { trackTierPurchase } from '../utils/analytics';
 
 interface TierPurchaseStoreProps {
   userInfo: any;
@@ -74,6 +75,10 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
 
       // Then stake the tokens to unlock the tier
       await stakeTokens(purchaseAmount);
+      
+      // Track tier purchase in Google Analytics
+      trackTierPurchase(selectedTier, purchaseAmountNum);
+      
       addToast({ 
         type: 'success', 
         title: 'Tier Unlocked!', 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Calendar, User, ArrowRight, Loader } from 'lucide-react';
+import { trackBlogView as trackBlogViewGA } from '../utils/analytics';
 
 interface BlogPost {
   id: string;
@@ -31,7 +32,10 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
   // Track blog view when a post is selected (only once per session)
   useEffect(() => {
     if (selectedPost && !trackedViewsRef.current.has(selectedPost.id)) {
+      // Track in backend API
       trackBlogView(selectedPost.id);
+      // Track in Google Analytics
+      trackBlogViewGA(selectedPost.id, selectedPost.title);
       trackedViewsRef.current.add(selectedPost.id);
     }
   }, [selectedPost]);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { BASE_MAINNET, BASE_TESTNET, LOCALHOST, getContractAddresses } from '../config/networks';
+import { trackWalletConnect } from '../utils/analytics';
 
 interface Web3State {
   provider: ethers.BrowserProvider | null;
@@ -55,6 +56,8 @@ export const useWeb3 = () => {
         contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
         contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
 
+      const isCorrectNetwork = hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId);
+      
       setWeb3State({
         provider,
         signer,
@@ -62,8 +65,14 @@ export const useWeb3 = () => {
         chainId,
         isConnected: true,
         // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
-        isCorrectNetwork: hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId),
+        isCorrectNetwork,
       });
+      
+      // Track wallet connection in Google Analytics
+      const walletType = window.ethereum?.isMetaMask ? 'MetaMask' : 
+                        window.ethereum?.isCoinbaseWallet ? 'Coinbase Wallet' : 
+                        'Other';
+      trackWalletConnect(walletType, chainId);
     } catch (err: any) {
       console.error('Wallet connection error:', err);
       

@@ -5,6 +5,7 @@ import { useContractsStore } from '../hooks/useContractsStore';
 import { useWeb3Store } from '../hooks/useWeb3Store';
 import { formatTokenAmount } from '../utils/formatNumbers';
 import { getOracleConfig, getContractAddresses } from '../config/networks';
+import { trackStaking } from '../utils/analytics';
 
 export const StakingPanelStore: React.FC = () => {
   const { addToast } = useToast();
@@ -89,6 +90,11 @@ export const StakingPanelStore: React.FC = () => {
       const stakedAmountStr = stakeAmount;
       await stakeTokens(stakeAmount);
       
+      // Track staking in Google Analytics
+      const amount = parseFloat(stakeAmount);
+      const userTier = userInfo?.tier !== undefined ? userInfo.tier : -1;
+      trackStaking('stake', amount, userTier >= 0 ? userTier : undefined);
+      
       // Success - refresh data and update UI
       setStakeAmount('');
       
@@ -159,6 +165,12 @@ export const StakingPanelStore: React.FC = () => {
     setIsProcessing(true);
     try {
       await unstakeTokens(unstakeAmount);
+      
+      // Track unstaking in Google Analytics
+      const amount = parseFloat(unstakeAmount);
+      const userTier = userInfo?.tier !== undefined ? userInfo.tier : -1;
+      trackStaking('unstake', amount, userTier >= 0 ? userTier : undefined);
+      
       addToast({ type: 'success', title: 'Unstake Successful', message: `Successfully unstaked ${unstakeAmount} tokens` });
       setUnstakeAmount('');
     } catch (error: any) {
