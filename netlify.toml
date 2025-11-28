@@ -1,0 +1,20 @@
+[build]
+  # Base directory for the build (monorepo root)
+  base = "."
+  
+  # Build command - runs from frontend directory
+  command = "cd frontend && npm ci && npm run build"
+  
+  # Publish directory - where the built files are located
+  publish = "frontend/build"
+
+# Node version (Netlify will use this)
+[build.environment]
+  NODE_VERSION = "18.20.4"
+
+# Redirect rules for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
