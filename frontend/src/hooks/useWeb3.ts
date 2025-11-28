@@ -113,7 +113,8 @@ export const useWeb3 = () => {
         account: accounts[0],
         chainId,
         isConnected: true,
-        // Contracts are deployed on Base Mainnet (8453), Base Sepolia (84532), and Localhost (31337)
+        // Currently using Base Sepolia testnet (84532) - contracts deployed
+        // Base Mainnet (8453) will be enabled when contracts are deployed
         isCorrectNetwork,
       });
       
@@ -186,8 +187,9 @@ export const useWeb3 = () => {
       return;
     }
 
-    // Default to Base Mainnet for production
-    const targetNetwork = BASE_MAINNET;
+    // Default to Base Sepolia testnet for now (contracts deployed)
+    // Switch to BASE_MAINNET when contracts are deployed to mainnet
+    const targetNetwork = BASE_TESTNET;
     
     try {
       await window.ethereum.request({
@@ -265,7 +267,8 @@ export const useWeb3 = () => {
             account: accounts[0],
             chainId,
             isConnected: true,
-            // Contracts are deployed on Base Mainnet (8453), Base Sepolia (84532), and Localhost (31337)
+            // Currently using Base Sepolia testnet (84532) - contracts deployed
+            // Base Mainnet (8453) will be enabled when contracts are deployed
             isCorrectNetwork: hasDeployedContracts && (
               chainId === BASE_MAINNET.chainId || 
               chainId === BASE_TESTNET.chainId || 
@@ -305,7 +308,8 @@ export const useWeb3 = () => {
       setWeb3State(prev => ({
         ...prev,
         chainId: newChainId,
-        // Contracts are deployed on Base Mainnet (8453), Base Sepolia (84532), and Localhost (31337)
+        // Currently using Base Sepolia testnet (84532) - contracts deployed
+        // Base Mainnet (8453) will be enabled when contracts are deployed
         isCorrectNetwork: hasDeployedContracts && (
           newChainId === BASE_MAINNET.chainId || 
           newChainId === BASE_TESTNET.chainId || 
