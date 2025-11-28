@@ -12,8 +12,9 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Separator } from './ui/separator';
-import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield } from 'lucide-react';
+import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare } from 'lucide-react';
 import { ethers } from 'ethers';
+import { FeedbackModal } from './FeedbackModal';
 
 interface NavbarProps {
   onConnect: () => void;
@@ -40,6 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [ethBalance, setEthBalance] = useState<string>('0');
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -181,6 +183,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
+          {/* Feedback Button */}
+          {isConnected && isCorrectNetwork && (
+            <button
+              onClick={() => setIsFeedbackOpen(true)}
+              className="hidden md:flex items-center px-3 py-2 text-sm text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors mr-2"
+              title="Share Feedback"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Feedback
+            </button>
+          )}
+
           {/* Wallet Section */}
           <div className="flex items-center space-x-4">
             {!isConnected ? (
@@ -277,6 +291,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Feedback Modal */}
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </nav>
   );
 };

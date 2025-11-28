@@ -243,23 +243,39 @@ export const StakingPanelStore: React.FC = () => {
       // MIN_STAKING_DURATION is 1 day (86400 seconds)
       const MIN_STAKING_DURATION = 86400;
       
-      // Get the stake timestamp from the contract
-      const stakeTimestamp = await contracts.flexibleTieredStaking.stakeTimestamp(userInfo.address);
+      // Get user staking info which includes canUnstake flag
+      const stakingInfo = await contracts.flexibleTieredStaking.getUserStakingInfo(userInfo.address);
       
-      if (stakeTimestamp && stakeTimestamp > 0) {
-        // Calculate when unstaking will be available
-        const unstakeTimestamp = Number(stakeTimestamp) + MIN_STAKING_DURATION;
-        const now = Math.floor(Date.now() / 1000);
-        
-        if (unstakeTimestamp > now) {
-          // Unstaking not yet available
-          setUnstakeAvailableAt(new Date(unstakeTimestamp * 1000));
-        } else {
-          // Unstaking should be available
+      // stakingInfo returns: [stakedAmount, usdValue, userHasAccess, canUnstake]
+      const canUnstake = stakingInfo[3];
+      
+      if (canUnstake) {
+        // User can unstake now
+        setUnstakeAvailableAt(null);
+      } else {
+        // Try to get the first stake timestamp
+        try {
+          const stakeTimestamp = await contracts.flexibleTieredStaking.firstStakeTimestamp(userInfo.address);
+          
+          if (stakeTimestamp && Number(stakeTimestamp) > 0) {
+            // Calculate when unstaking will be available
+            const unstakeTimestamp = Number(stakeTimestamp) + MIN_STAKING_DURATION;
+            const now = Math.floor(Date.now() / 1000);
+            
+            if (unstakeTimestamp > now) {
+              // Unstaking not yet available
+              setUnstakeAvailableAt(new Date(unstakeTimestamp * 1000));
+            } else {
+              setUnstakeAvailableAt(null);
+            }
+          } else {
+            setUnstakeAvailableAt(null);
+          }
+        } catch (timestampError) {
+          // If we can't get the timestamp, just use the canUnstake flag
+          console.warn('Could not get stake timestamp:', timestampError);
           setUnstakeAvailableAt(null);
         }
-      } else {
-        setUnstakeAvailableAt(null);
       }
     } catch (error) {
       console.error('Failed to check unstake availability:', error);

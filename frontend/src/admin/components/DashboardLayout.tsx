@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
+import { useFeedbackBadge } from '../hooks/useFeedbackBadge';
 import {
   BookOpen,
   LayoutDashboard,
@@ -11,12 +12,14 @@ import {
   Menu,
   X,
   Upload,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { admin, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { newFeedbackCount } = useFeedbackBadge();
 
   const handleLogout = () => {
     logout();
@@ -27,6 +30,7 @@ export default function DashboardLayout() {
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Files', href: '/admin/files', icon: Upload },
     { name: 'Blog', href: '/admin/blog', icon: FileText },
+    { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -66,24 +70,39 @@ export default function DashboardLayout() {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                end={item.href === '/admin'}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`
-                }
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.name}
-              </NavLink>
-            ))}
+            {navigation.map((item) => {
+              const isFeedback = item.name === 'Feedback';
+              return (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  end={item.href === '/admin'}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors relative ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    }`
+                  }
+                >
+                  <div className="relative">
+                    <item.icon className="h-5 w-5 mr-3" />
+                    {isFeedback && newFeedbackCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-white">
+                          {newFeedbackCount > 99 ? '99+' : newFeedbackCount}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  <span className="flex-1">{item.name}</span>
+                  {isFeedback && newFeedbackCount > 0 && (
+                    <span className="ml-2 h-2 w-2 bg-red-500 rounded-full"></span>
+                  )}
+                </NavLink>
+              );
+            })}
           </nav>
 
           {/* User info and logout */}
