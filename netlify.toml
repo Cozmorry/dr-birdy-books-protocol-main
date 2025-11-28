@@ -11,6 +11,9 @@
 # Node version (Netlify will use this)
 [build.environment]
   NODE_VERSION = "18.20.4"
+  
+  # Explicitly disable Python to prevent Netlify from detecting requirements.txt
+  PYTHON_VERSION = ""
 
 # Redirect rules for React Router
 [[redirects]]

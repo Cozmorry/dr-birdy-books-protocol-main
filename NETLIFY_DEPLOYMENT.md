@@ -15,6 +15,9 @@
    - **Build command**: `cd frontend && npm ci && npm run build`
    - **Publish directory**: `frontend/build`
    - **Node version**: `18.20.4` (set in `.nvmrc`)
+   - **⚠️ IMPORTANT**: Disable Python in Build & Deploy → Environment
+     - Set `PYTHON_VERSION` to empty or unset it
+     - This prevents Netlify from trying to install `requirements.txt` (which is for smart contracts, not frontend)
 
 3. **Environment Variables**
 
@@ -29,6 +32,16 @@
    - Or click "Deploy site" to trigger a manual deployment
 
 ## Troubleshooting
+
+### Build Fails with Python/Rust Errors
+
+**Error**: `error: rustup could not choose a version of cargo to run` or `Error installing pip dependencies`
+
+**Solution**: 
+- Netlify is trying to install Python dependencies from `requirements.txt` (which is for smart contracts)
+- Go to Site Settings → Build & Deploy → Environment
+- Set `PYTHON_VERSION` to empty/unset, or disable Python entirely
+- The `.netlifyignore` file should prevent this, but you can also manually disable Python in Netlify dashboard
 
 ### Build Fails with "Cannot find module"
 
