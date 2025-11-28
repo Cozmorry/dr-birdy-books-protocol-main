@@ -185,7 +185,9 @@ const startServer = async () => {
     await initializeDefaultAdmin();
     
     // Start listening
-    app.listen(PORT, 'localhost', () => {
+    // On Render, bind to 0.0.0.0 to accept connections from outside
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    app.listen(PORT, host, () => {
       console.log('');
       console.log('🚀 ═══════════════════════════════════════════════════════');
       console.log(`   Dr. Birdy Books Backend API`);
