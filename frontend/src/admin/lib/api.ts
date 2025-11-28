@@ -31,10 +31,19 @@ class ApiClient {
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
-          window.location.href = '/login';
+          // Don't redirect on login endpoint - let the login page handle the error
+          const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+          
+          if (!isLoginEndpoint) {
+            // Unauthorized - clear token and redirect to admin login
+            // Only redirect if we're not already on the login page
+            const currentPath = window.location.pathname;
+            if (!currentPath.includes('/admin/login')) {
+              localStorage.removeItem('adminToken');
+              localStorage.removeItem('adminUser');
+              window.location.href = '/admin/login';
+            }
+          }
         }
         return Promise.reject(error);
       }

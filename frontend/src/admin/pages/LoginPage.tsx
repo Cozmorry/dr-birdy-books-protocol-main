@@ -15,9 +15,11 @@ export default function LoginPage() {
     
     try {
       await login(username, password);
+      // Only navigate on successful login
       navigate('/admin');
     } catch (err) {
-      // Error is handled by the store
+      // Error is handled by the store - stay on login page
+      // Don't navigate, just show the error message
     }
   };
 
