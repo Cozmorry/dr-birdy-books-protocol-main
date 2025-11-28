@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Send, Star, MessageSquare, AlertCircle } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useWeb3 } from '../hooks/useWeb3';
+import { trackFeedback } from '../utils/analytics';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -61,6 +62,9 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       if (!response.ok) {
         throw new Error('Failed to submit feedback');
       }
+
+      // Track feedback submission in Google Analytics
+      trackFeedback(feedbackType);
 
       addToast({
         type: 'success',
