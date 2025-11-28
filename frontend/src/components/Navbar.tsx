@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {protocolStats.isLoading ? (
                     <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
                   ) : (
-                    `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBB`
+                    `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBBPT`
                   )}
                 </p>
               </div>
@@ -302,7 +302,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {protocolStats.isLoading ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
-                  `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBB`
+                  `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBBPT`
                 )}
               </p>
             </div>

@@ -60,7 +60,7 @@ export const TierInfo: React.FC<TierInfoProps> = ({
                     <p className={`text-sm ${
                       isUserTier ? 'text-blue-700' : isUnlocked ? 'text-green-700' : 'text-gray-500'
                     }`}>
-                      Minimum: {formatTokenAmount(tier.threshold)} DBB
+                      Minimum: {formatTokenAmount(tier.threshold)} DBBPT
                     </p>
                   </div>
                 </div>

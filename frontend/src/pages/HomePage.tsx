@@ -42,7 +42,7 @@ export default function HomePage() {
           <div className="text-center p-4 bg-orange-50 rounded-lg">
             <p className="text-xs text-gray-600 mb-1">Balance</p>
             <p className="text-xl font-bold text-gray-900">
-              {userInfo?.balance ? `${parseFloat(userInfo.balance).toFixed(2)}` : '0'} DBB
+              {userInfo?.balance ? `${parseFloat(userInfo.balance).toFixed(2)}` : '0'} DBBPT
             </p>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function HomePage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Token Balance</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {userInfo?.balance ? `${parseFloat(userInfo.balance).toFixed(2)}` : '0'} DBB
+                  {userInfo?.balance ? `${parseFloat(userInfo.balance).toFixed(2)}` : '0'} DBBPT
                 </p>
               </div>
               <Wallet className="h-8 w-8 text-blue-600" />
@@ -65,7 +65,7 @@ export default function HomePage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Staked</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {userInfo?.stakedAmount ? `${parseFloat(userInfo.stakedAmount).toFixed(2)}` : '0'} DBB
+                  {userInfo?.stakedAmount ? `${parseFloat(userInfo.stakedAmount).toFixed(2)}` : '0'} DBBPT
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />

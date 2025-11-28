@@ -146,7 +146,7 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
           <div>
             <p className="text-sm font-medium text-gray-600">Available Balance</p>
             <p className="text-2xl font-bold text-gray-900">
-              {formatTokenAmount(userInfo.balance)} DBB
+              {formatTokenAmount(userInfo.balance)} DBBPT
             </p>
           </div>
           <CreditCard className="h-8 w-8 text-gray-600" />
@@ -209,7 +209,7 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
                       status === 'current' ? 'text-blue-700' : 
                       status === 'unlocked' ? 'text-green-700' : 'text-gray-500'
                     }`}>
-                      Required: {formatTokenAmount(tier.threshold)} DBB
+                      Required: {formatTokenAmount(tier.threshold)} DBBPT
                     </p>
                   </div>
                 </div>
@@ -272,16 +272,16 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
             <div className="bg-white rounded-md p-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Required Amount:</span>
-                <span className="font-medium">{formatTokenAmount(tiers[selectedTier]?.threshold)} DBB</span>
+                <span className="font-medium">{formatTokenAmount(tiers[selectedTier]?.threshold)} DBBPT</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Your Balance:</span>
-                <span className="font-medium">{formatTokenAmount(userInfo.balance)} DBB</span>
+                <span className="font-medium">{formatTokenAmount(userInfo.balance)} DBBPT</span>
               </div>
               <div className="flex justify-between text-sm font-medium">
                 <span className="text-gray-600">Remaining After Purchase:</span>
                 <span className={parseFloat(userInfo.balance) - parseFloat(purchaseAmount) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {formatTokenAmount(parseFloat(userInfo.balance) - parseFloat(purchaseAmount))} DBB
+                  {formatTokenAmount(parseFloat(userInfo.balance) - parseFloat(purchaseAmount))} DBBPT
                 </span>
               </div>
             </div>

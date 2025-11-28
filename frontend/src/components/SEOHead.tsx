@@ -20,8 +20,8 @@ export function SEOHead({
 
   useEffect(() => {
     // Update document title
-    const defaultTitle = 'Dr. Birdy Books Protocol | DeFi Education Platform on Base Network';
-    document.title = title ? `${title} | Dr. Birdy Books Protocol` : defaultTitle;
+    const defaultTitle = 'Dr Birdy Books Protocol Token | DeFi Education Platform on Base Network';
+    document.title = title ? `${title} | Dr Birdy Books Protocol Token` : defaultTitle;
 
     // Update meta description
     const metaDescription = document.querySelector('meta[name="description"]');
@@ -49,7 +49,7 @@ export function SEOHead({
     if (ogTitle) {
       ogTitle.setAttribute(
         'content',
-        title ? `${title} | Dr. Birdy Books Protocol` : defaultTitle
+        title ? `${title} | Dr Birdy Books Protocol Token` : defaultTitle
       );
     }
 
@@ -80,7 +80,7 @@ export function SEOHead({
     if (twitterTitle) {
       twitterTitle.setAttribute(
         'content',
-        title ? `${title} | Dr. Birdy Books Protocol` : defaultTitle
+        title ? `${title} | Dr Birdy Books Protocol Token` : defaultTitle
       );
     }
 
