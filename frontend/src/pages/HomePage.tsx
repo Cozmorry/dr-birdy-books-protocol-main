@@ -1,13 +1,20 @@
 import React from 'react';
 import { useContractsStore } from '../hooks/useContractsStore';
 import { StakingPanelStore } from '../components/StakingPanelStore';
+import { SEOHead } from '../components/SEOHead';
 import { TrendingUp, Shield, Wallet } from 'lucide-react';
 
 export default function HomePage() {
   const { userInfo, protocolStats, isLoading } = useContractsStore();
 
   return (
-    <div className="space-y-8">
+    <>
+      <SEOHead
+        title="Dashboard"
+        description="View your staking dashboard, token balance, tier level, and access status on Dr. Birdy Books Protocol"
+        keywords="staking dashboard, DeFi dashboard, token balance, tier access, DBB Protocol"
+      />
+      <div className="space-y-8">
       {/* Dashboard Overview */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
@@ -81,6 +88,7 @@ export default function HomePage() {
       {/* Staking Panel */}
       <StakingPanelStore />
     </div>
+    </>
   );
 }
 
