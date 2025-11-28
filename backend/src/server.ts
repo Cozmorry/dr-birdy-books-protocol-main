@@ -23,13 +23,15 @@ import feedbackRoutes from './routes/feedbackRoutes';
 const app: Application = express();
 const PORT = parseInt(process.env.PORT || '5001', 10);
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
+// CORS configuration - must be before helmet to ensure headers are set correctly
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
   : ['http://localhost:3000', 'http://localhost:3001'];
+
+// Log allowed origins in development for debugging
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔒 Allowed CORS origins:', allowedOrigins);
+}
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -39,13 +41,23 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Log blocked origin for debugging
+      console.warn(`🚫 CORS blocked origin: ${origin}. Allowed origins:`, allowedOrigins);
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
     }
   },
   credentials: true,
   optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
 app.use(cors(corsOptions));
+
+// Security middleware - configure helmet to work with CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+}));
 
 // Rate limiting - General API routes
 const limiter = rateLimit({
