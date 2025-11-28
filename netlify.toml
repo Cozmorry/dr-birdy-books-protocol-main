@@ -1,17 +1,14 @@
 [build]
-  # Base directory for the build (monorepo root)
-  base = "."
-  
-  # Build command - runs from frontend directory
+  # Build command - runs from root, changes to frontend directory
   # Explicitly skip Python dependency installation (requirements.txt is for smart contracts)
-  # Skip root npm install by using --prefix to install only frontend dependencies
   command = "cd frontend && npm ci && npm run build"
   
   # Publish directory - where the built files are located
   publish = "frontend/build"
   
-  # Skip automatic npm install in root (we only want frontend dependencies)
-  # Netlify will auto-detect npm and try to install root package.json, so we prevent that
+  # Note: base directory is not set (defaults to repo root)
+  # This allows Netlify to find package.json in root for dependency installation
+  # Our build command then changes to frontend/ to build the React app
 
 # Node version (Netlify will use this)
 [build.environment]

@@ -11,7 +11,7 @@
 
    Netlify should auto-detect the settings from `netlify.toml`, but verify:
    
-   - **Base directory**: `.` (root of repository)
+   - **Base directory**: Leave empty (defaults to repo root) ⚠️ **IMPORTANT: Do NOT set to `"."` or empty string**
    - **Build command**: `cd frontend && npm ci && npm run build`
    - **Publish directory**: `frontend/build`
    - **Node version**: `18.20.4` (set in `.nvmrc`)
