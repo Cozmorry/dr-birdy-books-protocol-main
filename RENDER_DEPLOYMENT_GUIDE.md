@@ -75,10 +75,16 @@ dr-birdy-books-protocol-main/
    - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
    
-   **⚠️ IMPORTANT:** 
+   **⚠️ CRITICAL SETTINGS:** 
    - **Root Directory MUST be `backend`** - This tells Render to run commands from the backend folder
    - If Root Directory is not set, Render will try to build from the root and fail
-   - The build command will install all dependencies (including devDependencies) from `backend/package.json`
+   - **Auto-Deploy**: Set to `Yes` for automatic deployments on git push
+   - The build command installs all dependencies (including devDependencies) automatically
+   
+   **If you get `@types/node` errors:**
+   - Ensure Root Directory is set to `backend`
+   - Verify `@types/node` is in `devDependencies` in `backend/package.json`
+   - Try build command: `npm ci && npm run build` (uses clean install)
 
    **Environment Variables:**
    ```env
