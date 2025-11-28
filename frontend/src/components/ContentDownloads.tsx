@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, File, Image, FileText, Video, Music, AlertCircle } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 interface ContentFile {
   id: string;
@@ -27,6 +28,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   hasAccess,
   isLoading,
 }) => {
+  const { addToast } = useToast();
   const [availableFiles, setAvailableFiles] = useState<ContentFile[]>([]);
   const [filteredFiles, setFilteredFiles] = useState<ContentFile[]>([]);
   const [selectedTier, setSelectedTier] = useState<number | 'all'>('all');
@@ -56,6 +58,20 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       }
       
       const response = await fetch(`${API_BASE_URL}/files?${params.toString()}`);
+      
+      // Handle rate limit errors
+      if (response.status === 429) {
+        const errorText = await response.text();
+        console.warn('Rate limit reached for files API:', errorText);
+        // Keep existing files instead of clearing them
+        // The rate limit will reset, and files will reload on next attempt
+        return;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success && data.data?.files) {
@@ -197,7 +213,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
 
   const handleDownload = async (file: ContentFile) => {
     if (!userInfo?.address) {
-      alert('Please connect your wallet to download files');
+      addToast({
+        type: 'warning',
+        title: 'Wallet Required',
+        message: 'Please connect your wallet to download files',
+      });
       return;
     }
 
@@ -236,13 +256,22 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
         
         if (presignedResponse.status === 429) {
           // Rate limit or quota exceeded
-          alert(
-            errorData.message + 
-            (errorData.remaining !== undefined ? `\nRemaining: ${errorData.remaining}` : '') +
-            (errorData.resetTime ? `\nResets: ${errorData.resetTime}` : '')
-          );
+          const message = errorData.message || 'Daily download limit exceeded';
+          const remaining = errorData.remaining !== undefined ? `Remaining: ${errorData.remaining}` : '';
+          const resetTime = errorData.resetTime ? `Resets: ${errorData.resetTime}` : '';
+          
+          addToast({
+            type: 'error',
+            title: 'Download Limit Exceeded',
+            message: `${message}${remaining ? `\n${remaining}` : ''}${resetTime ? `\n${resetTime}` : ''}`,
+            duration: 8000, // Show for 8 seconds
+          });
         } else {
-          alert(errorData.message || 'Failed to generate download link');
+          addToast({
+            type: 'error',
+            title: 'Download Failed',
+            message: errorData.message || 'Failed to generate download link',
+          });
         }
         setDownloadingFileId(null);
         return;
@@ -252,15 +281,17 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       
       // Show quota warning if present
       if (presignedData.warning) {
-        const warningMsg = `⚠️ ${presignedData.message}\n\n` +
-          `Used: ${(presignedData.warning.used / (1024 * 1024 * 1024)).toFixed(2)} GB / ` +
-          `${(presignedData.warning.limit / (1024 * 1024 * 1024)).toFixed(2)} GB\n` +
-          `Percentage: ${presignedData.warning.percentage.toFixed(1)}%`;
+        const usedGB = (presignedData.warning.used / (1024 * 1024 * 1024)).toFixed(2);
+        const limitGB = (presignedData.warning.limit / (1024 * 1024 * 1024)).toFixed(2);
+        const percentage = presignedData.warning.percentage.toFixed(1);
         
-        if (!window.confirm(warningMsg + '\n\nContinue with download?')) {
-          setDownloadingFileId(null);
-          return;
-        }
+        addToast({
+          type: 'warning',
+          title: 'Quota Warning',
+          message: `You've used ${usedGB} GB / ${limitGB} GB (${percentage}%) of your monthly quota.`,
+          duration: 6000,
+        });
+        // Continue with download automatically (no confirmation needed)
       }
 
       // Step 2: Directly navigate to download URL (browser handles download natively)
@@ -287,7 +318,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       
     } catch (error: any) {
       console.error('Download error:', error);
-      alert(error.message || 'Failed to download file');
+      addToast({
+        type: 'error',
+        title: 'Download Failed',
+        message: error.message || 'Failed to download file',
+      });
     } finally {
       setDownloadingFileId(null);
     }

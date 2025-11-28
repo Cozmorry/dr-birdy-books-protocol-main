@@ -76,6 +76,16 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
       const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
       const response = await fetch(`${API_BASE_URL}/blog?status=published`);
       
+      // Handle rate limit errors gracefully
+      if (response.status === 429) {
+        const errorText = await response.text();
+        console.warn('Rate limit reached for blog API:', errorText);
+        setError('Too many requests. Please wait a moment and refresh the page.');
+        setPosts([]);
+        setIsLoading(false);
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error(`Failed to fetch blog posts: ${response.statusText}`);
       }
