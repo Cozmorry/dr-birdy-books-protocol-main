@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Separator } from './ui/separator';
-import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare } from 'lucide-react';
+import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare, Menu, X } from 'lucide-react';
 import { ethers } from 'ethers';
 import { FeedbackModal } from './FeedbackModal';
 
@@ -42,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -83,93 +84,55 @@ export const Navbar: React.FC<NavbarProps> = ({
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  const navigationLinks = [
+    { to: '/', label: 'Home', icon: Home },
+    { to: '/staking', label: 'Staking', icon: TrendingUp },
+    { to: '/content', label: 'Content', icon: Download },
+    { to: '/blog', label: 'Blog', icon: FileText },
+    { to: '/tier', label: 'Tier', icon: Shield },
+  ];
+
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
-          <Link to="/" className="flex items-center">
-            <BookOpen className="h-8 w-8 text-blue-600 mr-3" />
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Dr. Birdy Books</h1>
-              <p className="text-xs text-gray-600">Protocol</p>
+          <Link to="/" className="flex items-center flex-shrink-0">
+            <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
+            <div className="hidden xs:block">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Dr. Birdy Books</h1>
+              <p className="text-xs text-gray-600 hidden sm:block">Protocol</p>
             </div>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation Links */}
           {isConnected && isCorrectNetwork && (
-            <nav className="hidden md:flex items-center space-x-1 ml-8">
-              <Link
-                to="/"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/') 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center">
-                  <Home className="h-4 w-4 mr-1" />
-                  Home
-                </div>
-              </Link>
-              <Link
-                to="/staking"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/staking') 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  Staking
-                </div>
-              </Link>
-              <Link
-                to="/content"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/content') 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center">
-                  <Download className="h-4 w-4 mr-1" />
-                  Content
-                </div>
-              </Link>
-              <Link
-                to="/blog"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/blog') 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 mr-1" />
-                  Blog
-                </div>
-              </Link>
-              <Link
-                to="/tier"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/tier') 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center">
-                  <Shield className="h-4 w-4 mr-1" />
-                  Tier
-                </div>
-              </Link>
+            <nav className="hidden md:flex items-center space-x-1 ml-8 flex-1">
+              {navigationLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={`px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive(link.to) 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <Icon className="h-4 w-4 mr-1" />
+                      {link.label}
+                    </div>
+                  </Link>
+                );
+              })}
             </nav>
           )}
 
-          {/* Protocol Stats - Only Total Staked (Stakers removed per user request) */}
+          {/* Desktop Protocol Stats */}
           {isConnected && isCorrectNetwork && (
-            <div className="hidden md:flex items-center">
+            <div className="hidden lg:flex items-center mr-4">
               <div className="text-center">
                 <p className="text-xs text-gray-500">Total Staked</p>
                 <p className="text-sm font-semibold text-gray-900">
@@ -183,11 +146,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* Feedback Button */}
+          {/* Desktop Feedback Button */}
           {isConnected && isCorrectNetwork && (
             <button
               onClick={() => setIsFeedbackOpen(true)}
-              className="hidden md:flex items-center px-3 py-2 text-sm text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors mr-2"
+              className="hidden lg:flex items-center px-3 py-2 text-sm text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors mr-2"
               title="Share Feedback"
             >
               <MessageSquare className="h-4 w-4 mr-2" />
@@ -196,33 +159,34 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {/* Wallet Section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {!isConnected ? (
               <Button
                 onClick={onConnect}
                 disabled={web3Loading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm px-2 sm:px-4"
               >
-                <Wallet className="h-4 w-4 mr-2" />
-                {web3Loading ? 'Connecting...' : 'Connect Wallet'}
+                <Wallet className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{web3Loading ? 'Connecting...' : 'Connect Wallet'}</span>
+                <span className="sm:hidden">{web3Loading ? '...' : 'Connect'}</span>
               </Button>
             ) : !isCorrectNetwork ? (
               <Button
                 onClick={onSwitchNetwork}
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-orange-600 hover:bg-orange-700 text-xs sm:text-sm px-2 sm:px-4"
               >
                 Switch Network
               </Button>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center space-x-2">
+                  <Button variant="outline" className="flex items-center space-x-2 text-xs sm:text-sm px-2 sm:px-4">
                     <Wallet className="h-4 w-4" />
                     <span className="hidden sm:inline">
                       {formatAddress(account || '')}
                     </span>
                     <span className="sm:hidden">
-                      {account?.slice(0, 6)}...
+                      {account?.slice(0, 4)}...
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -232,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <p className="text-sm font-medium leading-none">
                         Connected Wallet
                       </p>
-                      <p className="text-xs leading-none text-muted-foreground">
+                      <p className="text-xs leading-none text-muted-foreground break-all">
                         {account}
                       </p>
                     </div>
@@ -288,8 +252,74 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+
+            {/* Mobile Menu Button */}
+            {isConnected && isCorrectNetwork && (
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isConnected && isCorrectNetwork && mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 py-4">
+            {/* Mobile Navigation Links */}
+            <nav className="flex flex-col space-y-1 mb-4">
+              {navigationLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive(link.to) 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 mr-3" />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Mobile Protocol Stats */}
+            <div className="px-4 py-3 bg-gray-50 rounded-lg mb-4">
+              <p className="text-xs text-gray-500 mb-1">Total Staked</p>
+              <p className="text-sm font-semibold text-gray-900">
+                {protocolStats.isLoading ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBB`
+                )}
+              </p>
+            </div>
+
+            {/* Mobile Feedback Button */}
+            <button
+              onClick={() => {
+                setIsFeedbackOpen(true);
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Feedback
+            </button>
+          </div>
+        )}
       </div>
       
       {/* Feedback Modal */}

@@ -63,11 +63,29 @@ const feedbackLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply general rate limiter to all API routes except feedback
+// More lenient rate limiter for files and blog routes (user-facing content)
+const contentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute (more lenient for content browsing)
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters based on route
 app.use('/api/', (req, res, next) => {
-  if (req.path.startsWith('/feedback')) {
+  const path = req.path;
+  
+  if (path.startsWith('/feedback')) {
     return feedbackLimiter(req, res, next);
   }
+  
+  // Files and blog routes get more lenient rate limiting
+  if (path.startsWith('/files') || path.startsWith('/blog')) {
+    return contentLimiter(req, res, next);
+  }
+  
+  // All other routes use general limiter
   return limiter(req, res, next);
 });
 

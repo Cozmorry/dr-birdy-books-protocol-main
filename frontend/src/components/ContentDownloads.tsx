@@ -376,7 +376,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       {/* Download Statistics - Simplified */}
       {downloadStats && userInfo?.address && (
         <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
             <span className="text-gray-600">
               Daily: {downloadStats.dailyDownloads}/{downloadStats.dailyLimit}
             </span>
@@ -388,19 +388,19 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       )}
 
       {/* Search and Filter - Simplified */}
-      <div className="mb-6 flex items-center space-x-3">
+      <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <input
           type="text"
           placeholder="Search files..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
         />
           {userTier >= 0 && (
             <select
               value={selectedTier}
               onChange={(e) => setSelectedTier(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               title="Filter by tier"
               aria-label="Filter files by tier"
             >
