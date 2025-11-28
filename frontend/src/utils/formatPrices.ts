@@ -50,13 +50,13 @@ export const calculateUSDValue = (tokenAmount: number | string, pricePerToken: n
  * Format token amount with USD equivalent
  * @param tokenAmount - Amount of tokens
  * @param pricePerToken - Price per token in USD
- * @param tokenSymbol - Token symbol (default: 'DBB')
+ * @param tokenSymbol - Token symbol (default: 'DBBPT')
  * @returns Formatted string with token amount and USD equivalent
  */
 export const formatTokenWithPrice = (
   tokenAmount: number | string, 
   pricePerToken: number, 
-  tokenSymbol: string = 'DBB'
+  tokenSymbol: string = 'DBBPT'
 ): string => {
   const amount = typeof tokenAmount === 'string' ? parseFloat(tokenAmount) : tokenAmount;
   const usdValue = calculateUSDValue(amount, pricePerToken);

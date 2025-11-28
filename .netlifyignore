@@ -1,0 +1,31 @@
+# Ignore Python requirements (for smart contracts, not frontend)
+# Note: requirements.txt has been moved to contracts/ directory
+requirements.txt
+contracts/requirements.txt
+
+# Ignore contract files
+contracts/
+hardhat.config.*
+*.sol
+
+# Ignore backend (deployed separately to Render)
+backend/
+
+# Ignore admin dashboard (integrated into frontend)
+admin-dashboard/
+
+# Ignore node_modules (will be installed fresh)
+**/node_modules/
+
+# Ignore build artifacts
+**/dist/
+**/.cache/
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore documentation
+*.md
+!README.md
+

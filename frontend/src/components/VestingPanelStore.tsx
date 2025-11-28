@@ -70,7 +70,7 @@ export const VestingPanelStore: React.FC = () => {
               <p className="text-2xl font-bold text-orange-900">
                 {formatTokenAmount(vestingInfo.totalAmount)}
               </p>
-              <p className="text-xs text-orange-500">DBB Tokens</p>
+              <p className="text-xs text-orange-500">DBBPT Tokens</p>
             </div>
             <DollarSign className="h-8 w-8 text-orange-600" />
           </div>
@@ -83,7 +83,7 @@ export const VestingPanelStore: React.FC = () => {
               <p className="text-2xl font-bold text-blue-900">
                 {formatTokenAmount(vestingInfo.claimable)}
               </p>
-              <p className="text-xs text-blue-500">DBB Tokens</p>
+              <p className="text-xs text-blue-500">DBBPT Tokens</p>
             </div>
             <TrendingUp className="h-8 w-8 text-blue-600" />
           </div>
@@ -96,7 +96,7 @@ export const VestingPanelStore: React.FC = () => {
               <p className="text-2xl font-bold text-green-900">
                 {formatTokenAmount(vestingInfo.claimed)}
               </p>
-              <p className="text-xs text-green-500">DBB Tokens</p>
+              <p className="text-xs text-green-500">DBBPT Tokens</p>
             </div>
             <Gift className="h-8 w-8 text-green-600" />
           </div>
@@ -131,7 +131,7 @@ export const VestingPanelStore: React.FC = () => {
         </div>
         <div className="flex justify-between text-sm text-gray-600">
           <span>
-            {formatTokenAmount(vestingInfo.claimed)} / {formatTokenAmount(vestingInfo.totalAmount)} DBB
+            {formatTokenAmount(vestingInfo.claimed)} / {formatTokenAmount(vestingInfo.totalAmount)} DBBPT
           </span>
           <span>
             {formatPercentage((parseFloat(vestingInfo.claimed) / parseFloat(vestingInfo.totalAmount)) * 100)}
@@ -171,13 +171,13 @@ export const VestingPanelStore: React.FC = () => {
             <div className="flex justify-between">
               <span className="text-gray-600">Available to Claim:</span>
               <span className="text-gray-900">
-                {formatTokenAmount(vestingInfo.claimable)} DBB
+                {formatTokenAmount(vestingInfo.claimable)} DBBPT
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Remaining:</span>
               <span className="text-gray-900">
-                {formatTokenAmount(parseFloat(vestingInfo.totalAmount) - parseFloat(vestingInfo.claimed))} DBB
+                {formatTokenAmount(parseFloat(vestingInfo.totalAmount) - parseFloat(vestingInfo.claimed))} DBBPT
               </span>
             </div>
             <div className="flex justify-between">

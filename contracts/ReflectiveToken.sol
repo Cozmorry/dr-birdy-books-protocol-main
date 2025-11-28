@@ -122,7 +122,7 @@ contract ReflectiveToken is
     uint256[50] private __gap;
 
     // Token Info
-    string private constant _NAME = "ReflectiveToken";
+    string private constant _NAME = "Dr Birdy Books Protocol Token";
     string private constant _SYMBOL = "DBBPT";
     uint8 private constant _DECIMALS = 18;
     uint256 private constant _TOTAL_SUPPLY = 10_000_000 * 10 ** _DECIMALS;

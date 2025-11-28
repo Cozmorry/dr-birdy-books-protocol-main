@@ -34,7 +34,7 @@ export const TokenInfoStore: React.FC = () => {
               <p className="text-2xl font-bold text-blue-900">
                 {formatTokenAmount(userInfo.balance)}
               </p>
-              <p className="text-xs text-blue-500">DBB Tokens</p>
+              <p className="text-xs text-blue-500">DBBPT Tokens</p>
             </div>
             <Coins className="h-8 w-8 text-blue-600" />
           </div>
@@ -47,7 +47,7 @@ export const TokenInfoStore: React.FC = () => {
               <p className="text-2xl font-bold text-green-900">
                 {formatTokenAmount(userInfo.stakedAmount)}
               </p>
-              <p className="text-xs text-green-500">DBB Tokens</p>
+              <p className="text-xs text-green-500">DBBPT Tokens</p>
             </div>
             <TrendingUp className="h-8 w-8 text-green-600" />
           </div>
@@ -110,13 +110,13 @@ export const TokenInfoStore: React.FC = () => {
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Total Balance:</span>
               <span className="text-gray-900">
-                {formatTokenAmount(parseFloat(userInfo.balance) + parseFloat(userInfo.stakedAmount))} DBB
+                {formatTokenAmount(parseFloat(userInfo.balance) + parseFloat(userInfo.stakedAmount))} DBBPT
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Available:</span>
               <span className="text-gray-900">
-                {formatTokenAmount(userInfo.balance)} DBB
+                {formatTokenAmount(userInfo.balance)} DBBPT
               </span>
             </div>
           </div>

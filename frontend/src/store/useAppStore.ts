@@ -486,8 +486,8 @@ export const useAppStore = create<AppState>()(
       
       console.log('=== BALANCE CHECK ===');
       console.log('User Address:', userAddress);
-      console.log('Balance:', balanceFormatted, 'DBB');
-      console.log('Required Amount:', amountFormatted, 'DBB');
+      console.log('Balance:', balanceFormatted, 'DBBPT');
+      console.log('Required Amount:', amountFormatted, 'DBBPT');
       console.log('Balance (Wei):', userBalance.toString());
       console.log('Amount (Wei):', amountWei.toString());
       console.log('Has Enough:', userBalance >= amountWei);
@@ -518,7 +518,7 @@ export const useAppStore = create<AppState>()(
       console.log('=== ALLOWANCE CHECK ===');
       console.log('User Address:', userAddress);
       console.log('Staking Contract:', stakingContractAddress);
-      console.log('Required Amount:', amountFormatted, 'DBB');
+      console.log('Required Amount:', amountFormatted, 'DBBPT');
       
       const currentAllowance = await contracts.reflectiveToken.allowance(
         userAddress,
@@ -526,8 +526,8 @@ export const useAppStore = create<AppState>()(
       );
       const allowanceFormatted = ethers.formatEther(currentAllowance);
       
-      console.log('Current Allowance:', allowanceFormatted, 'DBB');
-      console.log('Required Amount:', amountFormatted, 'DBB');
+      console.log('Current Allowance:', allowanceFormatted, 'DBBPT');
+      console.log('Required Amount:', amountFormatted, 'DBBPT');
       console.log('Has Enough Allowance:', currentAllowance >= amountWei);
       console.log('========================');
       
@@ -564,7 +564,7 @@ export const useAppStore = create<AppState>()(
             userAddress,
             stakingContractAddress
           );
-          console.log(`Allowance check attempt ${retries + 1}:`, ethers.formatEther(newAllowance), 'DBB');
+          console.log(`Allowance check attempt ${retries + 1}:`, ethers.formatEther(newAllowance), 'DBBPT');
           retries++;
         }
         
@@ -590,19 +590,19 @@ export const useAppStore = create<AppState>()(
       );
       
       console.log('=== FINAL PRE-TRANSACTION CHECK ===');
-      console.log(`Balance: ${ethers.formatEther(finalBalance)} DBB`);
-      console.log(`Allowance: ${ethers.formatEther(finalAllowance)} DBB`);
-      console.log(`Required: ${amountFormatted} DBB`);
+      console.log(`Balance: ${ethers.formatEther(finalBalance)} DBBPT`);
+      console.log(`Allowance: ${ethers.formatEther(finalAllowance)} DBBPT`);
+      console.log(`Required: ${amountFormatted} DBBPT`);
       console.log(`Balance >= Required: ${finalBalance >= amountWei ? '✓' : '✗'}`);
       console.log(`Allowance >= Required: ${finalAllowance >= amountWei ? '✓' : '✗'}`);
       console.log('===================================');
       
       if (finalBalance < amountWei) {
-        throw new Error(`Insufficient balance: You have ${ethers.formatEther(finalBalance)} DBB but need ${amountFormatted} DBB.`);
+        throw new Error(`Insufficient balance: You have ${ethers.formatEther(finalBalance)} DBBPT but need ${amountFormatted} DBBPT.`);
       }
       
       if (finalAllowance < amountWei) {
-        throw new Error(`Insufficient allowance: You have approved ${ethers.formatEther(finalAllowance)} DBB but need ${amountFormatted} DBB.`);
+        throw new Error(`Insufficient allowance: You have approved ${ethers.formatEther(finalAllowance)} DBBPT but need ${amountFormatted} DBBPT.`);
       }
 
       // Send transaction with manual gas limit to bypass estimation issues
@@ -674,9 +674,9 @@ export const useAppStore = create<AppState>()(
           errorMsg += `This is a known issue with the ReflectiveToken's reflection system when staking. `;
           errorMsg += `The contract calls \`super._update()\` which conflicts with the reflection balance system.\n\n`;
           errorMsg += `Diagnostic Info:\n`;
-          errorMsg += `• Your Balance: ${balanceFormatted} DBB\n`;
-          errorMsg += `• Your Allowance: ${ethers.formatEther(finalAllowance)} DBB\n`;
-          errorMsg += `• Required Amount: ${amountFormatted} DBB\n`;
+          errorMsg += `• Your Balance: ${balanceFormatted} DBBPT\n`;
+          errorMsg += `• Your Allowance: ${ethers.formatEther(finalAllowance)} DBBPT\n`;
+          errorMsg += `• Required Amount: ${amountFormatted} DBBPT\n`;
           errorMsg += `• Both accounts are excluded from fees\n\n`;
           errorMsg += `⚠️ This is a contract-level issue. The ReflectiveToken contract needs to be fixed. `;
           errorMsg += `As a workaround, you may need to temporarily un-exclude your wallet from fees, or wait for a contract fix.`;
@@ -684,8 +684,8 @@ export const useAppStore = create<AppState>()(
         }
         
         throw new Error(
-          `Failed to send transaction. Please check your balance (${balanceFormatted} DBB), ` +
-          `allowance (${ethers.formatEther(finalAllowance)} DBB), and try again. ` +
+          `Failed to send transaction. Please check your balance (${balanceFormatted} DBBPT), ` +
+          `allowance (${ethers.formatEther(finalAllowance)} DBBPT), and try again. ` +
           (txHash ? `Transaction hash: ${txHash}` : '')
         );
       }

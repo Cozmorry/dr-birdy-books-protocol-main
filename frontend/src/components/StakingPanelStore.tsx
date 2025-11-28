@@ -576,7 +576,7 @@ export const StakingPanelStore: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Balance</p>
               <p className="text-lg font-semibold text-gray-900">
-                {formatTokenAmount(userInfo.balance)} DBB
+                {formatTokenAmount(userInfo.balance)} DBBPT
               </p>
               {parseFloat(userInfo.balance) === 0 && (
                 <p className="text-xs text-red-600 mt-1">
@@ -593,7 +593,7 @@ export const StakingPanelStore: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Staked</p>
               <p className="text-lg font-semibold text-gray-900">
-                {formatTokenAmount(userInfo.stakedAmount)} DBB
+                {formatTokenAmount(userInfo.stakedAmount)} DBBPT
               </p>
             </div>
             <TrendingUp className="h-8 w-8 text-blue-600" />

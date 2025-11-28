@@ -178,7 +178,7 @@ export const TokenActionsStore: React.FC<TokenActionsStoreProps> = ({
             Current Balance
           </h3>
           <div className="text-2xl font-bold text-gray-900">
-            {formatTokenAmount(userInfo.balance)} DBB
+            {formatTokenAmount(userInfo.balance)} DBBPT
           </div>
           <p className="text-sm text-gray-600 mt-1">
             Available for burning or transferring

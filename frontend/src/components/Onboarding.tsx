@@ -35,7 +35,7 @@ export function Onboarding({ isFirstTime, onComplete }: OnboardingProps) {
     {
       id: 'staking',
       title: 'Stake Your Tokens',
-      description: 'Stake your DBB tokens to earn tier access. Higher tiers unlock more premium educational content. Visit the Staking page to get started.',
+      description: 'Stake your DBBPT tokens to earn tier access. Higher tiers unlock more premium educational content. Visit the Staking page to get started.',
       icon: <TrendingUp className="h-8 w-8 text-green-600" />,
       target: 'a[href="/staking"]',
     },

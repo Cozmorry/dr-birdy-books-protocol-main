@@ -35,10 +35,55 @@ export const useWeb3 = () => {
     setError(null);
 
     try {
-      // Request account access
-      const accounts = await window.ethereum.request({ 
-        method: 'eth_requestAccounts' 
-      });
+      // Wait for MetaMask to be ready (retry up to 3 times)
+      let retries = 3;
+      let accounts: string[] = [];
+      
+      while (retries > 0) {
+        try {
+          // First, check if we already have accounts (no prompt)
+          const existingAccounts = await window.ethereum.request({ 
+            method: 'eth_accounts' 
+          });
+          
+          if (existingAccounts && existingAccounts.length > 0) {
+            accounts = existingAccounts;
+            break;
+          }
+          
+          // If no existing accounts, request access (will prompt)
+          accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          
+          if (accounts && accounts.length > 0) {
+            break;
+          }
+        } catch (requestError: any) {
+          retries--;
+          
+          // If it's a user rejection, don't retry
+          if (requestError.code === 4001) {
+            throw requestError;
+          }
+          
+          // If it's a pending request, wait a bit and retry
+          if (requestError.code === -32002 || requestError.message?.includes('pending')) {
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+          }
+          
+          // For other errors, wait and retry
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            continue;
+          }
+          
+          throw requestError;
+        }
+      }
       
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts found. Please unlock your wallet.');
@@ -56,7 +101,11 @@ export const useWeb3 = () => {
         contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
         contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
 
-      const isCorrectNetwork = hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId);
+      const isCorrectNetwork = hasDeployedContracts && (
+        chainId === BASE_MAINNET.chainId || 
+        chainId === BASE_TESTNET.chainId || 
+        chainId === LOCALHOST.chainId
+      );
       
       setWeb3State({
         provider,
@@ -64,7 +113,8 @@ export const useWeb3 = () => {
         account: accounts[0],
         chainId,
         isConnected: true,
-        // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
+        // Currently using Base Sepolia testnet (84532) - contracts deployed
+        // Base Mainnet (8453) will be enabled when contracts are deployed
         isCorrectNetwork,
       });
       
@@ -80,9 +130,16 @@ export const useWeb3 = () => {
       if (err.code === 4001) {
         setError('Connection rejected. Please approve the connection request in your wallet.');
       } else if (err.code === -32002) {
-        setError('Connection request already pending. Please check your wallet.');
+        setError('Connection request already pending. Please check your wallet and approve or reject the pending request.');
+      } else if (err.message?.includes('Failed to connect to MetaMask')) {
+        setError('MetaMask connection failed. Please ensure MetaMask is unlocked and try again. If the issue persists, refresh the page.');
+      } else if (err.message?.includes('User rejected')) {
+        setError('Connection was rejected. Please click "Connect" again and approve the request in MetaMask.');
+      } else if (err.message?.includes('already pending')) {
+        setError('A connection request is already pending. Please check your MetaMask extension and approve or reject it.');
       } else {
-        setError(err.message || 'Failed to connect wallet. Please try again.');
+        const errorMessage = err.message || 'Failed to connect wallet. Please try again.';
+        setError(errorMessage);
       }
     } finally {
       setIsLoading(false);
@@ -130,7 +187,8 @@ export const useWeb3 = () => {
       return;
     }
 
-    // Default to Base Sepolia testnet where contracts are deployed
+    // Default to Base Sepolia testnet for now (contracts deployed)
+    // Switch to BASE_MAINNET when contracts are deployed to mainnet
     const targetNetwork = BASE_TESTNET;
     
     try {
@@ -209,8 +267,13 @@ export const useWeb3 = () => {
             account: accounts[0],
             chainId,
             isConnected: true,
-            // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
-            isCorrectNetwork: hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId),
+            // Currently using Base Sepolia testnet (84532) - contracts deployed
+            // Base Mainnet (8453) will be enabled when contracts are deployed
+            isCorrectNetwork: hasDeployedContracts && (
+              chainId === BASE_MAINNET.chainId || 
+              chainId === BASE_TESTNET.chainId || 
+              chainId === LOCALHOST.chainId
+            ),
           });
         }
       } catch (err) {
@@ -245,8 +308,13 @@ export const useWeb3 = () => {
       setWeb3State(prev => ({
         ...prev,
         chainId: newChainId,
-        // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
-        isCorrectNetwork: hasDeployedContracts && (newChainId === BASE_TESTNET.chainId || newChainId === LOCALHOST.chainId),
+        // Currently using Base Sepolia testnet (84532) - contracts deployed
+        // Base Mainnet (8453) will be enabled when contracts are deployed
+        isCorrectNetwork: hasDeployedContracts && (
+          newChainId === BASE_MAINNET.chainId || 
+          newChainId === BASE_TESTNET.chainId || 
+          newChainId === LOCALHOST.chainId
+        ),
       }));
     };
 

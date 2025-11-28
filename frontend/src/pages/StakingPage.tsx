@@ -7,8 +7,8 @@ export default function StakingPage() {
     <>
       <SEOHead
         title="Staking"
-        description="Stake your DBB tokens to earn tier access and unlock premium educational content. Learn about our flexible tiered staking system on Base Network."
-        keywords="staking, DeFi staking, token staking, tiered staking, DBB staking, Base Network staking"
+        description="Stake your DBBPT tokens to earn tier access and unlock premium educational content. Learn about our flexible tiered staking system on Base Network."
+        keywords="staking, DeFi staking, token staking, tiered staking, DBBPT staking, Base Network staking"
       />
     <div>
       <div className="mb-6">

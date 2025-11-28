@@ -1,0 +1,34 @@
+[build]
+  # Build command - runs from root, changes to frontend directory
+  # Explicitly skip Python dependency installation (requirements.txt is for smart contracts)
+  # CI=false prevents ESLint warnings from being treated as errors in CI environments
+  command = "cd frontend && npm ci && CI=false npm run build"
+  
+  # Publish directory - where the built files are located
+  publish = "frontend/build"
+  
+  # Note: base directory is not set (defaults to repo root)
+  # This allows Netlify to find package.json in root for dependency installation
+  # Our build command then changes to frontend/ to build the React app
+
+# Node version (Netlify will use this)
+[build.environment]
+  NODE_VERSION = "18.20.4"
+  
+  # Explicitly disable Python to prevent Netlify from auto-detecting requirements.txt
+  # Note: requirements.txt has been moved to contracts/ directory
+  PYTHON_VERSION = ""
+  
+  # Skip npm install in root (we only need frontend dependencies)
+  # Netlify auto-detects package.json and tries to install, but we only want frontend deps
+  NPM_FLAGS = "--legacy-peer-deps"
+  
+  # Alternative: Tell Netlify to skip root npm install entirely
+  # But we'll use legacy-peer-deps as a workaround for the Hardhat peer dependency conflict
+
+# Redirect rules for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
