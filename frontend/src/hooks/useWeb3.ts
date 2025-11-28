@@ -56,7 +56,11 @@ export const useWeb3 = () => {
         contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
         contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
 
-      const isCorrectNetwork = hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId);
+      const isCorrectNetwork = hasDeployedContracts && (
+        chainId === BASE_MAINNET.chainId || 
+        chainId === BASE_TESTNET.chainId || 
+        chainId === LOCALHOST.chainId
+      );
       
       setWeb3State({
         provider,
@@ -64,7 +68,7 @@ export const useWeb3 = () => {
         account: accounts[0],
         chainId,
         isConnected: true,
-        // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
+        // Contracts are deployed on Base Mainnet (8453), Base Sepolia (84532), and Localhost (31337)
         isCorrectNetwork,
       });
       
@@ -130,8 +134,8 @@ export const useWeb3 = () => {
       return;
     }
 
-    // Default to Base Sepolia testnet where contracts are deployed
-    const targetNetwork = BASE_TESTNET;
+    // Default to Base Mainnet for production
+    const targetNetwork = BASE_MAINNET;
     
     try {
       await window.ethereum.request({
@@ -209,8 +213,12 @@ export const useWeb3 = () => {
             account: accounts[0],
             chainId,
             isConnected: true,
-            // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
-            isCorrectNetwork: hasDeployedContracts && (chainId === BASE_TESTNET.chainId || chainId === LOCALHOST.chainId),
+            // Contracts are deployed on Base Mainnet (8453), Base Sepolia (84532), and Localhost (31337)
+            isCorrectNetwork: hasDeployedContracts && (
+              chainId === BASE_MAINNET.chainId || 
+              chainId === BASE_TESTNET.chainId || 
+              chainId === LOCALHOST.chainId
+            ),
           });
         }
       } catch (err) {
@@ -245,8 +253,12 @@ export const useWeb3 = () => {
       setWeb3State(prev => ({
         ...prev,
         chainId: newChainId,
-        // Contracts are only deployed on Base Sepolia (84532) and Localhost (31337)
-        isCorrectNetwork: hasDeployedContracts && (newChainId === BASE_TESTNET.chainId || newChainId === LOCALHOST.chainId),
+        // Contracts are deployed on Base Mainnet (8453), Base Sepolia (84532), and Localhost (31337)
+        isCorrectNetwork: hasDeployedContracts && (
+          newChainId === BASE_MAINNET.chainId || 
+          newChainId === BASE_TESTNET.chainId || 
+          newChainId === LOCALHOST.chainId
+        ),
       }));
     };
 
