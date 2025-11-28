@@ -1,8 +1,15 @@
 import React from 'react';
 import { StakingPanelStore } from '../components/StakingPanelStore';
+import { SEOHead } from '../components/SEOHead';
 
 export default function StakingPage() {
   return (
+    <>
+      <SEOHead
+        title="Staking"
+        description="Stake your DBB tokens to earn tier access and unlock premium educational content. Learn about our flexible tiered staking system on Base Network."
+        keywords="staking, DeFi staking, token staking, tiered staking, DBB staking, Base Network staking"
+      />
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Staking</h1>
@@ -10,6 +17,7 @@ export default function StakingPage() {
       </div>
       <StakingPanelStore />
     </div>
+    </>
   );
 }
 
