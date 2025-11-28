@@ -34,6 +34,17 @@
 
 ## Troubleshooting
 
+### Build Fails with npm Peer Dependency Errors (Hardhat)
+
+**Error**: `npm error ERESOLVE could not resolve` or `Conflicting peer dependency: @nomicfoundation/hardhat-verify`
+
+**Solution**: 
+- ✅ **FIXED**: Added `NPM_FLAGS = "--legacy-peer-deps"` to `netlify.toml` and `legacy-peer-deps=true` to `.npmrc`
+- Netlify auto-detects root `package.json` (which has Hardhat dependencies) and tries to install them
+- The `--legacy-peer-deps` flag allows the root install to proceed without peer dependency conflicts
+- Our build command then installs only frontend dependencies: `cd frontend && npm ci && npm run build`
+- This is a workaround - we don't actually need root dependencies for the frontend build, but Netlify installs them automatically
+
 ### Build Fails with Python/Rust Errors
 
 **Error**: `error: rustup could not choose a version of cargo to run` or `Error installing pip dependencies`
