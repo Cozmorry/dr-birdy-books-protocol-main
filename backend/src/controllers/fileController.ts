@@ -550,27 +550,57 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       });
       
       // Record download stats BEFORE streaming starts (to prevent multiple recordings)
-      // This ensures we only record once, even if the stream is accessed multiple times
+      // Use token as unique identifier to prevent duplicate recordings
+      // If using token, mark it as used; if not, use file+wallet combination
       if (verifiedWalletAddress) {
-        // Record download asynchronously (don't block the stream)
-        Promise.all([
-          recordDownload(verifiedWalletAddress, file.fileSize),
-          file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
-          Analytics.create({
-            eventType: 'file_download',
-            userId: verifiedWalletAddress || (walletAddress as string) || undefined,
-            fileId: file._id,
-            metadata: {
-              tier: file.tier,
-              fileType: file.fileType,
-              fileSize: file.fileSize,
-            },
-            timestamp: new Date(),
-          }),
-        ]).catch((err) => {
-          console.error('Error recording download stats:', err);
-          // Don't fail the download if stats recording fails
-        });
+        const downloadKey = token 
+          ? `token:${token}` 
+          : `file:${id}:wallet:${verifiedWalletAddress}`;
+        
+        // Check if we've already recorded this download recently (within last 30 seconds)
+        // This prevents duplicate recordings from browser retries/range requests
+        const downloadCache = (global as any).downloadCache || new Map();
+        (global as any).downloadCache = downloadCache;
+        
+        const cacheKey = downloadKey;
+        const lastRecorded = downloadCache.get(cacheKey);
+        const now = Date.now();
+        
+        // Only record if not recorded in the last 30 seconds
+        if (!lastRecorded || (now - lastRecorded) > 30000) {
+          downloadCache.set(cacheKey, now);
+          
+          // Clean up old cache entries (older than 5 minutes)
+          for (const [key, timestamp] of downloadCache.entries()) {
+            if (now - (timestamp as number) > 300000) {
+              downloadCache.delete(key);
+            }
+          }
+          
+          // Record download asynchronously (don't block the stream)
+          Promise.all([
+            recordDownload(verifiedWalletAddress, file.fileSize),
+            file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
+            Analytics.create({
+              eventType: 'file_download',
+              userId: verifiedWalletAddress || (walletAddress as string) || undefined,
+              fileId: file._id,
+              metadata: {
+                tier: file.tier,
+                fileType: file.fileType,
+                fileSize: file.fileSize,
+              },
+              timestamp: new Date(),
+            }),
+          ]).catch((err) => {
+            console.error('Error recording download stats:', err);
+            // Don't fail the download if stats recording fails
+          });
+          
+          console.log(`📊 Download recorded for ${verifiedWalletAddress}, file ${id}`);
+        } else {
+          console.log(`⏭️  Skipping duplicate download recording for ${cacheKey} (recorded ${Math.floor((now - lastRecorded) / 1000)}s ago)`);
+        }
       }
       
       // Pipe the stream directly to response (starts immediately)
