@@ -1056,6 +1056,31 @@ contract ReflectiveToken is
         return true;
     }
 
+    /**
+     * @notice Custom transfer function specifically for staking contract to transfer tokens back to users
+     * @dev Properly handles transfer from excluded staking contract to non-excluded users
+     * @dev Only callable by the staking contract
+     * @param recipient Address to transfer to (user)
+     * @param amount Amount to transfer
+     * @return success Whether the transfer succeeded
+     */
+    function transferForUnstaking(
+        address recipient,
+        uint256 amount
+    ) external onlyStakingContract nonReentrant returns (bool) {
+        require(recipient != address(0), "RT: Transfer to zero address");
+        require(amount > 0, "RT: Transfer amount must be greater than zero");
+
+        // Check staking contract balance (it's excluded, so check _tOwned)
+        require(_tOwned[stakingContract] >= amount, "RT: Insufficient _tOwned balance in staking contract");
+
+        // Perform the transfer from staking contract (excluded) to user (may be non-excluded)
+        // No fees when staking contract is involved
+        _update(stakingContract, recipient, amount);
+
+        return true;
+    }
+
     /// @dev Returns dynamic slippage (basis points) based on Uniswap V2 pool liquidity (USD value).
     /// @return slippageBps Slippage in basis points (e.g., 500 = 5%).
     function _getDynamicSlippageBps() internal view returns (uint256) {

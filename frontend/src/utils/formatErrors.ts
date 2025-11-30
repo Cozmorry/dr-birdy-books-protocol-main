@@ -26,12 +26,29 @@ export function formatUserError(
   const errorMessage = error?.message || error?.reason || String(error) || 'An unknown error occurred';
   const errorLower = errorMessage.toLowerCase();
 
+  // Gas fee errors - CHECK THIS FIRST before other "insufficient" errors
+  // But be more specific to avoid false positives
+  if (
+    (errorLower.includes('insufficient funds') && (errorLower.includes('gas') || errorLower.includes('fee'))) ||
+    errorLower.includes('intrinsic gas too low') ||
+    errorLower.includes('gas required exceeds allowance') ||
+    (errorLower.includes('max fee per gas') && errorLower.includes('insufficient')) ||
+    (errorLower.includes('insufficient') && errorLower.includes('for transaction'))
+  ) {
+    return {
+      title: 'Insufficient Gas Fees',
+      message: "You don't have enough ETH in your wallet to pay for transaction fees. Please add more ETH (not DBBPT) to your wallet and try again."
+    };
+  }
+
   // Unstaking errors
-  if (errorLower.includes('insufficient') && errorLower.includes('balance')) {
+  if (errorLower.includes('insufficient') && (errorLower.includes('balance') || errorLower.includes('staked'))) {
     if (context?.stakedAmount) {
+      const requestedAmount = context.amount ? parseFloat(context.amount) : 0;
+      const stakedAmount = parseFloat(context.stakedAmount);
       return {
         title: 'Insufficient Staked Amount',
-        message: `You don't have enough staked tokens. You currently have ${context.stakedAmount} DBBPT staked.`
+        message: `You don't have enough staked tokens. You currently have ${stakedAmount.toFixed(2)} DBBPT staked${requestedAmount > 0 ? `, but tried to unstake ${requestedAmount.toFixed(2)} DBBPT` : ''}.`
       };
     }
     return {
@@ -45,14 +62,6 @@ export function formatUserError(
     return {
       title: 'Approval Required',
       message: 'You need to approve tokens before staking. Please click "Approve Tokens" first.'
-    };
-  }
-
-  // Gas fee errors
-  if (errorLower.includes('insufficient funds') || errorLower.includes('gas')) {
-    return {
-      title: 'Insufficient Gas Fees',
-      message: "You don't have enough ETH in your wallet to pay for transaction fees. Please add more ETH and try again."
     };
   }
 

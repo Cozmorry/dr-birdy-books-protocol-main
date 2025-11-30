@@ -100,6 +100,7 @@ export interface ReflectiveTokenInterface extends Interface {
       | "totalSupply"
       | "tradingEnabled"
       | "transfer"
+      | "transferForUnstaking"
       | "transferFrom"
       | "transferFromForStaking"
       | "transferOwnership"
@@ -404,6 +405,10 @@ export interface ReflectiveTokenInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "transferForUnstaking",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "transferFrom",
     values: [AddressLike, AddressLike, BigNumberish]
   ): string;
@@ -672,6 +677,10 @@ export interface ReflectiveTokenInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferForUnstaking",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "transferFrom",
     data: BytesLike
@@ -1433,6 +1442,12 @@ export interface ReflectiveToken extends BaseContract {
     "nonpayable"
   >;
 
+  transferForUnstaking: TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
+
   transferFrom: TypedContractMethod<
     [sender: AddressLike, recipient: AddressLike, amount: BigNumberish],
     [boolean],
@@ -1823,6 +1838,13 @@ export interface ReflectiveToken extends BaseContract {
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
     nameOrSignature: "transfer"
+  ): TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "transferForUnstaking"
   ): TypedContractMethod<
     [recipient: AddressLike, amount: BigNumberish],
     [boolean],
