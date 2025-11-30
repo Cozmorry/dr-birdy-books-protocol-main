@@ -666,27 +666,20 @@ export const useAppStore = create<AppState>()(
         
         // Provide helpful error message
         if (txError.reason || txError.message) {
-          let errorMsg = `❌ Transaction failed: ${txError.reason || txError.message}. `;
-          if (txHash) {
-            errorMsg += `\n\nTransaction hash: ${txHash}\n`;
-            errorMsg += `View on Base Sepolia: https://sepolia.basescan.org/tx/${txHash}\n\n`;
+          const errorMsg = txError.reason || txError.message;
+          // Check for common user-facing errors
+          if (errorMsg.toLowerCase().includes('insufficient')) {
+            throw new Error(`You don't have enough tokens. Your balance: ${balanceFormatted} DBBPT`);
           }
-          errorMsg += `This is a known issue with the ReflectiveToken's reflection system when staking. `;
-          errorMsg += `The contract calls \`super._update()\` which conflicts with the reflection balance system.\n\n`;
-          errorMsg += `Diagnostic Info:\n`;
-          errorMsg += `• Your Balance: ${balanceFormatted} DBBPT\n`;
-          errorMsg += `• Your Allowance: ${ethers.formatEther(finalAllowance)} DBBPT\n`;
-          errorMsg += `• Required Amount: ${amountFormatted} DBBPT\n`;
-          errorMsg += `• Both accounts are excluded from fees\n\n`;
-          errorMsg += `⚠️ This is a contract-level issue. The ReflectiveToken contract needs to be fixed. `;
-          errorMsg += `As a workaround, you may need to temporarily un-exclude your wallet from fees, or wait for a contract fix.`;
-          throw new Error(errorMsg);
+          if (errorMsg.toLowerCase().includes('allowance')) {
+            throw new Error('Please approve tokens first before staking.');
+          }
+          // Generic error
+          throw new Error('Transaction failed. Please check your balance and try again.');
         }
         
         throw new Error(
-          `Failed to send transaction. Please check your balance (${balanceFormatted} DBBPT), ` +
-          `allowance (${ethers.formatEther(finalAllowance)} DBBPT), and try again. ` +
-          (txHash ? `Transaction hash: ${txHash}` : '')
+          `Transaction failed. Please check your balance (${balanceFormatted} DBBPT) and try again.`
         );
       }
     },

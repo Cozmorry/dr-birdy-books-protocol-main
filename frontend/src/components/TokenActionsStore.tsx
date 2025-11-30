@@ -3,6 +3,7 @@ import { Trash2, ArrowRightLeft, DollarSign } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useContractsStore } from '../hooks/useContractsStore';
 import { formatTokenAmount } from '../utils/formatNumbers';
+import { formatErrorForToast } from '../utils/formatErrors';
 
 interface TokenActionsStoreProps {
   userInfo: any;
@@ -39,7 +40,12 @@ export const TokenActionsStore: React.FC<TokenActionsStoreProps> = ({
       addToast({ type: 'success', title: 'Burn Successful', message: `Successfully burned ${burnAmount} tokens` });
       setBurnAmount('');
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Burn Failed', message: `Failed to burn tokens: ${error.message}` });
+      const formattedError = formatErrorForToast(error, {
+        operation: 'Burn Tokens',
+        amount: burnAmount,
+        balance: userInfo.balance
+      });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }
@@ -63,7 +69,12 @@ export const TokenActionsStore: React.FC<TokenActionsStoreProps> = ({
       setTransferTo('');
       setTransferAmount('');
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Transfer Failed', message: `Failed to transfer tokens: ${error.message}` });
+      const formattedError = formatErrorForToast(error, {
+        operation: 'Transfer',
+        amount: transferAmount,
+        balance: userInfo.balance
+      });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }

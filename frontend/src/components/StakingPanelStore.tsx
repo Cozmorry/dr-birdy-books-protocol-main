@@ -6,6 +6,7 @@ import { useWeb3Store } from '../hooks/useWeb3Store';
 import { formatTokenAmount } from '../utils/formatNumbers';
 import { getOracleConfig, getContractAddresses } from '../config/networks';
 import { trackStaking } from '../utils/analytics';
+import { formatErrorForToast } from '../utils/formatErrors';
 
 export const StakingPanelStore: React.FC = () => {
   const { addToast } = useToast();
@@ -119,38 +120,13 @@ export const StakingPanelStore: React.FC = () => {
     } catch (error: any) {
       console.error('Staking error:', error);
       
-      // Provide more specific error messages based on the error
-      let errorMessage = 'Failed to stake tokens';
+      const formattedError = formatErrorForToast(error, {
+        operation: 'Stake',
+        amount: stakeAmount,
+        balance: userInfo?.balance
+      });
       
-      if (error.message.includes('Insufficient balance')) {
-        errorMessage = error.message;
-      } else if (error.message.includes('Insufficient allowance')) {
-        errorMessage = error.message;
-      } else if (error.message.includes('execution reverted') || error.message.includes('missing revert data')) {
-        errorMessage = 'Transaction failed. This could mean:\n1. You don\'t have enough tokens\n2. You need to approve tokens first\n3. The contract is paused\n4. Contract configuration issue';
-      } else if (error.message.includes('Staking failed')) {
-        errorMessage = error.message;
-      } else if (error.message.includes('execution reverted')) {
-        if (error.message.includes('require(false)')) {
-          errorMessage = 'Staking failed due to contract requirements not being met. Please ensure you have sufficient balance and allowance.';
-        } else if (error.message.includes('Cannot stake zero tokens')) {
-          errorMessage = 'Cannot stake zero tokens. Please enter a valid amount.';
-        } else if (error.message.includes('Contract is paused')) {
-          errorMessage = 'Staking is currently paused. Please try again later.';
-        } else if (error.message.includes('Staking token not set')) {
-          errorMessage = 'Staking contract is not properly configured. Please contact support.';
-        } else if (error.message.includes('Price oracle not set')) {
-          errorMessage = 'Price oracle is not configured. Please contact support.';
-        } else {
-          errorMessage = 'Transaction failed. Please check your balance and allowance, then try again.';
-        }
-      } else if (error.message.includes('insufficient funds')) {
-        errorMessage = 'Insufficient funds for gas fees. Please add more ETH to your wallet.';
-      } else if (error.message.includes('user rejected')) {
-        errorMessage = 'Transaction was rejected. Please try again.';
-      }
-      
-      addToast({ type: 'error', title: 'Stake Failed', message: errorMessage });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }
@@ -171,10 +147,15 @@ export const StakingPanelStore: React.FC = () => {
       const userTier = userInfo?.tier !== undefined ? userInfo.tier : -1;
       trackStaking('unstake', amount, userTier >= 0 ? userTier : undefined);
       
-      addToast({ type: 'success', title: 'Unstake Successful', message: `Successfully unstaked ${unstakeAmount} tokens` });
+      addToast({ type: 'success', title: 'Unstake Successful', message: `Successfully unstaked ${formatTokenAmount(unstakeAmount)} DBBPT` });
       setUnstakeAmount('');
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Unstake Failed', message: `Failed to unstake tokens: ${error.message}` });
+      const formattedError = formatErrorForToast(error, {
+        operation: 'Unstake',
+        amount: unstakeAmount,
+        stakedAmount: userInfo?.stakedAmount
+      });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }
@@ -187,7 +168,8 @@ export const StakingPanelStore: React.FC = () => {
       await emergencyWithdraw();
       addToast({ type: 'success', title: 'Emergency Withdrawal', message: 'Emergency withdrawal completed' });
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Emergency Withdrawal Failed', message: `Emergency withdrawal failed: ${error.message}` });
+      const formattedError = formatErrorForToast(error, { operation: 'Emergency Withdrawal' });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }
@@ -204,7 +186,8 @@ export const StakingPanelStore: React.FC = () => {
       await approveTokens(stakeAmount);
       addToast({ type: 'success', title: 'Approval Successful', message: `Successfully approved ${stakeAmount} tokens` });
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Approval Failed', message: `Failed to approve tokens: ${error.message}` });
+      const formattedError = formatErrorForToast(error, { operation: 'Approval' });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }
