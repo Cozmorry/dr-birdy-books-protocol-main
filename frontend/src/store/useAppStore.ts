@@ -300,12 +300,20 @@ export const useAppStore = create<AppState>()(
 
     // Data loading actions
     loadUserInfo: async (account: string) => {
+      console.log('[loadUserInfo] Called for account:', account);
       const { contracts } = get();
-      if (!contracts.reflectiveToken || !contracts.flexibleTieredStaking) return;
+      if (!contracts.reflectiveToken || !contracts.flexibleTieredStaking) {
+        console.log('[loadUserInfo] Contracts not ready:', {
+          hasToken: !!contracts.reflectiveToken,
+          hasStaking: !!contracts.flexibleTieredStaking
+        });
+        return;
+      }
 
       set({ contractsLoading: true, contractsError: null });
 
       try {
+        console.log('[loadUserInfo] Fetching user data...');
         const [balance, stakingInfo, tierInfo] = await Promise.all([
           contracts.reflectiveToken.balanceOf(account),
           contracts.flexibleTieredStaking.getUserStakingInfo(account),
@@ -314,6 +322,14 @@ export const useAppStore = create<AppState>()(
 
         const [stakedAmount, , hasAccess, canUnstake] = stakingInfo;
         const [tierIndex] = tierInfo;
+
+        console.log('[loadUserInfo] Raw data:', {
+          balance: balance.toString(),
+          stakedAmount: stakedAmount.toString(),
+          tierIndex: tierIndex.toString(),
+          hasAccess,
+          canUnstake
+        });
 
         const userInfo: UserInfo = {
           address: account,
@@ -324,8 +340,10 @@ export const useAppStore = create<AppState>()(
           canUnstake,
         };
 
+        console.log('[loadUserInfo] Setting userInfo:', userInfo);
         set({ userInfo, contractsLoading: false });
       } catch (err: any) {
+        console.error('[loadUserInfo] Error:', err);
         set({ contractsError: 'Failed to load user info: ' + err.message, contractsLoading: false });
       }
     },
@@ -465,6 +483,7 @@ export const useAppStore = create<AppState>()(
     },
 
     refreshAllData: async (account: string) => {
+      console.log('[refreshAllData] Called for account:', account);
       const { loadUserInfo, loadVestingInfo, loadTiers, loadProtocolStats } = get();
       set({ isRefreshing: true, lastDataRefresh: Date.now() });
 
@@ -475,6 +494,7 @@ export const useAppStore = create<AppState>()(
           loadTiers(),
           loadProtocolStats(),
         ]);
+        console.log('[refreshAllData] Completed successfully');
       } finally {
         set({ isRefreshing: false });
       }

@@ -20,8 +20,8 @@ export default function ContentPage() {
       </div>
       <ContentDownloads
         userInfo={userInfo}
-        userTier={userInfo?.tier || -1}
-        hasAccess={userInfo?.hasAccess || false}
+        userTier={userInfo?.tier ?? -1}
+        hasAccess={userInfo?.hasAccess ?? false}
         isLoading={isLoading}
       />
     </div>
