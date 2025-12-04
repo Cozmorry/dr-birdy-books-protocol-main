@@ -6,7 +6,7 @@ dotenv.config();
 // Blockchain configuration
 export const BLOCKCHAIN_CONFIG = {
   rpcUrl: process.env.BLOCKCHAIN_RPC_URL || 'https://sepolia.base.org',
-  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS || '0xc918019DE2c186010Eb549B043F2d1408640ffe9', // Updated to new staking contract
+  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS || '0xAa3cA3eF0619dfA1753385C32C3De16f04c4b93c', // ✅ Redeployed with new owner: 0x27799bb35820Ecb2814Ac2484bA34AD91bbda198
   tokenContractAddress: process.env.TOKEN_CONTRACT_ADDRESS || '0xdEA33fCB6BDCaB788De398A636a1227122Ae3d7D',
 };
 

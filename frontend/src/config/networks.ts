@@ -57,7 +57,7 @@ export const CONTRACT_ADDRESSES = {
   [BASE_TESTNET.chainId]: {
     reflectiveToken: '0xdEA33fCB6BDCaB788De398A636a1227122Ae3d7D', // ✅ WORKING - Non-upgradeable version
     tokenDistribution: '0x0e9697F783654d5F26f41dA15FbAc449fF4Ddf5d', // Deployed on Base Sepolia
-    flexibleTieredStaking: '0xc918019DE2c186010Eb549B043F2d1408640ffe9', // ✅ UPDATED - Fixed unstaking with transferForUnstaking
+    flexibleTieredStaking: '0xAa3cA3eF0619dfA1753385C32C3De16f04c4b93c', // ✅ UPDATED - Redeployed with new owner: 0x27799bb35820Ecb2814Ac2484bA34AD91bbda198
     arweaveGateway: '0xb37EE17a794013fFDfE87E5921eE7984588A8eC7', // Deployed on Base Sepolia
     improvedTimelock: '0x937D2960F0BA86a2c829CC6F5921E8b3725d08dA', // Deployed on Base Sepolia
   },
