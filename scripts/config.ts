@@ -22,7 +22,7 @@ const DEPLOYMENT_CONFIG = {
 
   // Token Configuration
   TOKEN_CONFIG: {
-    NAME: "ReflectiveToken",
+    NAME: "Dr Birdy Books Protocol Token",
     SYMBOL: "DBBPT",
     DECIMALS: 18,
     TOTAL_SUPPLY: "10000000", // 10M tokens TODO: INCREASE IF YOU WANT

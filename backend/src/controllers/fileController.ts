@@ -34,13 +34,19 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     
-    const { description, tier = -1 } = req.body;
+    const { description } = req.body;
+    // Parse tier from form data (multer sends it as string)
+    const tierRaw = req.body.tier !== undefined ? req.body.tier : -1;
+    const tierValue = isNaN(Number(tierRaw)) ? -1 : Number(tierRaw);
+    const tier = tierValue >= -1 && tierValue <= 2 ? tierValue : -1;
     
     console.log('📝 File upload request:', {
       hasFile: !!req.file,
       hasBuffer: !!req.file?.buffer,
       fileSize: req.file?.size,
       originalName: req.file?.originalname,
+      tierRaw: tierRaw,
+      tierParsed: tier,
     });
     
     if (!description) {
@@ -103,7 +109,7 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       mimeType: req.file.mimetype,
       fileSize: req.file.size,
       description,
-      tier: Number(tier),
+      tier: tier,
       storageType: 'mongodb' as const,
       storagePath,
       uploadedBy: req.admin?.id,
@@ -182,20 +188,9 @@ export const getFiles = async (req: AuthRequest, res: Response): Promise<void> =
       query.fileType = fileType;
     }
     
-    // If wallet address provided, filter by user's tier access
-    if (walletAddress && typeof walletAddress === 'string') {
-      try {
-        const userTier = await getUserTier(walletAddress);
-        if (userTier >= 0) {
-          query.tier = { $lte: userTier };
-        } else {
-          query.tier = -1; // Only show admin files
-        }
-      } catch (error) {
-        console.error('Error getting user tier:', error);
-        query.tier = -1;
-      }
-    }
+    // Note: We no longer filter by user tier access here
+    // The frontend will show all files and handle access control client-side
+    // This allows users to see all available content and know what tiers they need to unlock
     
     const skip = (Number(page) - 1) * Number(limit);
     
@@ -330,19 +325,29 @@ export const generatePreSignedUrl = async (req: AuthRequest, res: Response): Pro
     if (file.tier >= 0) {
       try {
         const userTier = await getUserTier(walletAddress);
-        if (userTier < file.tier) {
+        // User must have unlocked the required tier or higher
+        // userTier: -1 = no tier, 0 = Tier 1, 1 = Tier 2, 2 = Tier 3
+        // file.tier: 0 = Tier 1, 1 = Tier 2, 2 = Tier 3
+        console.log(`[Tier Check] File tier: ${file.tier}, User tier: ${userTier}, Wallet: ${walletAddress}`);
+        if (userTier < 0 || userTier < file.tier) {
+          console.log(`[Tier Check] Access DENIED - User tier ${userTier} < required tier ${file.tier}`);
           res.status(403).json({
             success: false,
             message: 'Insufficient tier access',
             requiredTier: file.tier,
             userTier,
+            requiredTierName: file.tier === 0 ? 'Tier 1' : file.tier === 1 ? 'Tier 2' : 'Tier 3',
+            userTierName: userTier === -1 ? 'None' : userTier === 0 ? 'Tier 1' : userTier === 1 ? 'Tier 2' : 'Tier 3',
           });
           return;
         }
+        console.log(`[Tier Check] Access GRANTED - User tier ${userTier} >= required tier ${file.tier}`);
       } catch (error) {
+        console.error('Error verifying tier access:', error);
         res.status(403).json({
           success: false,
           message: 'Unable to verify access',
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
         return;
       }
@@ -464,16 +469,22 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
     if (file.tier >= 0 && verifiedWalletAddress) {
       try {
         const userTier = await getUserTier(verifiedWalletAddress);
-        if (userTier < file.tier) {
+        // User must have unlocked the required tier or higher
+        // userTier: -1 = no tier, 0 = Tier 1, 1 = Tier 2, 2 = Tier 3
+        // file.tier: 0 = Tier 1, 1 = Tier 2, 2 = Tier 3
+        if (userTier < 0 || userTier < file.tier) {
           res.status(403).json({
             success: false,
             message: 'Insufficient tier access',
             requiredTier: file.tier,
             userTier,
+            requiredTierName: file.tier === 0 ? 'Tier 1' : file.tier === 1 ? 'Tier 2' : 'Tier 3',
+            userTierName: userTier === -1 ? 'None' : userTier === 0 ? 'Tier 1' : userTier === 1 ? 'Tier 2' : 'Tier 3',
           });
           return;
         }
       } catch (error) {
+        console.error('Error verifying tier access:', error);
         res.status(403).json({
           success: false,
           message: 'Unable to verify access',
@@ -538,37 +549,62 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
         }
       });
       
-      // Pipe the stream directly to response (starts immediately)
-      downloadStream.pipe(res);
-    
-      // Record download stats AFTER streaming starts (non-blocking)
-      let downloadRecorded = false;
-      downloadStream.once('data', () => {
-        // Once we start receiving data, record the download in background (only once)
-        if (verifiedWalletAddress && !downloadRecorded) {
-          downloadRecorded = true;
+      // Record download stats BEFORE streaming starts (to prevent multiple recordings)
+      // Use token as unique identifier to prevent duplicate recordings
+      // If using token, mark it as used; if not, use file+wallet combination
+      if (verifiedWalletAddress) {
+        const downloadKey = token 
+          ? `token:${token}` 
+          : `file:${id}:wallet:${verifiedWalletAddress}`;
+        
+        // Check if we've already recorded this download recently (within last 30 seconds)
+        // This prevents duplicate recordings from browser retries/range requests
+        const downloadCache = (global as any).downloadCache || new Map();
+        (global as any).downloadCache = downloadCache;
+        
+        const cacheKey = downloadKey;
+        const lastRecorded = downloadCache.get(cacheKey);
+        const now = Date.now();
+        
+        // Only record if not recorded in the last 30 seconds
+        if (!lastRecorded || (now - lastRecorded) > 30000) {
+          downloadCache.set(cacheKey, now);
+          
+          // Clean up old cache entries (older than 5 minutes)
+          for (const [key, timestamp] of downloadCache.entries()) {
+            if (now - (timestamp as number) > 300000) {
+              downloadCache.delete(key);
+            }
+          }
           
           // Record download asynchronously (don't block the stream)
           Promise.all([
             recordDownload(verifiedWalletAddress, file.fileSize),
             file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
             Analytics.create({
-      eventType: 'file_download',
+              eventType: 'file_download',
               userId: verifiedWalletAddress || (walletAddress as string) || undefined,
-      fileId: file._id,
-      metadata: {
-        tier: file.tier,
-        fileType: file.fileType,
+              fileId: file._id,
+              metadata: {
+                tier: file.tier,
+                fileType: file.fileType,
                 fileSize: file.fileSize,
-      },
-      timestamp: new Date(),
+              },
+              timestamp: new Date(),
             }),
           ]).catch((err) => {
             console.error('Error recording download stats:', err);
             // Don't fail the download if stats recording fails
           });
+          
+          console.log(`📊 Download recorded for ${verifiedWalletAddress}, file ${id}`);
+        } else {
+          console.log(`⏭️  Skipping duplicate download recording for ${cacheKey} (recorded ${Math.floor((now - lastRecorded) / 1000)}s ago)`);
         }
-      });
+      }
+      
+      // Pipe the stream directly to response (starts immediately)
+      downloadStream.pipe(res);
       
       // Log completion
       downloadStream.on('end', () => {

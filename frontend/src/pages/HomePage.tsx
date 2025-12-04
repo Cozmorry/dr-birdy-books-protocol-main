@@ -27,9 +27,9 @@ export default function HomePage() {
               {protocolStats.isLoading ? (
                 <span className="animate-pulse">...</span>
               ) : parseFloat(protocolStats.totalStaked) > 0 ? (
-                `${parseFloat(protocolStats.totalStaked).toLocaleString()}`
+                `${parseFloat(protocolStats.totalStaked).toLocaleString(undefined, { maximumFractionDigits: 2 })} DBBPT`
               ) : (
-                '0'
+                '0 DBBPT'
               )}
             </p>
           </div>

@@ -20,7 +20,9 @@ export const VestingPanelStore: React.FC = () => {
       await claimVestedTokens();
       addToast({ type: 'success', title: 'Claim Successful', message: `Successfully claimed ${vestingInfo.claimable} tokens` });
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Claim Failed', message: `Failed to claim tokens: ${error.message}` });
+      const { formatErrorForToast } = await import('../utils/formatErrors');
+      const formattedError = formatErrorForToast(error, { operation: 'Claim Tokens' });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }

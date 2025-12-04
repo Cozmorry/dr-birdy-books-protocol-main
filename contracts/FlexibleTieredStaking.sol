@@ -493,8 +493,12 @@ contract FlexibleTieredStaking is
 
         _updateUserTier(msg.sender);
 
-        // Transfer tokens back to user (using standard transfer instead of SafeERC20)
-        bool success = stakingToken.transfer(msg.sender, amount);
+        // Transfer tokens back to user using custom unstaking function
+        // This properly handles reflection token transfers from excluded staking contract
+        // Cast to ReflectiveToken to access transferForUnstaking
+        (bool success, ) = address(stakingToken).call(
+            abi.encodeWithSignature("transferForUnstaking(address,uint256)", msg.sender, amount)
+        );
         require(success, "Token transfer failed");
 
         emit Unstaked(msg.sender, amount);
@@ -532,8 +536,12 @@ contract FlexibleTieredStaking is
 
         _updateUserTier(msg.sender);
 
-        // Transfer tokens back to user (using standard transfer instead of SafeERC20)
-        bool success = stakingToken.transfer(msg.sender, totalAmount);
+        // Transfer tokens back to user using custom unstaking function
+        // This properly handles reflection token transfers from excluded staking contract
+        // Cast to ReflectiveToken to access transferForUnstaking
+        (bool success, ) = address(stakingToken).call(
+            abi.encodeWithSignature("transferForUnstaking(address,uint256)", msg.sender, totalAmount)
+        );
         require(success, "Token transfer failed");
 
         emit Unstaked(msg.sender, totalAmount);

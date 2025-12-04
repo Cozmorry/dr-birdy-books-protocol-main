@@ -33,13 +33,6 @@ async function main() {
   deployed.distribution = await distribution.getAddress();
   console.log("✅ TokenDistribution deployed to:", deployed.distribution);
 
-  console.log("\n📦 Deploying FlexibleTieredStaking...");
-  const Staking = await ethers.getContractFactory("FlexibleTieredStaking");
-  const staking = await Staking.deploy();
-  await staking.waitForDeployment();
-  deployed.staking = await staking.getAddress();
-  console.log("✅ FlexibleTieredStaking deployed to:", deployed.staking);
-
   console.log("\n📦 Deploying Timelock...");
   const Timelock = await ethers.getContractFactory("ImprovedTimelock");
   const timelock = await Timelock.deploy(deployer.address, 172800); // 2 days in seconds
@@ -54,37 +47,55 @@ async function main() {
   deployed.token = await token.getAddress();
   console.log("✅ ReflectiveToken deployed to:", deployed.token);
 
+  // Deploy FlexibleTieredStaking with constructor arguments (token, primaryOracle, backupOracle)
+  console.log("\n📦 Deploying FlexibleTieredStaking...");
+  const Staking = await ethers.getContractFactory("FlexibleTieredStaking");
+  
+  // Get oracle addresses with proper checksum
+  let primaryOracle: string;
+  let backupOracle: string;
+  
+  try {
+    primaryOracle = DEPLOYMENT_CONFIG.PRIMARY_ORACLE 
+      ? ethers.getAddress(DEPLOYMENT_CONFIG.PRIMARY_ORACLE.toLowerCase()) 
+      : ethers.ZeroAddress;
+  } catch (e) {
+    primaryOracle = DEPLOYMENT_CONFIG.PRIMARY_ORACLE || ethers.ZeroAddress;
+  }
+  
+  try {
+    backupOracle = DEPLOYMENT_CONFIG.BACKUP_ORACLE 
+      ? ethers.getAddress(DEPLOYMENT_CONFIG.BACKUP_ORACLE.toLowerCase()) 
+      : ethers.ZeroAddress;
+  } catch (e) {
+    backupOracle = DEPLOYMENT_CONFIG.BACKUP_ORACLE || ethers.ZeroAddress;
+  }
+  
+  if (primaryOracle === ethers.ZeroAddress) {
+    throw new Error("Primary oracle not configured in DEPLOYMENT_CONFIG");
+  }
+
+  const staking = await Staking.deploy(
+    ethers.getAddress(deployed.token),
+    primaryOracle,
+    backupOracle
+  );
+  await staking.waitForDeployment();
+  deployed.staking = await staking.getAddress();
+  console.log("✅ FlexibleTieredStaking deployed to:", deployed.staking);
+  console.log("   ✅ Constructor initialized with token and oracles");
+
   // ===============================
   // STEP 2: Safe Initialization
   // ===============================
 
   console.log("\n🔧 Initializing contracts...");
 
-  // ===============================
-  // STEP 2A: Initialize FlexibleTieredStaking
-  // ===============================
-
-  console.log("\n🔧 Initializing FlexibleTieredStaking...");
-
-  try {
-    // Initialize the staking contract with basic parameters
-    const stakingTx = await staking.initialize(
-      deployed.token, // Will be set after token is deployed
-      DEPLOYMENT_CONFIG.PRIMARY_ORACLE, // Primary oracle
-      DEPLOYMENT_CONFIG.BACKUP_ORACLE, // Backup oracle
-      { gasLimit: 5_000_000 }
-    );
-    await stakingTx.wait();
-    console.log("✅ FlexibleTieredStaking initialized successfully!");
-  } catch (err: any) {
-    console.warn(
-      "⚠️ Staking initialization failed (will retry after token setup):",
-      err.message
-    );
-  }
+  // Note: FlexibleTieredStaking is already initialized via constructor
+  // Tiers are automatically set in the constructor (Tier 1: $24, Tier 2: $50, Tier 3: $1000)
 
   // ===============================
-  // STEP 2B: Initialize ReflectiveToken
+  // STEP 2A: Initialize ReflectiveToken
   // ===============================
 
   console.log("\n🔧 Initializing ReflectiveToken...");
@@ -154,52 +165,16 @@ async function main() {
     // ===============================
 
     console.log(
-      "\n🔧 Setting up staking contract post-deployment configurations..."
+      "\n🔧 Staking contract setup..."
     );
 
-    // Set staking token (the deployed ReflectiveToken)
-    try {
-      const setStakingTokenTx = await (staking as any).setStakingToken(
-        deployed.token
-      );
-      await setStakingTokenTx.wait();
-      console.log("✅ Staking token set");
-    } catch (err: any) {
-      console.warn("⚠️ Failed to set staking token:", err.message);
-    }
-
-    // Set primary oracle
-    try {
-      const setPrimaryOracleTx = await (staking as any).setPrimaryPriceOracle(
-        DEPLOYMENT_CONFIG.PRIMARY_ORACLE
-      );
-      await setPrimaryOracleTx.wait();
-      console.log("✅ Primary oracle set");
-    } catch (err: any) {
-      console.warn("⚠️ Failed to set primary oracle:", err.message);
-    }
-
-    // Set backup oracle
-    try {
-      const setBackupOracleTx = await (staking as any).setBackupPriceOracle(
-        DEPLOYMENT_CONFIG.BACKUP_ORACLE
-      );
-      await setBackupOracleTx.wait();
-      console.log("✅ Backup oracle set");
-    } catch (err: any) {
-      console.warn("⚠️ Failed to set backup oracle:", err.message);
-    }
-
-    // Set gas refund reward
-    try {
-      const setGasRefundTx = await (staking as any).setGasRefundReward(
-        ethers.parseEther("0.001")
-      );
-      await setGasRefundTx.wait();
-      console.log("✅ Gas refund reward set");
-    } catch (err: any) {
-      console.warn("⚠️ Failed to set gas refund reward:", err.message);
-    }
+    // Note: Staking contract is already initialized via constructor with:
+    // - Token address
+    // - Primary oracle
+    // - Backup oracle
+    // - Default tiers (Tier 1: $24, Tier 2: $50, Tier 3: $1000)
+    
+    console.log("✅ Staking contract fully configured via constructor");
 
     // ===============================
     // STEP 4: TokenDistribution (DISABLED - Will be done later)
@@ -334,6 +309,29 @@ async function main() {
     }
   } catch (err: any) {
     console.warn("⚠️ Initialization failed:", err.message || err);
+  }
+
+  // ===============================
+  // STEP 5: Transfer Ownership to New Owner
+  // ===============================
+  
+  const newOwnerAddress = "0x27799bb35820Ecb2814Ac2484bA34AD91bbda198";
+  
+  try {
+    console.log("\n🔐 Transferring ownership of FlexibleTieredStaking to new owner...");
+    const staking = await ethers.getContractAt("FlexibleTieredStaking", deployed.staking);
+    const currentOwner = await staking.owner();
+    
+    if (currentOwner.toLowerCase() !== newOwnerAddress.toLowerCase()) {
+      const transferTx = await staking.transferOwnership(newOwnerAddress);
+      await transferTx.wait();
+      console.log("✅ Ownership transferred to:", newOwnerAddress);
+    } else {
+      console.log("✅ Contract already owned by:", newOwnerAddress);
+    }
+  } catch (err: any) {
+    console.warn("⚠️ Failed to transfer ownership:", err.message);
+    console.warn("   You can transfer ownership manually later using the transfer-ownership script");
   }
 
   console.log("\n🎯 Deployment Summary:");

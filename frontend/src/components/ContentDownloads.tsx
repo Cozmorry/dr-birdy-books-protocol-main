@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, File, Image, FileText, Video, Music, AlertCircle } from 'lucide-react';
+import { Download, File, Image, FileText, Video, Music, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { trackFileDownload } from '../utils/analytics';
 
@@ -41,8 +41,8 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const [filesPerPage, setFilesPerPage] = useState(12);
   const [totalFiles, setTotalFiles] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [sortBy, setSortBy] = useState<'date' | 'name' | 'downloads'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'downloads' | 'tier'>('tier');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     loadAvailableFiles();
@@ -91,18 +91,24 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       
       if (data.success && data.data?.files) {
         // Format files from API response
-        const allFiles: ContentFile[] = data.data.files.map((f: any) => ({
-          id: f._id || f.id,
-          txId: f.arweaveTxId || f._id,
-          fileName: f.originalName || f.fileName || 'Untitled',
-          fileType: f.fileType || 'unknown',
-          description: f.description || '',
-          tier: f.tier || -1,
-          uploadDate: f.createdAt || new Date().toISOString(),
-          fileSize: f.fileSize || 0,
-          downloads: f.downloads || 0,
-          downloadUrl: `${API_BASE_URL}/files/${f._id}/download`, // Don't include walletAddress here
-        }));
+        const allFiles: ContentFile[] = data.data.files.map((f: any) => {
+          // Handle tier properly - tier can be 0, 1, 2, or -1
+          // Use nullish coalescing to only default to -1 if tier is null/undefined
+          const fileTier = f.tier !== undefined && f.tier !== null ? Number(f.tier) : -1;
+          
+          return {
+            id: f._id || f.id,
+            txId: f.arweaveTxId || f._id,
+            fileName: f.originalName || f.fileName || 'Untitled',
+            fileType: f.fileType || 'unknown',
+            description: f.description || '',
+            tier: fileTier,
+            uploadDate: f.createdAt || new Date().toISOString(),
+            fileSize: f.fileSize || 0,
+            downloads: f.downloads || 0,
+            downloadUrl: `${API_BASE_URL}/files/${f._id}/download`, // Don't include walletAddress here
+          };
+        });
         
         // Update pagination info
         if (data.data.pagination) {
@@ -180,22 +186,31 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     }
   };
 
+  // Check if user can access a file based on their tier
+  const canAccessFile = (file: ContentFile): boolean => {
+    // Admin files (-1) are not accessible to regular users
+    if (file.tier === -1) {
+      return false; // Admin-only files
+    }
+    // User must have unlocked the required tier or higher
+    if (userTier >= 0) {
+      const canAccess = file.tier <= userTier;
+      console.log(`[canAccessFile] File: ${file.fileName}, file.tier: ${file.tier}, userTier: ${userTier}, canAccess: ${canAccess}`);
+      return canAccess;
+    }
+    // No tier unlocked
+    console.log(`[canAccessFile] File: ${file.fileName}, userTier: ${userTier}, NO TIER UNLOCKED`);
+    return false;
+  };
+
   const filterFiles = () => {
     let filtered = [...availableFiles];
 
-    // Filter by tier access
-    if (userTier >= 0) {
-      filtered = filtered.filter(
-        (file) => file.tier === -1 || file.tier <= userTier
-      );
-    } else {
-      filtered = filtered.filter((file) => file.tier === -1);
-    }
-
+    // Show ALL files (don't filter by access - access only affects downloadability)
     // Filter by selected tier
     if (selectedTier !== 'all') {
       filtered = filtered.filter(
-        (file) => file.tier === selectedTier || file.tier === -1
+        (file) => file.tier === selectedTier
       );
     }
 
@@ -215,6 +230,17 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       let comparison = 0;
       
       switch (sortBy) {
+        case 'tier':
+          // Sort by tier first (ascending: Tier 1, Tier 2, Tier 3, Admin)
+          // Admin (-1) should come last
+          const tierA = a.tier === -1 ? 999 : a.tier;
+          const tierB = b.tier === -1 ? 999 : b.tier;
+          comparison = tierA - tierB;
+          // If tiers are equal, sort by date as secondary sort
+          if (comparison === 0) {
+            comparison = new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime();
+          }
+          break;
         case 'name':
           comparison = a.fileName.localeCompare(b.fileName);
           break;
@@ -261,6 +287,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
         title: 'Wallet Required',
         message: 'Please connect your wallet to download files',
       });
+      return;
+    }
+
+    // Prevent multiple simultaneous downloads of the same file
+    if (downloadingFileId === file.id) {
       return;
     }
 
@@ -491,6 +522,26 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
               <option value="2">Tier 3</option>
             </select>
           )}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'downloads' | 'tier')}
+          className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          title="Sort by"
+          aria-label="Sort files"
+        >
+          <option value="tier">Sort by Tier</option>
+          <option value="date">Sort by Date</option>
+          <option value="name">Sort by Name</option>
+          <option value="downloads">Sort by Downloads</option>
+        </select>
+        <button
+          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+          aria-label="Toggle sort order"
+        >
+          {sortOrder === 'asc' ? '↑' : '↓'}
+        </button>
       </div>
 
       {/* Files List */}
@@ -523,10 +574,36 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                   <p className="text-xs text-gray-500 line-clamp-2 mb-2">
                     {file.description || 'No description'}
                   </p>
-                  <div className="flex items-center justify-between text-xs text-gray-400">
+                  <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
                     <span className="uppercase">{file.fileType}</span>
                     {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
                   </div>
+                  {/* Tier Badge - Show for all files */}
+                  <div className="mt-1">
+                    {file.tier === -1 ? (
+                      <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                        Admin Only
+                      </span>
+                    ) : (
+                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
+                        file.tier === 0 ? 'bg-green-100 text-green-800' :
+                        file.tier === 1 ? 'bg-blue-100 text-blue-800' :
+                        file.tier === 2 ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        Tier {file.tier + 1}
+                      </span>
+                    )}
+                  </div>
+                  {/* Access Status */}
+                  {!canAccessFile(file) && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Locked
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -535,25 +612,36 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                 <span className="text-xs text-gray-500">
                   {formatDate(file.uploadDate)}
                 </span>
-                <button
-                  onClick={() => handleDownload(file)}
-                  disabled={downloadingFileId === file.id}
-                  className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
-                    downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {downloadingFileId === file.id ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </>
-                  )}
-                </button>
+                {canAccessFile(file) ? (
+                  <button
+                    onClick={() => handleDownload(file)}
+                    disabled={downloadingFileId === file.id}
+                    className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
+                      downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {downloadingFileId === file.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed flex items-center text-sm"
+                    title={file.tier === -1 ? 'Admin only' : `Requires Tier ${file.tier + 1} access`}
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Locked
+                  </button>
+                )}
               </div>
             </div>
           ))}

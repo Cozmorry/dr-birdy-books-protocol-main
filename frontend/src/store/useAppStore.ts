@@ -300,12 +300,20 @@ export const useAppStore = create<AppState>()(
 
     // Data loading actions
     loadUserInfo: async (account: string) => {
+      console.log('[loadUserInfo] Called for account:', account);
       const { contracts } = get();
-      if (!contracts.reflectiveToken || !contracts.flexibleTieredStaking) return;
+      if (!contracts.reflectiveToken || !contracts.flexibleTieredStaking) {
+        console.log('[loadUserInfo] Contracts not ready:', {
+          hasToken: !!contracts.reflectiveToken,
+          hasStaking: !!contracts.flexibleTieredStaking
+        });
+        return;
+      }
 
       set({ contractsLoading: true, contractsError: null });
 
       try {
+        console.log('[loadUserInfo] Fetching user data...');
         const [balance, stakingInfo, tierInfo] = await Promise.all([
           contracts.reflectiveToken.balanceOf(account),
           contracts.flexibleTieredStaking.getUserStakingInfo(account),
@@ -314,6 +322,14 @@ export const useAppStore = create<AppState>()(
 
         const [stakedAmount, , hasAccess, canUnstake] = stakingInfo;
         const [tierIndex] = tierInfo;
+
+        console.log('[loadUserInfo] Raw data:', {
+          balance: balance.toString(),
+          stakedAmount: stakedAmount.toString(),
+          tierIndex: tierIndex.toString(),
+          hasAccess,
+          canUnstake
+        });
 
         const userInfo: UserInfo = {
           address: account,
@@ -324,8 +340,10 @@ export const useAppStore = create<AppState>()(
           canUnstake,
         };
 
+        console.log('[loadUserInfo] Setting userInfo:', userInfo);
         set({ userInfo, contractsLoading: false });
       } catch (err: any) {
+        console.error('[loadUserInfo] Error:', err);
         set({ contractsError: 'Failed to load user info: ' + err.message, contractsLoading: false });
       }
     },
@@ -400,10 +418,29 @@ export const useAppStore = create<AppState>()(
         
         // Get total staked amount directly
         const totalStaked = await contracts.flexibleTieredStaking.getTotalStaked();
-        console.log('Total staked result:', totalStaked.toString());
+        console.log('Total staked result (raw):', totalStaked.toString());
         
         const totalStakedFormatted = ethers.formatEther(totalStaked);
         console.log('Formatted total staked:', totalStakedFormatted);
+        
+        // Debug: Also check contract balance directly from token
+        try {
+          if (contracts.flexibleTieredStaking?.provider) {
+            const network = await contracts.flexibleTieredStaking.provider.getNetwork();
+            const chainId = Number(network.chainId);
+            const contractAddresses = getContractAddresses(chainId);
+            const stakingContractAddress = contractAddresses.flexibleTieredStaking;
+            
+            if (contracts.reflectiveToken && stakingContractAddress) {
+              const contractBalance = await contracts.reflectiveToken.balanceOf(stakingContractAddress);
+              const contractBalanceFormatted = ethers.formatEther(contractBalance);
+              console.log('Contract balance (from token):', contractBalanceFormatted);
+              console.log('Balance match:', totalStaked.toString() === contractBalance.toString() ? 'YES' : 'NO');
+            }
+          }
+        } catch (debugError) {
+          console.warn('Could not debug contract balance:', debugError);
+        }
 
         // For now, we'll estimate stakers based on total staked amount
         // In a real implementation, you'd want to track this via events
@@ -446,6 +483,7 @@ export const useAppStore = create<AppState>()(
     },
 
     refreshAllData: async (account: string) => {
+      console.log('[refreshAllData] Called for account:', account);
       const { loadUserInfo, loadVestingInfo, loadTiers, loadProtocolStats } = get();
       set({ isRefreshing: true, lastDataRefresh: Date.now() });
 
@@ -456,6 +494,7 @@ export const useAppStore = create<AppState>()(
           loadTiers(),
           loadProtocolStats(),
         ]);
+        console.log('[refreshAllData] Completed successfully');
       } finally {
         set({ isRefreshing: false });
       }
@@ -666,27 +705,20 @@ export const useAppStore = create<AppState>()(
         
         // Provide helpful error message
         if (txError.reason || txError.message) {
-          let errorMsg = `❌ Transaction failed: ${txError.reason || txError.message}. `;
-          if (txHash) {
-            errorMsg += `\n\nTransaction hash: ${txHash}\n`;
-            errorMsg += `View on Base Sepolia: https://sepolia.basescan.org/tx/${txHash}\n\n`;
+          const errorMsg = txError.reason || txError.message;
+          // Check for common user-facing errors
+          if (errorMsg.toLowerCase().includes('insufficient')) {
+            throw new Error(`You don't have enough tokens. Your balance: ${balanceFormatted} DBBPT`);
           }
-          errorMsg += `This is a known issue with the ReflectiveToken's reflection system when staking. `;
-          errorMsg += `The contract calls \`super._update()\` which conflicts with the reflection balance system.\n\n`;
-          errorMsg += `Diagnostic Info:\n`;
-          errorMsg += `• Your Balance: ${balanceFormatted} DBBPT\n`;
-          errorMsg += `• Your Allowance: ${ethers.formatEther(finalAllowance)} DBBPT\n`;
-          errorMsg += `• Required Amount: ${amountFormatted} DBBPT\n`;
-          errorMsg += `• Both accounts are excluded from fees\n\n`;
-          errorMsg += `⚠️ This is a contract-level issue. The ReflectiveToken contract needs to be fixed. `;
-          errorMsg += `As a workaround, you may need to temporarily un-exclude your wallet from fees, or wait for a contract fix.`;
-          throw new Error(errorMsg);
+          if (errorMsg.toLowerCase().includes('allowance')) {
+            throw new Error('Please approve tokens first before staking.');
+          }
+          // Generic error
+          throw new Error('Transaction failed. Please check your balance and try again.');
         }
         
         throw new Error(
-          `Failed to send transaction. Please check your balance (${balanceFormatted} DBBPT), ` +
-          `allowance (${ethers.formatEther(finalAllowance)} DBBPT), and try again. ` +
-          (txHash ? `Transaction hash: ${txHash}` : '')
+          `Transaction failed. Please check your balance (${balanceFormatted} DBBPT) and try again.`
         );
       }
     },
@@ -697,13 +729,72 @@ export const useAppStore = create<AppState>()(
         throw new Error('Contracts or signer not available');
       }
 
-      const amountWei = ethers.parseEther(amount);
-      const unstakeTx = await contracts.flexibleTieredStaking.connect(signer).unstake(amountWei);
-      await unstakeTx.wait();
+      try {
+        // Check network first
+        const network = await signer.provider.getNetwork();
+        const chainId = Number(network.chainId);
+        console.log('Current network:', network.name, 'Chain ID:', chainId);
+        
+        // Check if on correct network (Base Sepolia = 84532, Base Mainnet = 8453)
+        if (chainId !== 84532 && chainId !== 8453 && chainId !== 31337) {
+          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Sepolia (Chain ID: 84532) or Base Mainnet (Chain ID: 8453).`);
+        }
+        
+        // Check ETH balance for gas
+        const ethBalance = await signer.provider.getBalance(account);
+        const ethBalanceFormatted = ethers.formatEther(ethBalance);
+        console.log('ETH balance for gas:', ethBalanceFormatted, 'ETH');
+        
+        if (ethBalance === BigInt(0)) {
+          throw new Error('You have 0 ETH in your wallet. You need ETH (not DBBPT) to pay for gas fees. Please add ETH to your wallet.');
+        }
+        
+        // Check staked amount
+        const stakingInfo = await contracts.flexibleTieredStaking.getUserStakingInfo(account);
+        const stakedAmount = stakingInfo[0];
+        const stakedAmountFormatted = ethers.formatEther(stakedAmount);
+        console.log('Staked amount:', stakedAmountFormatted, 'DBBPT');
+        
+        const amountWei = ethers.parseEther(amount);
+        const amountFormatted = ethers.formatEther(amountWei);
+        console.log('Attempting to unstake:', amountFormatted, 'DBBPT');
+        
+        // Check if user can unstake
+        const canUnstake = stakingInfo[3];
+        console.log('Can unstake:', canUnstake);
+        
+        if (!canUnstake) {
+          throw new Error('Minimum staking duration not met. You need to wait at least 24 hours after staking before you can unstake.');
+        }
+        
+        if (stakedAmount < amountWei) {
+          throw new Error(`Insufficient staked tokens. You have ${stakedAmountFormatted} DBBPT staked, but tried to unstake ${amountFormatted} DBBPT.`);
+        }
 
-      // Refresh user data after unstaking
-      const { loadUserInfo } = get();
-      await loadUserInfo(account);
+        const unstakeTx = await contracts.flexibleTieredStaking.connect(signer).unstake(amountWei);
+        console.log('Unstake transaction sent:', unstakeTx.hash);
+        await unstakeTx.wait();
+        console.log('Unstake transaction confirmed');
+
+        // Refresh user data after unstaking
+        const { loadUserInfo } = get();
+        await loadUserInfo(account);
+      } catch (error: any) {
+        console.error('Unstake error details:', {
+          message: error?.message,
+          reason: error?.reason,
+          code: error?.code,
+          data: error?.data,
+          error: error
+        });
+        
+        // Check for network-related errors
+        if (error?.code === 'NETWORK_ERROR' || error?.message?.includes('network')) {
+          throw new Error(`Network error: ${error.message}. Please check your network connection and try again.`);
+        }
+        
+        throw error;
+      }
     },
 
     stakeBatch: async (amounts: string[]) => {

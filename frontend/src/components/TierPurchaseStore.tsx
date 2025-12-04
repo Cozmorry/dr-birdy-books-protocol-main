@@ -88,7 +88,13 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
       setSelectedTier(null);
       setPurchaseAmount('');
     } catch (error: any) {
-      addToast({ type: 'error', title: 'Purchase Failed', message: `Failed to unlock tier: ${error.message}` });
+      const { formatErrorForToast } = await import('../utils/formatErrors');
+      const formattedError = formatErrorForToast(error, {
+        operation: 'Tier Purchase',
+        amount: purchaseAmount,
+        balance: userInfo.balance
+      });
+      addToast({ type: 'error', title: formattedError.title, message: formattedError.message });
     } finally {
       setIsProcessing(false);
     }
