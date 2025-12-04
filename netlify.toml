@@ -23,8 +23,9 @@
   # Netlify auto-detects package.json and tries to install, but we only want frontend deps
   NPM_FLAGS = "--legacy-peer-deps"
   
-  # Alternative: Tell Netlify to skip root npm install entirely
-  # But we'll use legacy-peer-deps as a workaround for the Hardhat peer dependency conflict
+  # Google Analytics - This will be overridden by Netlify UI environment variables
+  # Set REACT_APP_GA_TRACKING_ID in Netlify UI: Site configuration → Environment variables
+  REACT_APP_GA_TRACKING_ID = "G-F7WFFPVMQQ"
 
 # Redirect rules for React Router
 [[redirects]]
