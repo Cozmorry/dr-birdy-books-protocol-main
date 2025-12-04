@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { getContractAddresses } from "../frontend/src/config/networks";
+import { getContractAddresses, getOracleConfig } from "../frontend/src/config/networks";
 
 /**
  * Verify contracts on Basescan
@@ -14,6 +14,7 @@ async function main() {
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
   const contractAddresses = getContractAddresses(chainId);
+  const oracleConfig = getOracleConfig(chainId);
 
   console.log("Network:", network.name, `(Chain ID: ${chainId})`);
   console.log("");
@@ -24,6 +25,26 @@ async function main() {
     console.log("   Please add ETHERSCAN_API_KEY to your .env file");
     console.log("   Get your API key from: https://basescan.org/apis");
     process.exit(1);
+  }
+
+  // Get oracle addresses with proper checksum
+  let primaryOracle: string;
+  let backupOracle: string;
+  
+  try {
+    primaryOracle = oracleConfig.primaryOracle 
+      ? ethers.getAddress(oracleConfig.primaryOracle.toLowerCase()) 
+      : ethers.ZeroAddress;
+  } catch (e) {
+    primaryOracle = oracleConfig.primaryOracle || ethers.ZeroAddress;
+  }
+  
+  try {
+    backupOracle = oracleConfig.backupOracle 
+      ? ethers.getAddress(oracleConfig.backupOracle.toLowerCase()) 
+      : ethers.ZeroAddress;
+  } catch (e) {
+    backupOracle = oracleConfig.backupOracle || ethers.ZeroAddress;
   }
 
   const contractsToVerify = [
@@ -38,8 +59,8 @@ async function main() {
       address: contractAddresses.flexibleTieredStaking,
       constructorArgs: [
         contractAddresses.reflectiveToken,
-        "0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1", // Primary oracle (Base Sepolia)
-        "0x6A7A5c3825438cf93dAe5C4C7B0a5c55fDcf1649", // Backup oracle (Base Sepolia)
+        primaryOracle,
+        backupOracle,
       ],
       file: "contracts/FlexibleTieredStaking.sol",
     },
