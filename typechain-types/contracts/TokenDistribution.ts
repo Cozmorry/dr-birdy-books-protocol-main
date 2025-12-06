@@ -27,7 +27,8 @@ export interface TokenDistributionInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "AIRDROP_ALLOCATION"
-      | "TEAM_ALLOCATION"
+      | "TEAM_ALLOCATION_DEVELOPER"
+      | "TEAM_ALLOCATION_STANDARD"
       | "TOTAL_DISTRIBUTED"
       | "VESTING_CLIFF"
       | "VESTING_DURATION"
@@ -43,6 +44,7 @@ export interface TokenDistributionInterface extends Interface {
       | "emergencyWithdraw"
       | "getAirdropAllocation"
       | "getContractBalance"
+      | "getDeveloperAllocation"
       | "getTeamAllocation"
       | "getTeamMembers"
       | "getTeamWallets"
@@ -83,7 +85,11 @@ export interface TokenDistributionInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "TEAM_ALLOCATION",
+    functionFragment: "TEAM_ALLOCATION_DEVELOPER",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "TEAM_ALLOCATION_STANDARD",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -141,6 +147,10 @@ export interface TokenDistributionInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getContractBalance",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getDeveloperAllocation",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -242,7 +252,11 @@ export interface TokenDistributionInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "TEAM_ALLOCATION",
+    functionFragment: "TEAM_ALLOCATION_DEVELOPER",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "TEAM_ALLOCATION_STANDARD",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -300,6 +314,10 @@ export interface TokenDistributionInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getContractBalance",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getDeveloperAllocation",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -565,7 +583,9 @@ export interface TokenDistribution extends BaseContract {
 
   AIRDROP_ALLOCATION: TypedContractMethod<[], [bigint], "view">;
 
-  TEAM_ALLOCATION: TypedContractMethod<[], [bigint], "view">;
+  TEAM_ALLOCATION_DEVELOPER: TypedContractMethod<[], [bigint], "view">;
+
+  TEAM_ALLOCATION_STANDARD: TypedContractMethod<[], [bigint], "view">;
 
   TOTAL_DISTRIBUTED: TypedContractMethod<[], [bigint], "view">;
 
@@ -604,6 +624,8 @@ export interface TokenDistribution extends BaseContract {
   getAirdropAllocation: TypedContractMethod<[], [bigint], "view">;
 
   getContractBalance: TypedContractMethod<[], [bigint], "view">;
+
+  getDeveloperAllocation: TypedContractMethod<[], [bigint], "view">;
 
   getTeamAllocation: TypedContractMethod<[], [bigint], "view">;
 
@@ -722,7 +744,10 @@ export interface TokenDistribution extends BaseContract {
     nameOrSignature: "AIRDROP_ALLOCATION"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "TEAM_ALLOCATION"
+    nameOrSignature: "TEAM_ALLOCATION_DEVELOPER"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "TEAM_ALLOCATION_STANDARD"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "TOTAL_DISTRIBUTED"
@@ -768,6 +793,9 @@ export interface TokenDistribution extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "getContractBalance"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getDeveloperAllocation"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "getTeamAllocation"

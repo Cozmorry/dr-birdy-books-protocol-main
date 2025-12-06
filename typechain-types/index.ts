@@ -66,6 +66,8 @@ export type { IPriceOracle } from "./contracts/FlexibleTieredStaking.sol/IPriceO
 export { IPriceOracle__factory } from "./factories/contracts/FlexibleTieredStaking.sol/IPriceOracle__factory";
 export type { IUniswapV2Pair } from "./contracts/FlexibleTieredStaking.sol/IUniswapV2Pair";
 export { IUniswapV2Pair__factory } from "./factories/contracts/FlexibleTieredStaking.sol/IUniswapV2Pair__factory";
+export type { IYieldStrategy } from "./contracts/FlexibleTieredStaking.sol/IYieldStrategy";
+export { IYieldStrategy__factory } from "./factories/contracts/FlexibleTieredStaking.sol/IYieldStrategy__factory";
 export type { ImprovedTimelock } from "./contracts/ImprovedTimelock";
 export { ImprovedTimelock__factory } from "./factories/contracts/ImprovedTimelock__factory";
 export type { MockERC20 } from "./contracts/mocks/MockERC20";
@@ -90,3 +92,7 @@ export type { SimpleStakingV2 } from "./contracts/SimpleStakingV2";
 export { SimpleStakingV2__factory } from "./factories/contracts/SimpleStakingV2__factory";
 export type { TokenDistribution } from "./contracts/TokenDistribution";
 export { TokenDistribution__factory } from "./factories/contracts/TokenDistribution__factory";
+export type { IReflectiveToken } from "./contracts/TreasuryYieldStrategy.sol/IReflectiveToken";
+export { IReflectiveToken__factory } from "./factories/contracts/TreasuryYieldStrategy.sol/IReflectiveToken__factory";
+export type { TreasuryYieldStrategy } from "./contracts/TreasuryYieldStrategy.sol/TreasuryYieldStrategy";
+export { TreasuryYieldStrategy__factory } from "./factories/contracts/TreasuryYieldStrategy.sol/TreasuryYieldStrategy__factory";

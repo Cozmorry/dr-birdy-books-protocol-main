@@ -52,6 +52,15 @@ interface IUniswapV2Pair {
     function token1() external view returns (address);
 }
 
+interface IYieldStrategy {
+    function deposit(uint256 amount) external returns (uint256 shares);
+    function withdraw(uint256 shares) external returns (uint256 amount);
+    function getTotalValue() external view returns (uint256 totalValue);
+    function getYieldRate() external view returns (uint256 apyBps);
+    function getStatus() external view returns (bool isActive, bool isSafe);
+    function emergencyWithdraw() external returns (uint256 amount);
+}
+
 contract FlexibleTieredStaking is
     Ownable,
     AccessControl,
@@ -117,6 +126,12 @@ contract FlexibleTieredStaking is
     // Max users that can be processed in one clearExpiredAccess call
     uint256 public constant MAX_USERS_PER_CLEAR = 10;
 
+    // --- Yield Generation ---
+    IYieldStrategy public yieldStrategy;
+    uint256 public maxYieldDeploymentBps = 5000; // 50% max (in basis points)
+    uint256 public yieldDeployedShares; // Total shares deployed to yield strategy
+    bool public yieldEnabled = false;
+
     // Events
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
@@ -153,6 +168,13 @@ contract FlexibleTieredStaking is
         uint256 timestamp
     );
     event GasRefundRewardSet(uint256 indexed gasRefundReward);
+    
+    // Yield generation events
+    event YieldStrategySet(address indexed strategy);
+    event YieldDeposited(uint256 amount, uint256 shares);
+    event YieldWithdrawn(uint256 shares, uint256 amount);
+    event MaxYieldDeploymentUpdated(uint256 newMaxBps);
+    event YieldEnabled(bool enabled);
 
     // --- Constructor ---
     /**
@@ -434,6 +456,11 @@ contract FlexibleTieredStaking is
 
         _updateUserTier(msg.sender);
 
+        // Optionally deploy to yield strategy if enabled and within limits
+        if (yieldEnabled && address(yieldStrategy) != address(0)) {
+            _deployToYieldIfPossible();
+        }
+
         emit Staked(msg.sender, amount);
     }
 
@@ -492,6 +519,11 @@ contract FlexibleTieredStaking is
         lastUnstakeTimestamp[msg.sender] = block.timestamp;
 
         _updateUserTier(msg.sender);
+
+        // Withdraw from yield if needed to cover unstaking
+        if (yieldEnabled && address(yieldStrategy) != address(0) && yieldDeployedShares > 0) {
+            _withdrawFromYieldIfNeeded(amount);
+        }
 
         // Transfer tokens back to user using custom unstaking function
         // This properly handles reflection token transfers from excluded staking contract
@@ -1019,6 +1051,201 @@ contract FlexibleTieredStaking is
 
         uint256 usdValue = _getUserUsdValue(user);
         return usdValue >= tiers[tierIndex].threshold;
+    }
+
+    // --- Yield Generation Management ---
+
+    /**
+     * @notice Set the yield strategy contract (only owner)
+     * @param _strategy Address of the yield strategy contract
+     */
+    function setYieldStrategy(address _strategy) external onlyOwner {
+        require(_strategy != address(0), "Invalid strategy address");
+        yieldStrategy = IYieldStrategy(_strategy);
+        emit YieldStrategySet(_strategy);
+    }
+
+    /**
+     * @notice Enable or disable yield generation (only owner)
+     * @param _enabled True to enable, false to disable
+     */
+    function setYieldEnabled(bool _enabled) external onlyOwner {
+        yieldEnabled = _enabled;
+        emit YieldEnabled(_enabled);
+    }
+
+    /**
+     * @notice Set maximum percentage of staked tokens that can be deployed to yield (only owner)
+     * @param _maxBps Maximum percentage in basis points (e.g., 5000 = 50%)
+     */
+    function setMaxYieldDeployment(uint256 _maxBps) external onlyOwner {
+        require(_maxBps <= 10000, "Cannot exceed 100%");
+        maxYieldDeploymentBps = _maxBps;
+        emit MaxYieldDeploymentUpdated(_maxBps);
+    }
+
+    /**
+     * @notice Manually deploy tokens to yield strategy (only owner)
+     * @param amount Amount of tokens to deploy
+     */
+    function deployToYield(uint256 amount) external onlyOwner nonReentrant {
+        require(yieldEnabled, "Yield not enabled");
+        require(address(yieldStrategy) != address(0), "Strategy not set");
+        require(amount > 0, "Amount must be greater than 0");
+        
+        uint256 totalStaked = stakingToken.balanceOf(address(this));
+        uint256 currentDeployed = yieldDeployedShares;
+        uint256 maxDeployable = (totalStaked * maxYieldDeploymentBps) / 10000;
+        
+        require(currentDeployed + amount <= maxDeployable, "Exceeds max deployment limit");
+        
+        // Check strategy status
+        (bool isActive, bool isSafe) = yieldStrategy.getStatus();
+        require(isActive && isSafe, "Strategy not safe");
+        
+        // Approve and deposit
+        bool success = stakingToken.approve(address(yieldStrategy), amount);
+        require(success, "Approval failed");
+        
+        uint256 shares = yieldStrategy.deposit(amount);
+        yieldDeployedShares += shares;
+        
+        emit YieldDeposited(amount, shares);
+    }
+
+    /**
+     * @notice Withdraw tokens from yield strategy (only owner)
+     * @param shares Number of shares to withdraw
+     */
+    function withdrawFromYield(uint256 shares) external onlyOwner nonReentrant {
+        require(shares > 0, "Shares must be greater than 0");
+        require(shares <= yieldDeployedShares, "Insufficient shares");
+        
+        uint256 amount = yieldStrategy.withdraw(shares);
+        yieldDeployedShares -= shares;
+        
+        emit YieldWithdrawn(shares, amount);
+    }
+
+    /**
+     * @notice Emergency withdraw all funds from yield strategy (only owner)
+     */
+    function emergencyWithdrawFromYield() external onlyOwner nonReentrant {
+        require(address(yieldStrategy) != address(0), "Strategy not set");
+        
+        uint256 amount = yieldStrategy.emergencyWithdraw();
+        yieldDeployedShares = 0;
+        
+        emit YieldWithdrawn(yieldDeployedShares, amount);
+    }
+
+    /**
+     * @notice Get yield strategy information
+     * @return strategyAddress Address of yield strategy
+     * @return deployedShares Total shares deployed
+     * @return totalValue Total value in strategy
+     * @return apyBps Annual percentage yield in basis points
+     * @return isActive Whether strategy is active
+     */
+    function getYieldInfo() external view returns (
+        address strategyAddress,
+        uint256 deployedShares,
+        uint256 totalValue,
+        uint256 apyBps,
+        bool isActive
+    ) {
+        if (address(yieldStrategy) == address(0)) {
+            return (address(0), 0, 0, 0, false);
+        }
+        
+        totalValue = yieldStrategy.getTotalValue();
+        apyBps = yieldStrategy.getYieldRate();
+        (isActive, ) = yieldStrategy.getStatus();
+        
+        return (
+            address(yieldStrategy),
+            yieldDeployedShares,
+            totalValue,
+            apyBps,
+            isActive
+        );
+    }
+
+    /**
+     * @dev Internal function to deploy tokens to yield if conditions are met
+     */
+    function _deployToYieldIfPossible() internal {
+        if (!yieldEnabled || address(yieldStrategy) == address(0)) {
+            return;
+        }
+        
+        // Check strategy status
+        (bool isActive, bool isSafe) = yieldStrategy.getStatus();
+        if (!isActive || !isSafe) {
+            return;
+        }
+        
+        uint256 totalStaked = stakingToken.balanceOf(address(this));
+        uint256 currentDeployed = yieldDeployedShares;
+        uint256 maxDeployable = (totalStaked * maxYieldDeploymentBps) / 10000;
+        
+        // Only deploy if we're below the limit
+        if (currentDeployed < maxDeployable) {
+            uint256 availableToDeploy = maxDeployable - currentDeployed;
+            uint256 contractBalance = stakingToken.balanceOf(address(this));
+            
+            // Deploy a small portion to avoid gas issues
+            uint256 deployAmount = availableToDeploy < contractBalance 
+                ? availableToDeploy 
+                : contractBalance;
+            
+            if (deployAmount > 0) {
+                // Try to deploy, but don't fail if it doesn't work
+                try stakingToken.approve(address(yieldStrategy), deployAmount) returns (bool success) {
+                    if (success) {
+                        try yieldStrategy.deposit(deployAmount) returns (uint256 shares) {
+                            yieldDeployedShares += shares;
+                            emit YieldDeposited(deployAmount, shares);
+                        } catch {
+                            // Silently fail - yield deployment is optional
+                        }
+                    }
+                } catch {
+                    // Silently fail - yield deployment is optional
+                }
+            }
+        }
+    }
+
+    /**
+     * @dev Internal function to withdraw from yield if needed for unstaking
+     */
+    function _withdrawFromYieldIfNeeded(uint256 requiredAmount) internal {
+        if (yieldDeployedShares == 0) {
+            return;
+        }
+        
+        uint256 contractBalance = stakingToken.balanceOf(address(this));
+        
+        // Only withdraw if we don't have enough in contract
+        if (contractBalance < requiredAmount) {
+            uint256 needed = requiredAmount - contractBalance;
+            
+            // Calculate shares needed (approximate 1:1 for simplicity)
+            uint256 sharesToWithdraw = needed <= yieldDeployedShares 
+                ? needed 
+                : yieldDeployedShares;
+            
+            if (sharesToWithdraw > 0) {
+                try yieldStrategy.withdraw(sharesToWithdraw) returns (uint256 amount) {
+                    yieldDeployedShares -= sharesToWithdraw;
+                    emit YieldWithdrawn(sharesToWithdraw, amount);
+                } catch {
+                    // If withdrawal fails, we'll try to use contract balance
+                    // This shouldn't happen if strategy is properly implemented
+                }
+            }
+        }
     }
 
     // --- Allow contract to receive ETH for gas refund rewards ---

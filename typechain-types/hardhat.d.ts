@@ -134,9 +134,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IUniswapV2Pair__factory>;
     getContractFactory(
+      name: "IYieldStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IYieldStrategy__factory>;
+    getContractFactory(
       name: "ImprovedTimelock",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ImprovedTimelock__factory>;
+    getContractFactory(
+      name: "IYieldStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IYieldStrategy__factory>;
     getContractFactory(
       name: "MockERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -193,6 +201,18 @@ declare module "hardhat/types/runtime" {
       name: "TokenDistribution",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TokenDistribution__factory>;
+    getContractFactory(
+      name: "IReflectiveToken",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IReflectiveToken__factory>;
+    getContractFactory(
+      name: "IUniswapV2Router",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IUniswapV2Router__factory>;
+    getContractFactory(
+      name: "TreasuryYieldStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TreasuryYieldStrategy__factory>;
 
     getContractAt(
       name: "AccessControlUpgradeable",
@@ -345,10 +365,20 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IUniswapV2Pair>;
     getContractAt(
+      name: "IYieldStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IYieldStrategy>;
+    getContractAt(
       name: "ImprovedTimelock",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ImprovedTimelock>;
+    getContractAt(
+      name: "IYieldStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IYieldStrategy>;
     getContractAt(
       name: "MockERC20",
       address: string | ethers.Addressable,
@@ -419,6 +449,21 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TokenDistribution>;
+    getContractAt(
+      name: "IReflectiveToken",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IReflectiveToken>;
+    getContractAt(
+      name: "IUniswapV2Router",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IUniswapV2Router>;
+    getContractAt(
+      name: "TreasuryYieldStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TreasuryYieldStrategy>;
 
     deployContract(
       name: "AccessControlUpgradeable",
@@ -541,9 +586,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IUniswapV2Pair>;
     deployContract(
+      name: "IYieldStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IYieldStrategy>;
+    deployContract(
       name: "ImprovedTimelock",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ImprovedTimelock>;
+    deployContract(
+      name: "IYieldStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IYieldStrategy>;
     deployContract(
       name: "MockERC20",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -600,6 +653,18 @@ declare module "hardhat/types/runtime" {
       name: "TokenDistribution",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TokenDistribution>;
+    deployContract(
+      name: "IReflectiveToken",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IReflectiveToken>;
+    deployContract(
+      name: "IUniswapV2Router",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV2Router>;
+    deployContract(
+      name: "TreasuryYieldStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TreasuryYieldStrategy>;
 
     deployContract(
       name: "AccessControlUpgradeable",
@@ -752,10 +817,20 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IUniswapV2Pair>;
     deployContract(
+      name: "IYieldStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IYieldStrategy>;
+    deployContract(
       name: "ImprovedTimelock",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ImprovedTimelock>;
+    deployContract(
+      name: "IYieldStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IYieldStrategy>;
     deployContract(
       name: "MockERC20",
       args: any[],
@@ -826,6 +901,21 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TokenDistribution>;
+    deployContract(
+      name: "IReflectiveToken",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IReflectiveToken>;
+    deployContract(
+      name: "IUniswapV2Router",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV2Router>;
+    deployContract(
+      name: "TreasuryYieldStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TreasuryYieldStrategy>;
 
     // default types
     getContractFactory(

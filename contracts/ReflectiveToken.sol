@@ -1329,7 +1329,7 @@ contract ReflectiveToken is
             "Distribution contract not set"
         );
 
-        uint256 totalToDistribute = 1_000_000 * 10 ** 18; // 1M tokens (10% of supply)
+        uint256 totalToDistribute = 900_000 * 10 ** 18; // 900k tokens (9% of supply: 750k team + 250k airdrop)
         require(
             balanceOf(address(this)) >= totalToDistribute,
             "Insufficient contract balance"
