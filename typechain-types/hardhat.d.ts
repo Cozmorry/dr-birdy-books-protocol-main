@@ -134,10 +134,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IUniswapV2Pair__factory>;
     getContractFactory(
-      name: "IYieldStrategy",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IYieldStrategy__factory>;
-    getContractFactory(
       name: "ImprovedTimelock",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ImprovedTimelock__factory>;
@@ -365,11 +361,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IUniswapV2Pair>;
     getContractAt(
-      name: "IYieldStrategy",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IYieldStrategy>;
-    getContractAt(
       name: "ImprovedTimelock",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -585,10 +576,6 @@ declare module "hardhat/types/runtime" {
       name: "IUniswapV2Pair",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IUniswapV2Pair>;
-    deployContract(
-      name: "IYieldStrategy",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IYieldStrategy>;
     deployContract(
       name: "ImprovedTimelock",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -816,11 +803,6 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IUniswapV2Pair>;
-    deployContract(
-      name: "IYieldStrategy",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IYieldStrategy>;
     deployContract(
       name: "ImprovedTimelock",
       args: any[],

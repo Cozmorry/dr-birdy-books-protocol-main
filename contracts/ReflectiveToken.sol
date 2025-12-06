@@ -1071,8 +1071,10 @@ contract ReflectiveToken is
         require(recipient != address(0), "RT: Transfer to zero address");
         require(amount > 0, "RT: Transfer amount must be greater than zero");
 
-        // Check staking contract balance (it's excluded, so check _tOwned)
-        require(_tOwned[stakingContract] >= amount, "RT: Insufficient _tOwned balance in staking contract");
+        // Check staking contract balance using balanceOf (works correctly for excluded addresses)
+        // balanceOf() returns _tOwned for excluded addresses, which is what we need
+        uint256 stakingBalance = balanceOf(stakingContract);
+        require(stakingBalance >= amount, "RT: Insufficient balance in staking contract");
 
         // Perform the transfer from staking contract (excluded) to user (may be non-excluded)
         // No fees when staking contract is involved
@@ -1329,7 +1331,7 @@ contract ReflectiveToken is
             "Distribution contract not set"
         );
 
-        uint256 totalToDistribute = 900_000 * 10 ** 18; // 900k tokens (9% of supply: 750k team + 250k airdrop)
+        uint256 totalToDistribute = 1_000_000 * 10 ** 18; // 1M tokens (10% of supply: 750k team + 250k airdrop)
         require(
             balanceOf(address(this)) >= totalToDistribute,
             "Insufficient contract balance"

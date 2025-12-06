@@ -312,27 +312,15 @@ async function main() {
   }
 
   // ===============================
-  // STEP 5: Transfer Ownership to New Owner
+  // STEP 5: Ownership Configuration
   // ===============================
+  // Owner is set to deployer address (you) - no transfer needed
+  // If you want to transfer to a different address later, use the transfer-ownership script
   
-  const newOwnerAddress = "0x27799bb35820Ecb2814Ac2484bA34AD91bbda198";
-  
-  try {
-    console.log("\n🔐 Transferring ownership of FlexibleTieredStaking to new owner...");
-    const staking = await ethers.getContractAt("FlexibleTieredStaking", deployed.staking);
-    const currentOwner = await staking.owner();
-    
-    if (currentOwner.toLowerCase() !== newOwnerAddress.toLowerCase()) {
-      const transferTx = await staking.transferOwnership(newOwnerAddress);
-      await transferTx.wait();
-      console.log("✅ Ownership transferred to:", newOwnerAddress);
-    } else {
-      console.log("✅ Contract already owned by:", newOwnerAddress);
-    }
-  } catch (err: any) {
-    console.warn("⚠️ Failed to transfer ownership:", err.message);
-    console.warn("   You can transfer ownership manually later using the transfer-ownership script");
-  }
+  console.log("\n🔐 Contract ownership:");
+  console.log("   Owner (deployer):", deployer.address);
+  console.log("   ✅ Contracts deployed with you as owner");
+  console.log("   💡 To transfer ownership later, use: scripts/transfer-ownership.ts");
 
   console.log("\n🎯 Deployment Summary:");
   console.table(deployed);

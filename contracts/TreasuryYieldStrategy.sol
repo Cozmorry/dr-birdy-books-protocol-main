@@ -77,12 +77,18 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
 
     /**
      * @notice Deposit tokens into the strategy
+     * @dev BUG FIX: Now properly transfers tokens from staking contract to this strategy
      * @dev In this strategy, tokens are simply held. Yield comes from buybacks.
      */
     function deposit(uint256 amount) external override nonReentrant returns (uint256 shares) {
         require(isActive, "Strategy is paused");
         require(msg.sender == stakingContract, "Only staking contract can deposit");
         require(amount > 0, "Amount must be greater than 0");
+        
+        // BUG FIX: Transfer tokens from staking contract to this strategy
+        // Before: tokens were never transferred, leaving strategy with zero balance
+        bool success = token.transferFrom(stakingContract, address(this), amount);
+        require(success, "Token transfer failed");
         
         totalDeposited += amount;
         emit TokensDeposited(amount);
@@ -238,4 +244,3 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
         // ETH can be sent directly for buybacks
     }
 }
-

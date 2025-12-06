@@ -29,8 +29,8 @@ async function main() {
   const stakingAddress = contractAddresses.flexibleTieredStaking;
   const uniswapRouter = oracleConfig.uniswapRouter;
 
-  // Owner address (client's address)
-  const ownerAddress = "0x27799bb35820Ecb2814Ac2484bA34AD91bbda198";
+  // Owner address (deployer's address - you)
+  const ownerAddress = deployer.address;
 
   // Validate addresses
   if (tokenAddress === ethers.ZeroAddress) {

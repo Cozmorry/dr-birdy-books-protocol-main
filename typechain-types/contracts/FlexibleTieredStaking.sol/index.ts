@@ -5,4 +5,3 @@ export type { FlexibleTieredStaking } from "./FlexibleTieredStaking";
 export type { IFlexibleTieredStaking } from "./IFlexibleTieredStaking";
 export type { IPriceOracle } from "./IPriceOracle";
 export type { IUniswapV2Pair } from "./IUniswapV2Pair";
-export type { IYieldStrategy } from "./IYieldStrategy";

@@ -55,11 +55,11 @@ export const CONTRACT_ADDRESSES = {
     improvedTimelock: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
   },
   [BASE_TESTNET.chainId]: {
-    reflectiveToken: '0xdEA33fCB6BDCaB788De398A636a1227122Ae3d7D', // ✅ WORKING - Non-upgradeable version
-    tokenDistribution: '0x0e9697F783654d5F26f41dA15FbAc449fF4Ddf5d', // Deployed on Base Sepolia
-    flexibleTieredStaking: '0xAa3cA3eF0619dfA1753385C32C3De16f04c4b93c', // ✅ UPDATED - Redeployed with new owner: 0x27799bb35820Ecb2814Ac2484bA34AD91bbda198
-    arweaveGateway: '0xb37EE17a794013fFDfE87E5921eE7984588A8eC7', // Deployed on Base Sepolia
-    improvedTimelock: '0x937D2960F0BA86a2c829CC6F5921E8b3725d08dA', // Deployed on Base Sepolia
+    reflectiveToken: '0x02e4346067b96FfA5F4A6F2005c4fb98C39Da38c', // ✅ FIXED - With balanceOf() fix for unstaking
+    tokenDistribution: '0x951f92b9897f632B0caE54502C8016F4cEd0e969', // ✅ FIXED - With correct TOTAL_DISTRIBUTED (1M tokens)
+    flexibleTieredStaking: '0x09b611a69BecdA1c2D043D423F70EA9a7fc3c7d3', // ✅ REDEPLOYED - Owned by: 0xE409c2F794647AC4940d7f1B6506790098bbA136
+    arweaveGateway: '0xe5C61ff65d10FfBBbaf706Bd9E97D5965708c1Fa', // Deployed on Base Sepolia
+    improvedTimelock: '0xc875dEC51d1a0ff97Fb23c3004aBBb9feC0eba48', // Deployed on Base Sepolia
   },
   [LOCALHOST.chainId]: {
     reflectiveToken: '0x4213F020e9430F3549614231A4Dc06226FEEae40',
