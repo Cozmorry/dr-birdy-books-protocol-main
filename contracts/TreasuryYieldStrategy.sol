@@ -43,8 +43,9 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
     bool public isActive = true;
     
     // Configuration
-    uint256 public minBuybackAmount = 100 * 10**18; // Minimum 100 tokens to trigger buyback
+    uint256 public minBuybackAmount = 0.001 ether; // Minimum ETH to trigger auto-buyback
     uint256 public estimatedAPY = 200; // 2% APY estimate (conservative, based on protocol fees)
+    bool public autoBuybackEnabled = true; // Auto-execute buyback when ETH received
     
     // Events
     event TokensDeposited(uint256 amount);
@@ -53,6 +54,20 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
     event StrategyResumed();
     event MinBuybackAmountUpdated(uint256 newAmount);
     event UniswapRouterUpdated(address newRouter);
+    event AutoBuybackToggled(bool enabled);
+    
+    // Receive ETH and auto-execute buyback
+    receive() external payable {
+        if (autoBuybackEnabled && msg.value >= minBuybackAmount && isActive) {
+            _executeBuybackInternal(msg.value);
+        }
+    }
+    
+    fallback() external payable {
+        if (autoBuybackEnabled && msg.value >= minBuybackAmount && isActive) {
+            _executeBuybackInternal(msg.value);
+        }
+    }
 
     constructor(
         address _token,
@@ -73,6 +88,23 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
         require(stakingContract == address(0), "Staking contract already set");
         require(_stakingContract != address(0), "Invalid address");
         stakingContract = _stakingContract;
+    }
+    
+    /**
+     * @notice Enable or disable auto-buyback on ETH receive
+     */
+    function setAutoBuybackEnabled(bool _enabled) external onlyOwner {
+        autoBuybackEnabled = _enabled;
+        emit AutoBuybackToggled(_enabled);
+    }
+    
+    /**
+     * @notice Set minimum ETH amount to trigger auto-buyback
+     */
+    function setMinBuybackAmount(uint256 _minAmount) external onlyOwner {
+        require(_minAmount > 0, "Amount must be greater than 0");
+        minBuybackAmount = _minAmount;
+        emit MinBuybackAmountUpdated(_minAmount);
     }
 
     /**
@@ -121,7 +153,16 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
     function executeBuyback() external payable nonReentrant {
         require(isActive, "Strategy is paused");
         require(msg.value > 0, "No ETH sent");
-        require(address(this).balance >= msg.value, "Insufficient balance");
+        _executeBuybackInternal(msg.value);
+    }
+    
+    /**
+     * @dev Internal function to execute buyback
+     */
+    function _executeBuybackInternal(uint256 ethAmount) internal nonReentrant {
+        require(isActive, "Strategy is paused");
+        require(ethAmount > 0, "No ETH to swap");
+        require(address(this).balance >= ethAmount, "Insufficient balance");
         
         // Get WETH address
         address weth = uniswapRouter.WETH();
@@ -133,12 +174,12 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
         path[1] = address(token);
         
         // Get minimum amount out (with 1% slippage tolerance)
-        uint256[] memory amountsOut = uniswapRouter.getAmountsOut(msg.value, path);
+        uint256[] memory amountsOut = uniswapRouter.getAmountsOut(ethAmount, path);
         require(amountsOut.length >= 2, "Invalid path");
         uint256 minAmountOut = (amountsOut[1] * 99) / 100; // 1% slippage
         
         // Execute swap
-        uint256[] memory amounts = uniswapRouter.swapExactETHForTokens{value: msg.value}(
+        uint256[] memory amounts = uniswapRouter.swapExactETHForTokens{value: ethAmount}(
             minAmountOut,
             path,
             address(this),
@@ -152,7 +193,7 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
             IReflectiveToken(address(token)).burnTokens(tokensBought);
             totalBurned += tokensBought;
             
-            emit BuybackExecuted(msg.value, tokensBought, tokensBought);
+            emit BuybackExecuted(ethAmount, tokensBought, tokensBought);
         }
     }
 
@@ -205,15 +246,6 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Update minimum buyback amount
-     */
-    function setMinBuybackAmount(uint256 _minAmount) external onlyOwner {
-        require(_minAmount > 0, "Amount must be greater than 0");
-        minBuybackAmount = _minAmount;
-        emit MinBuybackAmountUpdated(_minAmount);
-    }
-
-    /**
      * @notice Update Uniswap router
      */
     function setUniswapRouter(address _router) external onlyOwner {
@@ -237,10 +269,5 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
             token.balanceOf(address(this)),
             isActive
         );
-    }
-
-    // Allow contract to receive ETH for buybacks
-    receive() external payable {
-        // ETH can be sent directly for buybacks
     }
 }

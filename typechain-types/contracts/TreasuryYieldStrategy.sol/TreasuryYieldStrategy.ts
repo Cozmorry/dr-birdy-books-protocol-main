@@ -26,6 +26,7 @@ import type {
 export interface TreasuryYieldStrategyInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "autoBuybackEnabled"
       | "deposit"
       | "emergencyWithdraw"
       | "estimatedAPY"
@@ -40,6 +41,7 @@ export interface TreasuryYieldStrategyInterface extends Interface {
       | "pause"
       | "renounceOwnership"
       | "resume"
+      | "setAutoBuybackEnabled"
       | "setMinBuybackAmount"
       | "setStakingContract"
       | "setUniswapRouter"
@@ -52,6 +54,7 @@ export interface TreasuryYieldStrategyInterface extends Interface {
 
   getEvent(
     nameOrSignatureOrTopic:
+      | "AutoBuybackToggled"
       | "BuybackExecuted"
       | "MinBuybackAmountUpdated"
       | "OwnershipTransferred"
@@ -61,6 +64,10 @@ export interface TreasuryYieldStrategyInterface extends Interface {
       | "UniswapRouterUpdated"
   ): EventFragment;
 
+  encodeFunctionData(
+    functionFragment: "autoBuybackEnabled",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "deposit",
     values: [BigNumberish]
@@ -100,6 +107,10 @@ export interface TreasuryYieldStrategyInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "resume", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "setAutoBuybackEnabled",
+    values: [boolean]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setMinBuybackAmount",
     values: [BigNumberish]
   ): string;
@@ -129,6 +140,10 @@ export interface TreasuryYieldStrategyInterface extends Interface {
     values: [BigNumberish]
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "autoBuybackEnabled",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "emergencyWithdraw",
@@ -165,6 +180,10 @@ export interface TreasuryYieldStrategyInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "resume", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "setAutoBuybackEnabled",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setMinBuybackAmount",
     data: BytesLike
   ): Result;
@@ -190,6 +209,18 @@ export interface TreasuryYieldStrategyInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
+}
+
+export namespace AutoBuybackToggledEvent {
+  export type InputTuple = [enabled: boolean];
+  export type OutputTuple = [enabled: boolean];
+  export interface OutputObject {
+    enabled: boolean;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace BuybackExecutedEvent {
@@ -326,6 +357,8 @@ export interface TreasuryYieldStrategy extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  autoBuybackEnabled: TypedContractMethod<[], [boolean], "view">;
+
   deposit: TypedContractMethod<[amount: BigNumberish], [bigint], "nonpayable">;
 
   emergencyWithdraw: TypedContractMethod<[], [bigint], "nonpayable">;
@@ -369,6 +402,12 @@ export interface TreasuryYieldStrategy extends BaseContract {
 
   resume: TypedContractMethod<[], [void], "nonpayable">;
 
+  setAutoBuybackEnabled: TypedContractMethod<
+    [_enabled: boolean],
+    [void],
+    "nonpayable"
+  >;
+
   setMinBuybackAmount: TypedContractMethod<
     [_minAmount: BigNumberish],
     [void],
@@ -405,6 +444,9 @@ export interface TreasuryYieldStrategy extends BaseContract {
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "autoBuybackEnabled"
+  ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
     nameOrSignature: "deposit"
   ): TypedContractMethod<[amount: BigNumberish], [bigint], "nonpayable">;
@@ -463,6 +505,9 @@ export interface TreasuryYieldStrategy extends BaseContract {
     nameOrSignature: "resume"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setAutoBuybackEnabled"
+  ): TypedContractMethod<[_enabled: boolean], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "setMinBuybackAmount"
   ): TypedContractMethod<[_minAmount: BigNumberish], [void], "nonpayable">;
   getFunction(
@@ -487,6 +532,13 @@ export interface TreasuryYieldStrategy extends BaseContract {
     nameOrSignature: "withdraw"
   ): TypedContractMethod<[shares: BigNumberish], [bigint], "nonpayable">;
 
+  getEvent(
+    key: "AutoBuybackToggled"
+  ): TypedContractEvent<
+    AutoBuybackToggledEvent.InputTuple,
+    AutoBuybackToggledEvent.OutputTuple,
+    AutoBuybackToggledEvent.OutputObject
+  >;
   getEvent(
     key: "BuybackExecuted"
   ): TypedContractEvent<
@@ -538,6 +590,17 @@ export interface TreasuryYieldStrategy extends BaseContract {
   >;
 
   filters: {
+    "AutoBuybackToggled(bool)": TypedContractEvent<
+      AutoBuybackToggledEvent.InputTuple,
+      AutoBuybackToggledEvent.OutputTuple,
+      AutoBuybackToggledEvent.OutputObject
+    >;
+    AutoBuybackToggled: TypedContractEvent<
+      AutoBuybackToggledEvent.InputTuple,
+      AutoBuybackToggledEvent.OutputTuple,
+      AutoBuybackToggledEvent.OutputObject
+    >;
+
     "BuybackExecuted(uint256,uint256,uint256)": TypedContractEvent<
       BuybackExecutedEvent.InputTuple,
       BuybackExecutedEvent.OutputTuple,

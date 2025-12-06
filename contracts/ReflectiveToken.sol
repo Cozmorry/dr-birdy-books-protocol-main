@@ -163,6 +163,8 @@ contract ReflectiveToken is
     address public timelock;
     uint256 public timelockDelay;
     TokenDistribution public tokenDistribution;
+    address public yieldStrategy; // TreasuryYieldStrategy for automated buybacks
+    uint256 public yieldStrategyFeeBps = 5000; // 50% of marketing fee goes to yield (in basis points)
 
     // Reflection Tracking
     uint256 private _rTotal;
@@ -222,6 +224,9 @@ contract ReflectiveToken is
         uint256 liquidityAdded
     );
     event MarketingFeeDistributed(uint256 amount);
+    event YieldStrategyFeeSent(uint256 amount);
+    event YieldStrategySet(address yieldStrategy);
+    event YieldStrategyFeeBpsUpdated(uint256 newBps);
     event SlippageUpdated(
         uint256 swapSlippageBps,
         uint256 liquiditySlippageBps
@@ -399,6 +404,27 @@ contract ReflectiveToken is
         require(_arweaveGateway != address(0), "Invalid gateway address");
         arweaveGateway = _arweaveGateway;
         emit ArweaveGatewaySet(_arweaveGateway);
+    }
+
+    /**
+     * @notice Set yield strategy address for automated buybacks (only owner)
+     * @dev Sets the TreasuryYieldStrategy address to receive marketing fees
+     * @param _yieldStrategy Address of the yield strategy contract
+     */
+    function setYieldStrategy(address _yieldStrategy) external onlyOwner {
+        yieldStrategy = _yieldStrategy;
+        emit YieldStrategySet(_yieldStrategy);
+    }
+
+    /**
+     * @notice Set percentage of marketing fee that goes to yield strategy (only owner)
+     * @dev Sets the split between marketing wallet and yield strategy
+     * @param _feeBps Fee percentage in basis points (e.g., 5000 = 50%)
+     */
+    function setYieldStrategyFeeBps(uint256 _feeBps) external onlyOwner {
+        require(_feeBps <= 10000, "Cannot exceed 100%");
+        yieldStrategyFeeBps = _feeBps;
+        emit YieldStrategyFeeBpsUpdated(_feeBps);
     }
 
     /**
@@ -1199,14 +1225,35 @@ contract ReflectiveToken is
     }
 
     /**
-     * @dev Distributes the marketing fee to the marketing wallet.
+     * @dev Distributes the marketing fee to the marketing wallet and yield strategy.
      * @param ethReceived Total ETH received from the swap.
      */
     function _distributeMarketingFee(uint256 ethReceived) private {
         uint256 marketingShare = (ethReceived * marketingFee) /
             (marketingFee + liquidityFee);
-        payable(marketingWallet).transfer(marketingShare);
-        emit MarketingFeeDistributed(marketingShare);
+        
+        // Split marketing fee between marketing wallet and yield strategy
+        if (yieldStrategy != address(0) && yieldStrategyFeeBps > 0) {
+            uint256 yieldStrategyShare = (marketingShare * yieldStrategyFeeBps) / 10000;
+            uint256 marketingWalletShare = marketingShare - yieldStrategyShare;
+            
+            // Send to yield strategy (will auto-execute buyback if enabled)
+            (bool success, ) = payable(yieldStrategy).call{value: yieldStrategyShare}("");
+            if (success) {
+                emit YieldStrategyFeeSent(yieldStrategyShare);
+            }
+            
+            // Send remaining to marketing wallet
+            if (marketingWalletShare > 0) {
+                payable(marketingWallet).transfer(marketingWalletShare);
+            }
+            
+            emit MarketingFeeDistributed(marketingWalletShare);
+        } else {
+            // No yield strategy set, send all to marketing wallet
+            payable(marketingWallet).transfer(marketingShare);
+            emit MarketingFeeDistributed(marketingShare);
+        }
     }
 
     // Arweave transaction verification
