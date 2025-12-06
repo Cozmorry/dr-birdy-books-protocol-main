@@ -66,10 +66,10 @@ export type { IPriceOracle } from "./contracts/FlexibleTieredStaking.sol/IPriceO
 export { IPriceOracle__factory } from "./factories/contracts/FlexibleTieredStaking.sol/IPriceOracle__factory";
 export type { IUniswapV2Pair } from "./contracts/FlexibleTieredStaking.sol/IUniswapV2Pair";
 export { IUniswapV2Pair__factory } from "./factories/contracts/FlexibleTieredStaking.sol/IUniswapV2Pair__factory";
+export type { IYieldStrategy } from "./contracts/FlexibleTieredStaking.sol/IYieldStrategy";
+export { IYieldStrategy__factory } from "./factories/contracts/FlexibleTieredStaking.sol/IYieldStrategy__factory";
 export type { ImprovedTimelock } from "./contracts/ImprovedTimelock";
 export { ImprovedTimelock__factory } from "./factories/contracts/ImprovedTimelock__factory";
-export type { IYieldStrategy } from "./contracts/IYieldStrategy";
-export { IYieldStrategy__factory } from "./factories/contracts/IYieldStrategy__factory";
 export type { MockERC20 } from "./contracts/mocks/MockERC20";
 export { MockERC20__factory } from "./factories/contracts/mocks/MockERC20__factory";
 export type { MockPriceOracle } from "./contracts/mocks/MockPriceOracle";
