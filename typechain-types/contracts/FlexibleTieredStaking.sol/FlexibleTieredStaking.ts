@@ -99,6 +99,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "setPrimaryPriceOracle"
       | "setStakingToken"
       | "setUniswapPair"
+      | "setYieldDeployedShares"
       | "setYieldEnabled"
       | "setYieldStrategy"
       | "stake"
@@ -144,6 +145,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "UserFileAdded"
       | "YieldDeposited"
       | "YieldEnabled"
+      | "YieldSharesAdjusted"
       | "YieldStrategySet"
       | "YieldWithdrawn"
   ): EventFragment;
@@ -331,6 +333,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setUniswapPair",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setYieldDeployedShares",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setYieldEnabled",
@@ -566,6 +572,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setUniswapPair",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setYieldDeployedShares",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -974,6 +984,19 @@ export namespace YieldEnabledEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace YieldSharesAdjustedEvent {
+  export type InputTuple = [oldShares: BigNumberish, newShares: BigNumberish];
+  export type OutputTuple = [oldShares: bigint, newShares: bigint];
+  export interface OutputObject {
+    oldShares: bigint;
+    newShares: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace YieldStrategySetEvent {
   export type InputTuple = [strategy: AddressLike];
   export type OutputTuple = [strategy: string];
@@ -1290,6 +1313,12 @@ export interface FlexibleTieredStaking extends BaseContract {
 
   setUniswapPair: TypedContractMethod<
     [_uniswapPair: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setYieldDeployedShares: TypedContractMethod<
+    [newShares: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1658,6 +1687,9 @@ export interface FlexibleTieredStaking extends BaseContract {
     nameOrSignature: "setUniswapPair"
   ): TypedContractMethod<[_uniswapPair: AddressLike], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setYieldDeployedShares"
+  ): TypedContractMethod<[newShares: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "setYieldEnabled"
   ): TypedContractMethod<[_enabled: boolean], [void], "nonpayable">;
   getFunction(
@@ -1872,6 +1904,13 @@ export interface FlexibleTieredStaking extends BaseContract {
     YieldEnabledEvent.InputTuple,
     YieldEnabledEvent.OutputTuple,
     YieldEnabledEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldSharesAdjusted"
+  ): TypedContractEvent<
+    YieldSharesAdjustedEvent.InputTuple,
+    YieldSharesAdjustedEvent.OutputTuple,
+    YieldSharesAdjustedEvent.OutputObject
   >;
   getEvent(
     key: "YieldStrategySet"
@@ -2107,6 +2146,17 @@ export interface FlexibleTieredStaking extends BaseContract {
       YieldEnabledEvent.InputTuple,
       YieldEnabledEvent.OutputTuple,
       YieldEnabledEvent.OutputObject
+    >;
+
+    "YieldSharesAdjusted(uint256,uint256)": TypedContractEvent<
+      YieldSharesAdjustedEvent.InputTuple,
+      YieldSharesAdjustedEvent.OutputTuple,
+      YieldSharesAdjustedEvent.OutputObject
+    >;
+    YieldSharesAdjusted: TypedContractEvent<
+      YieldSharesAdjustedEvent.InputTuple,
+      YieldSharesAdjustedEvent.OutputTuple,
+      YieldSharesAdjustedEvent.OutputObject
     >;
 
     "YieldStrategySet(address)": TypedContractEvent<

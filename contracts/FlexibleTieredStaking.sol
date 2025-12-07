@@ -175,6 +175,7 @@ contract FlexibleTieredStaking is
     event YieldWithdrawn(uint256 shares, uint256 amount);
     event MaxYieldDeploymentUpdated(uint256 newMaxBps);
     event YieldEnabled(bool enabled);
+    event YieldSharesAdjusted(uint256 oldShares, uint256 newShares);
 
     // --- Constructor ---
     /**
@@ -1138,6 +1139,17 @@ contract FlexibleTieredStaking is
         yieldDeployedShares = 0;
         
         emit YieldWithdrawn(sharesToEmit, amount);
+    }
+
+    /**
+     * @notice Manually adjust deployed shares (only owner)
+     * @dev Use this to fix mismatches when migrating strategies
+     * @param newShares New value for yieldDeployedShares
+     */
+    function setYieldDeployedShares(uint256 newShares) external onlyOwner {
+        uint256 oldShares = yieldDeployedShares;
+        yieldDeployedShares = newShares;
+        emit YieldSharesAdjusted(oldShares, newShares);
     }
 
     /**

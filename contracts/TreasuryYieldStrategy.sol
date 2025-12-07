@@ -132,6 +132,7 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
     /**
      * @notice Withdraw tokens from the strategy
      * @dev Returns tokens 1:1. Yield is distributed via buybacks, not withdrawals.
+     *      Transfers tokens from strategy (this contract) to staking contract.
      */
     function withdraw(uint256 shares) external override nonReentrant returns (uint256 amount) {
         require(msg.sender == stakingContract, "Only staking contract can withdraw");
@@ -140,8 +141,10 @@ contract TreasuryYieldStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
         
         totalDeposited -= shares;
         
-        // Transfer tokens back to staking contract
-        IReflectiveToken(address(token)).transferForUnstaking(stakingContract, shares);
+        // Transfer tokens from strategy (this contract) to staking contract
+        // Use regular transfer since tokens are in the strategy, not staking contract
+        bool success = token.transfer(stakingContract, shares);
+        require(success, "Token transfer failed");
         
         return shares;
     }
