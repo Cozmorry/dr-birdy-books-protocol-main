@@ -14,7 +14,7 @@ const DEPLOYMENT_CONFIG = {
   TEAM_WALLETS: {
     JOSEPH: "0x4d8b10e7d6bff54c8c1c1c42240c74e173c5f8ed", // J - 1.625%
     AJ: "0xdd82052fbc8edc7091dafa1540f16c63c51cb2fb", // A - 1.625%
-    DSIGN: "0x0000000000000000000000000000000000000000", // D - 1.625% (to be updated later)
+    DSIGN: "0x130678ed1594929c02da4c10ab11a848df727eea", // D - 1.625%
     DEVELOPER: "0xe409c2f794647ac4940d7f1b6506790098bba136", // Morris - 1%
     BIRDY: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // B - 1.625%
     AIRDROP: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // Replace with actual
@@ -84,7 +84,7 @@ function validateConfig() {
     throw new Error("PRIMARY_ORACLE not set");
   }
 
-  // Check team wallets (DSIGN can be zero as it will be updated later)
+  // Check team wallets
   const teamWallets = Object.values(config.TEAM_WALLETS);
   for (const [key, wallet] of Object.entries(config.TEAM_WALLETS)) {
     if (wallet === "0x0000000000000000000000000000000000000000" && key !== "DSIGN") {
