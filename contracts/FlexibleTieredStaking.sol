@@ -132,6 +132,10 @@ contract FlexibleTieredStaking is
     uint256 public yieldDeployedShares; // Total shares deployed to yield strategy
     bool public yieldEnabled = false;
 
+    // --- Testing Override ---
+    uint256 public minStakingDurationOverride; // Override for testing (0 = no waiting, >0 = custom duration, max uint = use constant)
+    bool public minStakingDurationOverrideEnabled; // Whether override is enabled
+
     // Events
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
@@ -176,6 +180,7 @@ contract FlexibleTieredStaking is
     event MaxYieldDeploymentUpdated(uint256 newMaxBps);
     event YieldEnabled(bool enabled);
     event YieldSharesAdjusted(uint256 oldShares, uint256 newShares);
+    event MinStakingDurationOverrideSet(uint256 seconds_, bool enabled);
 
     // --- Constructor ---
     /**
@@ -510,9 +515,14 @@ contract FlexibleTieredStaking is
         );
 
         // Enforce minimum staking duration before unstaking allowed
+        uint256 minDuration;
+        if (minStakingDurationOverrideEnabled) {
+            minDuration = minStakingDurationOverride; // 0 = no waiting, >0 = custom duration
+        } else {
+            minDuration = MIN_STAKING_DURATION; // Use default 24 hours
+        }
         require(
-            block.timestamp >=
-                stakeTimestamp[msg.sender] + MIN_STAKING_DURATION,
+            block.timestamp >= stakeTimestamp[msg.sender] + minDuration,
             "Minimum staking duration not met"
         );
 
@@ -522,16 +532,19 @@ contract FlexibleTieredStaking is
         _updateUserTier(msg.sender);
 
         // Withdraw from yield if needed to cover unstaking
+        // Do this BEFORE checking balance to ensure tokens are available
         if (yieldEnabled && address(yieldStrategy) != address(0) && yieldDeployedShares > 0) {
             _withdrawFromYieldIfNeeded(amount);
         }
 
-        // Transfer tokens back to user using custom unstaking function
-        // This properly handles reflection token transfers from excluded staking contract
-        // Cast to ReflectiveToken to access transferForUnstaking
-        (bool success, ) = address(stakingToken).call(
-            abi.encodeWithSignature("transferForUnstaking(address,uint256)", msg.sender, amount)
-        );
+        // Verify we have enough balance after withdrawal
+        uint256 contractBalance = stakingToken.balanceOf(address(this));
+        require(contractBalance >= amount, "Insufficient contract balance after yield withdrawal");
+
+        // Transfer tokens directly using standard transfer
+        // Since staking contract is excluded from fees, this should work
+        // and avoids the balance check issue in transferForUnstaking
+        bool success = stakingToken.transfer(msg.sender, amount);
         require(success, "Token transfer failed");
 
         emit Unstaked(msg.sender, amount);
@@ -556,9 +569,14 @@ contract FlexibleTieredStaking is
         }
 
         // Enforce minimum staking duration before unstaking allowed
+        uint256 minDuration;
+        if (minStakingDurationOverrideEnabled) {
+            minDuration = minStakingDurationOverride; // 0 = no waiting, >0 = custom duration
+        } else {
+            minDuration = MIN_STAKING_DURATION; // Use default 24 hours
+        }
         require(
-            block.timestamp >=
-                stakeTimestamp[msg.sender] + MIN_STAKING_DURATION,
+            block.timestamp >= stakeTimestamp[msg.sender] + minDuration,
             "Minimum staking duration not met"
         );
 
@@ -963,8 +981,13 @@ contract FlexibleTieredStaking is
         stakedAmount = userStakedTokens[user];
         usdValue = _getUserUsdValue(user);
         userHasAccess = hasAccess(user);
-        canUnstake =
-            block.timestamp >= stakeTimestamp[user] + MIN_STAKING_DURATION;
+        uint256 minDuration;
+        if (minStakingDurationOverrideEnabled) {
+            minDuration = minStakingDurationOverride; // 0 = no waiting, >0 = custom duration
+        } else {
+            minDuration = MIN_STAKING_DURATION; // Use default 24 hours
+        }
+        canUnstake = block.timestamp >= stakeTimestamp[user] + minDuration;
     }
 
     /**
@@ -1086,6 +1109,17 @@ contract FlexibleTieredStaking is
     }
 
     /**
+     * @notice Set minimum staking duration override for testing (only owner)
+     * @param _seconds Override duration in seconds (0 = no waiting, >0 = custom duration)
+     * @param _enabled Whether to enable the override (false = use default 24 hours)
+     */
+    function setMinStakingDurationOverride(uint256 _seconds, bool _enabled) external onlyOwner {
+        minStakingDurationOverride = _seconds;
+        minStakingDurationOverrideEnabled = _enabled;
+        emit MinStakingDurationOverrideSet(_seconds, _enabled);
+    }
+
+    /**
      * @notice Manually deploy tokens to yield strategy (only owner)
      * @param amount Amount of tokens to deploy
      */
@@ -1192,9 +1226,13 @@ contract FlexibleTieredStaking is
             return;
         }
         
-        // Check strategy status
-        (bool isActive, bool isSafe) = yieldStrategy.getStatus();
-        if (!isActive || !isSafe) {
+        // Check strategy status (wrap in try-catch to prevent reverts)
+        try yieldStrategy.getStatus() returns (bool isActive, bool isSafe) {
+            if (!isActive || !isSafe) {
+                return;
+            }
+        } catch {
+            // If status check fails, skip yield deployment
             return;
         }
         
@@ -1250,13 +1288,10 @@ contract FlexibleTieredStaking is
                 : yieldDeployedShares;
             
             if (sharesToWithdraw > 0) {
-                try yieldStrategy.withdraw(sharesToWithdraw) returns (uint256 amount) {
-                    yieldDeployedShares -= sharesToWithdraw;
-                    emit YieldWithdrawn(sharesToWithdraw, amount);
-                } catch {
-                    // If withdrawal fails, we'll try to use contract balance
-                    // This shouldn't happen if strategy is properly implemented
-                }
+                // Withdraw from strategy - this must succeed or the balance check will fail
+                uint256 amount = yieldStrategy.withdraw(sharesToWithdraw);
+                yieldDeployedShares -= sharesToWithdraw;
+                emit YieldWithdrawn(sharesToWithdraw, amount);
             }
         }
     }

@@ -85,6 +85,8 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "logFileAccess"
       | "maxYieldDeploymentBps"
       | "meetsTierRequirement"
+      | "minStakingDurationOverride"
+      | "minStakingDurationOverrideEnabled"
       | "owner"
       | "pause"
       | "paused"
@@ -96,6 +98,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "setBackupPriceOracle"
       | "setGasRefundReward"
       | "setMaxYieldDeployment"
+      | "setMinStakingDurationOverride"
       | "setPrimaryPriceOracle"
       | "setStakingToken"
       | "setUniswapPair"
@@ -128,6 +131,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "FileAccessLogged"
       | "GasRefundRewardSet"
       | "MaxYieldDeploymentUpdated"
+      | "MinStakingDurationOverrideSet"
       | "OwnershipTransferred"
       | "Paused"
       | "RoleAdminChanged"
@@ -287,6 +291,14 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "meetsTierRequirement",
     values: [AddressLike, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "minStakingDurationOverride",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "minStakingDurationOverrideEnabled",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
@@ -321,6 +333,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setMaxYieldDeployment",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setMinStakingDurationOverride",
+    values: [BigNumberish, boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "setPrimaryPriceOracle",
@@ -533,6 +549,14 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "meetsTierRequirement",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "minStakingDurationOverride",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "minStakingDurationOverrideEnabled",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
@@ -560,6 +584,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setMaxYieldDeployment",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setMinStakingDurationOverride",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -688,6 +716,19 @@ export namespace MaxYieldDeploymentUpdatedEvent {
   export type OutputTuple = [newMaxBps: bigint];
   export interface OutputObject {
     newMaxBps: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace MinStakingDurationOverrideSetEvent {
+  export type InputTuple = [seconds_: BigNumberish, enabled: boolean];
+  export type OutputTuple = [seconds_: bigint, enabled: boolean];
+  export interface OutputObject {
+    seconds_: bigint;
+    enabled: boolean;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -1253,6 +1294,10 @@ export interface FlexibleTieredStaking extends BaseContract {
     "view"
   >;
 
+  minStakingDurationOverride: TypedContractMethod<[], [bigint], "view">;
+
+  minStakingDurationOverrideEnabled: TypedContractMethod<[], [boolean], "view">;
+
   owner: TypedContractMethod<[], [string], "view">;
 
   pause: TypedContractMethod<[], [void], "nonpayable">;
@@ -1295,6 +1340,12 @@ export interface FlexibleTieredStaking extends BaseContract {
 
   setMaxYieldDeployment: TypedContractMethod<
     [_maxBps: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setMinStakingDurationOverride: TypedContractMethod<
+    [_seconds: BigNumberish, _enabled: boolean],
     [void],
     "nonpayable"
   >;
@@ -1625,6 +1676,12 @@ export interface FlexibleTieredStaking extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "minStakingDurationOverride"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "minStakingDurationOverrideEnabled"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -1673,6 +1730,13 @@ export interface FlexibleTieredStaking extends BaseContract {
   getFunction(
     nameOrSignature: "setMaxYieldDeployment"
   ): TypedContractMethod<[_maxBps: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setMinStakingDurationOverride"
+  ): TypedContractMethod<
+    [_seconds: BigNumberish, _enabled: boolean],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "setPrimaryPriceOracle"
   ): TypedContractMethod<
@@ -1785,6 +1849,13 @@ export interface FlexibleTieredStaking extends BaseContract {
     MaxYieldDeploymentUpdatedEvent.InputTuple,
     MaxYieldDeploymentUpdatedEvent.OutputTuple,
     MaxYieldDeploymentUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "MinStakingDurationOverrideSet"
+  ): TypedContractEvent<
+    MinStakingDurationOverrideSetEvent.InputTuple,
+    MinStakingDurationOverrideSetEvent.OutputTuple,
+    MinStakingDurationOverrideSetEvent.OutputObject
   >;
   getEvent(
     key: "OwnershipTransferred"
@@ -1959,6 +2030,17 @@ export interface FlexibleTieredStaking extends BaseContract {
       MaxYieldDeploymentUpdatedEvent.InputTuple,
       MaxYieldDeploymentUpdatedEvent.OutputTuple,
       MaxYieldDeploymentUpdatedEvent.OutputObject
+    >;
+
+    "MinStakingDurationOverrideSet(uint256,bool)": TypedContractEvent<
+      MinStakingDurationOverrideSetEvent.InputTuple,
+      MinStakingDurationOverrideSetEvent.OutputTuple,
+      MinStakingDurationOverrideSetEvent.OutputObject
+    >;
+    MinStakingDurationOverrideSet: TypedContractEvent<
+      MinStakingDurationOverrideSetEvent.InputTuple,
+      MinStakingDurationOverrideSetEvent.OutputTuple,
+      MinStakingDurationOverrideSetEvent.OutputObject
     >;
 
     "OwnershipTransferred(address,address)": TypedContractEvent<

@@ -6,7 +6,7 @@ import { DEPLOYMENT_CONFIG } from "./config";
  */
 async function main() {
   const TOKEN_ADDRESS = "0x02e4346067b96FfA5F4A6F2005c4fb98C39Da38c";
-  const NEW_STAKING_ADDRESS = "0x1D8CFeFc697b6CE93BF2304C5035922Bb2557e88";
+  const NEW_STAKING_ADDRESS = "0xDB1A28eA484f0321d242a293ae42c74f71E14FC0";
   const UNISWAP_ROUTER = DEPLOYMENT_CONFIG.UNISWAP_ROUTER;
 
   const [deployer] = await ethers.getSigners();
