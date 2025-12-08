@@ -772,9 +772,9 @@ export const useAppStore = create<AppState>()(
         const chainId = Number(network.chainId);
         console.log('Current network:', network.name, 'Chain ID:', chainId);
         
-        // Check if on correct network (Base Sepolia = 84532, Base Mainnet = 8453)
-        if (chainId !== 84532 && chainId !== 8453 && chainId !== 31337) {
-          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Sepolia (Chain ID: 84532) or Base Mainnet (Chain ID: 8453).`);
+        // Check if on correct network (Base Mainnet = 8453, Base Sepolia = 84532)
+        if (chainId !== 8453 && chainId !== 84532 && chainId !== 31337) {
+          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`);
         }
         
         // Check ETH balance for gas
@@ -1042,9 +1042,9 @@ export const initializeContracts = async (provider: ethers.BrowserProvider | nul
 
     if (!hasDeployedContracts) {
       console.warn('Contracts not deployed on chain ID:', chainId);
-      console.warn('Please switch to Base Sepolia (84532) or Localhost (31337)');
+      console.warn('Please switch to Base Mainnet (8453), Base Sepolia (84532), or Localhost (31337)');
       useAppStore.getState().setContractsError(
-        `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Sepolia Testnet (Chain ID: 84532).`
+        `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`
       );
       // Don't set contracts if they don't exist
       useAppStore.getState().setContracts({

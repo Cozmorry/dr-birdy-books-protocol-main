@@ -6,11 +6,14 @@ dotenv.config();
 // Blockchain configuration
 // IMPORTANT: Contract addresses must match frontend config in frontend/src/config/networks.ts
 export const BLOCKCHAIN_CONFIG = {
-  rpcUrl: process.env.BLOCKCHAIN_RPC_URL || 'https://sepolia.base.org',
-  // Base Sepolia (chainId 84532) - must match frontend CONTRACT_ADDRESSES[84532].flexibleTieredStaking
-  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS || '0xDB1A28eA484f0321d242a293ae42c74f71E14FC0',
-  // Base Sepolia (chainId 84532) - must match frontend CONTRACT_ADDRESSES[84532].reflectiveToken
-  tokenContractAddress: process.env.TOKEN_CONTRACT_ADDRESS || '0x02e4346067b96FfA5F4A6F2005c4fb98C39Da38c',
+  // Base Mainnet (chainId 8453) - default for production
+  rpcUrl: process.env.BLOCKCHAIN_RPC_URL || 'https://mainnet.base.org',
+  // Base Mainnet (chainId 8453) - must match frontend CONTRACT_ADDRESSES[8453].flexibleTieredStaking
+  // Base Mainnet: 0xDe739Dd135Ffb5899e10F0a373fb9E0F61571e12
+  // Base Sepolia Testnet: 0x23A94f5C6FCb46EbB5888E02CF66eB80E13CE822
+  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS || '0xDe739Dd135Ffb5899e10F0a373fb9E0F61571e12',
+  // Base Mainnet (chainId 8453) - must match frontend CONTRACT_ADDRESSES[8453].reflectiveToken
+  tokenContractAddress: process.env.TOKEN_CONTRACT_ADDRESS || '0xD19f1c7941244270c71a4c3dF4CC0A8baFC48134',
 };
 
 // Staking Contract ABI (minimal interface for verification)

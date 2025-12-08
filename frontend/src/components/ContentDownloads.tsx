@@ -197,11 +197,16 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     // User must have unlocked the required tier or higher
     if (userTier >= 0) {
       const canAccess = file.tier <= userTier;
-      console.log(`[canAccessFile] File: ${file.fileName}, file.tier: ${file.tier}, userTier: ${userTier}, canAccess: ${canAccess}`);
+      // Only log in development mode and for debugging
+      if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_TIER === 'true') {
+        console.log(`[canAccessFile] File: ${file.fileName}, file.tier: ${file.tier}, userTier: ${userTier}, canAccess: ${canAccess}`);
+      }
       return canAccess;
     }
     // No tier unlocked
-    console.log(`[canAccessFile] File: ${file.fileName}, userTier: ${userTier}, NO TIER UNLOCKED`);
+    if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_TIER === 'true') {
+      console.log(`[canAccessFile] File: ${file.fileName}, userTier: ${userTier}, NO TIER UNLOCKED`);
+    }
     return false;
   };
 
