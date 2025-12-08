@@ -55,12 +55,13 @@ export const CONTRACT_ADDRESSES = {
     improvedTimelock: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
   },
   [BASE_TESTNET.chainId]: {
-    reflectiveToken: '0x02e4346067b96FfA5F4A6F2005c4fb98C39Da38c', // ✅ FIXED - With balanceOf() fix for unstaking
-    tokenDistribution: '0x951f92b9897f632B0caE54502C8016F4cEd0e969', // ✅ FIXED - With correct TOTAL_DISTRIBUTED (1M tokens)
-    flexibleTieredStaking: '0xDB1A28eA484f0321d242a293ae42c74f71E14FC0', // ✅ FIXED - Uses regular transfer instead of transferForUnstaking
-    treasuryYieldStrategy: '0xa73819Ed19f6e755B6056C7f32c0A2Bf7aF5099F', // ✅ NEW - Connected to new staking contract
-    arweaveGateway: '0xe5C61ff65d10FfBBbaf706Bd9E97D5965708c1Fa', // Deployed on Base Sepolia
-    improvedTimelock: '0xc875dEC51d1a0ff97Fb23c3004aBBb9feC0eba48', // Deployed on Base Sepolia
+    reflectiveToken: '0xB49872C1aD8a052f1369ABDfC890264938647EB6', // ✅ PROXY - Deployed Dec 8, 2025 with manual proxy pattern
+    tokenDistribution: '0x59ff0451A0718237CAd0FDb0835338180C66580e', // ✅ UPDATED - New deployment Dec 8, 2025
+    flexibleTieredStaking: '0x23A94f5C6FCb46EbB5888E02CF66eB80E13CE822', // ✅ UPDATED - New deployment Dec 8, 2025
+    arweaveGateway: '0x64E4EFc69A94aeEB23Efb1E2629386C71e01cde4', // ✅ UPDATED - New deployment Dec 8, 2025
+    improvedTimelock: '0x986Aa78997327B9a9b7507429a6cE72A5De993e3', // ✅ UPDATED - New deployment Dec 8, 2025
+    proxyAdmin: '0x5627785DBcfEdEc7f2ff4c1f2E94928825A3449B', // ✅ NEW - ProxyAdmin for upgradeability
+    tokenImplementation: '0x82d0079cB7D5fE492B673a3d9ad24fFA1c4E5882', // ℹ️ INFO - Implementation contract (users don't interact with this)
   },
   [LOCALHOST.chainId]: {
     reflectiveToken: '0x4213F020e9430F3549614231A4Dc06226FEEae40',

@@ -140,31 +140,31 @@ contract ReflectiveToken is
     uint256 private constant MIN_SLIPPAGE = 950; // 95% minimum expected output (in basis points)
 
     // Limits
-    uint256 public maxTxAmount = _TOTAL_SUPPLY / 100; // 1% of supply
-    uint256 public swapThreshold = _TOTAL_SUPPLY / 100; // 1% of supply
+    uint256 public maxTxAmount; // 1% of supply
+    uint256 public swapThreshold; // 1% of supply
 
     // Fee Structure (in basis points)
-    uint256 public taxFee = 100; // 1%
-    uint256 public liquidityFee = 200; // 2%
-    uint256 public marketingFee = 200; // 2%
-    uint256 public totalFee = taxFee + liquidityFee + marketingFee;
+    uint256 public taxFee; // 1%
+    uint256 public liquidityFee; // 2%
+    uint256 public marketingFee; // 2%
+    uint256 public totalFee;
 
     // Slippage configuration (in basis points) - OPTIMIZED FOR BASE LAUNCH
-    uint256 public swapSlippageBps = 50; // 0.5% default for low-liquidity swaps
-    uint256 public liquiditySlippageBps = 30; // 0.3% default for liquidity operations
+    uint256 public swapSlippageBps; // 0.5% default for low-liquidity swaps
+    uint256 public liquiditySlippageBps; // 0.3% default for liquidity operations
 
     // Addresses
     address public uniswapRouter;
     address public marketingWallet;
     address public stakingContract;
     address public arweaveGateway;
-    address public immutable WETH = 0x4200000000000000000000000000000000000006;
+    address public constant WETH = 0x4200000000000000000000000000000000000006;
     address public pairAddress;
     address public timelock;
     uint256 public timelockDelay;
     TokenDistribution public tokenDistribution;
     address public yieldStrategy; // TreasuryYieldStrategy for automated buybacks
-    uint256 public yieldStrategyFeeBps = 5000; // 50% of marketing fee goes to yield (in basis points)
+    uint256 public yieldStrategyFeeBps; // 50% of marketing fee goes to yield (in basis points)
 
     // Reflection Tracking
     uint256 private _rTotal;
@@ -172,9 +172,9 @@ contract ReflectiveToken is
     uint256 private _rFeeTotal;
 
     // State
-    bool public tradingEnabled = true;
-    bool public swapEnabled = true;
-    bool public inSwap = false;
+    bool public tradingEnabled;
+    bool public swapEnabled;
+    bool public inSwap;
     bool public swapped;
 
     // Exclusions and Tracking
@@ -270,14 +270,16 @@ contract ReflectiveToken is
         // Validate addresses
         require(_uniswapRouter != address(0), "Invalid router address");
         require(_marketingWallet != address(0), "Invalid marketing wallet");
-        require(_stakingContract != address(0), "Invalid staking contract");
+        // Note: staking contract can be zero initially and set later via setStakingContract()
+        // require(_stakingContract != address(0), "Invalid staking contract");
         require(_arweaveGateway != address(0), "Invalid Arweave gateway");
         require(_priceOracle != address(0), "Invalid price oracle");
 
-        // Initialize OpenZeppelin upgradeable contracts
+        // Initialize OpenZeppelin upgradeable contracts (in correct order)
+        // Order must be: Ownable -> ReentrancyGuard -> ERC20
+        __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __ERC20_init(_NAME, _SYMBOL);
-        __Ownable_init_unchained(msg.sender);
 
         // Set basic state variables without external calls
         ethUsdFeed = AggregatorV3Interface(_priceOracle);
@@ -287,14 +289,34 @@ contract ReflectiveToken is
         arweaveGateway = _arweaveGateway;
         // timelock will be set later via setTimelock()
 
-        // Manually set owner as backup (in case __Ownable_init_unchained doesn't work)
-        _transferOwnership(msg.sender);
-
-        // Debug: Check if ownership was set
+        // Verify ownership was set correctly
         require(
             owner() == msg.sender,
             "Ownership not set correctly during initialization"
         );
+
+        // Initialize state variables (moved from declarations for upgrade safety)
+        maxTxAmount = _TOTAL_SUPPLY / 100; // 1% of supply
+        swapThreshold = _TOTAL_SUPPLY / 100; // 1% of supply
+        
+        // Fee Structure (in basis points)
+        taxFee = 100; // 1%
+        liquidityFee = 200; // 2%
+        marketingFee = 200; // 2%
+        totalFee = taxFee + liquidityFee + marketingFee;
+        
+        // Slippage configuration (in basis points)
+        swapSlippageBps = 50; // 0.5% default for low-liquidity swaps
+        liquiditySlippageBps = 30; // 0.3% default for liquidity operations
+        
+        // State flags
+        tradingEnabled = true;
+        swapEnabled = true;
+        inSwap = false;
+        swapped = false;
+        
+        // Yield strategy fee
+        yieldStrategyFeeBps = 5000; // 50% of marketing fee goes to yield
 
         // Initialize reflection system FIRST
         _rTotal = (MAX - (MAX % _TOTAL_SUPPLY));

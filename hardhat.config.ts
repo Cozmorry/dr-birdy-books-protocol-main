@@ -19,7 +19,9 @@ const config: HardhatUserConfig = {
     },
     // BASE TESTNET NETWORK
     testnet: {
-      url: "https://sepolia.base.org",
+      url: process.env.ALCHEMY_API_KEY
+        ? `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+        : "https://sepolia.base.org",
       accounts: process.env.SEPOLIA_PRIVATE_KEY
         ? [process.env.SEPOLIA_PRIVATE_KEY]
         : [],

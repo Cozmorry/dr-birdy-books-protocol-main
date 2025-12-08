@@ -68,22 +68,28 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       "FlexibleTieredStaking"
     );
 
-    // Deploy contracts without staking first (needs token address)
+    // Deploy contracts that don't need token address first
     const [mockRouter, mockOracle, mockGateway] = await Promise.all([
       MockRouterFactory.deploy(),
       MockOracleFactory.deploy(),
       MockGatewayFactory.deploy(),
     ]);
 
-    // Wait for token deployment
-    await token.waitForDeployment();
+    // Wait for initial deployments
+    await Promise.all([
+      mockRouter.waitForDeployment(),
+      mockOracle.waitForDeployment(),
+      mockGateway.waitForDeployment(),
+      token.waitForDeployment(),
+    ]);
 
-    // Now deploy staking with correct constructor args
+    // Now deploy staking with correct constructor arguments (FIXED: Bug 1)
     const mockStaking = await MockStakingFactory.deploy(
       await token.getAddress(),
       await mockOracle.getAddress(),
       await mockOracle.getAddress() // using same oracle for backup
     );
+    await mockStaking.waitForDeployment();
 
     // Initialize token contract first
     try {
@@ -176,11 +182,13 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       await distribution.initializeVesting();
 
       const teamMembers = await distribution.getTeamMembers();
+      // FIXED: Bug 2 - Developer is at index 3, not 4
+      // Array order: Joseph (0), AJ (1), D-Sign (2), Developer (3), Birdy (4)
       for (let i = 0; i < teamMembers.length; i++) {
         const member = teamMembers[i];
         const vestingInfo = await distribution.getVestingInfo(member);
-        // Morris (developer, index 4) gets 100k, others get 162.5k
-        const expectedAmount = i === 4 ? TEAM_ALLOCATION_DEVELOPER : TEAM_ALLOCATION_STANDARD;
+        // Morris (developer, index 3) gets 100k, others get 162.5k
+        const expectedAmount = i === 3 ? TEAM_ALLOCATION_DEVELOPER : TEAM_ALLOCATION_STANDARD;
         expect(vestingInfo.totalAmount).to.equal(expectedAmount);
         expect(vestingInfo.claimed).to.equal(0);
       }
@@ -513,7 +521,7 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       const newVestingInfo = await distribution.getVestingInfo(
         newTeamMember2.address
       );
-      expect(newVestingInfo.totalAmount).to.equal(TEAM_ALLOCATION);
+      expect(newVestingInfo.totalAmount).to.equal(TEAM_ALLOCATION_STANDARD); // AJ replacement - standard allocation
       expect(newVestingInfo.claimed).to.equal(initialVestingInfo.claimed);
       expect(newVestingInfo.startTime).to.equal(initialVestingInfo.startTime);
     });
