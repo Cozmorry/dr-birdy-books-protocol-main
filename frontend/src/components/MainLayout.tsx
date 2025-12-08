@@ -15,7 +15,7 @@ export function MainLayout({
   onDisconnect,
 }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar
         onConnect={onConnect}
         onSwitchNetwork={onSwitchNetwork}
@@ -24,13 +24,13 @@ export function MainLayout({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
-      <footer className="bg-white border-t border-gray-200 mt-16">
+      <footer className="bg-card border-t border-border mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Dr. Birdy Books Protocol - Bridging Education, Media, and Cryptocurrency
             </p>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Built on Base Network
             </p>
           </div>

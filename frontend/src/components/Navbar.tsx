@@ -15,6 +15,7 @@ import { Separator } from './ui/separator';
 import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare, Menu, X } from 'lucide-react';
 import { ethers } from 'ethers';
 import { FeedbackModal } from './FeedbackModal';
+import ThemeToggle from './ThemeToggle';
 
 interface NavbarProps {
   onConnect: () => void;
@@ -93,15 +94,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <Link to="/" className="flex items-center flex-shrink-0">
             <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
             <div className="hidden xs:block">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Dr. Birdy Books</h1>
-              <p className="text-xs text-gray-600 hidden sm:block">Protocol</p>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Dr. Birdy Books</h1>
+              <p className="text-xs text-gray-600 dark:text-gray-400 hidden sm:block">Protocol</p>
             </div>
           </Link>
 
@@ -116,8 +117,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     to={link.to}
                     className={`px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive(link.to) 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     <div className="flex items-center">
@@ -134,8 +135,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           {isConnected && isCorrectNetwork && (
             <div className="hidden lg:flex items-center mr-4">
               <div className="text-center">
-                <p className="text-xs text-gray-500">Total Staked</p>
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Staked</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {protocolStats.isLoading ? (
                     <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
                   ) : (
@@ -150,7 +151,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {isConnected && isCorrectNetwork && (
             <button
               onClick={() => setIsFeedbackOpen(true)}
-              className="hidden lg:flex items-center px-3 py-2 text-sm text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors mr-2"
+              className="hidden lg:flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors mr-2"
               title="Share Feedback"
             >
               <MessageSquare className="h-4 w-4 mr-2" />
@@ -160,6 +161,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Wallet Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Theme Toggle */}
+            <ThemeToggle />
             {!isConnected ? (
               <Button
                 onClick={onConnect}
@@ -272,7 +275,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Menu */}
         {isConnected && isCorrectNetwork && mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4">
+          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 py-4">
             {/* Mobile Navigation Links */}
             <nav className="flex flex-col space-y-1 mb-4">
               {navigationLinks.map((link) => {
@@ -284,8 +287,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive(link.to) 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     <Icon className="h-5 w-5 mr-3" />
@@ -296,9 +299,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             </nav>
 
             {/* Mobile Protocol Stats */}
-            <div className="px-4 py-3 bg-gray-50 rounded-lg mb-4">
-              <p className="text-xs text-gray-500 mb-1">Total Staked</p>
-              <p className="text-sm font-semibold text-gray-900">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Staked</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
                 {protocolStats.isLoading ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
@@ -313,7 +316,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsFeedbackOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors"
+              className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
             >
               <MessageSquare className="h-4 w-4 mr-2" />
               Feedback

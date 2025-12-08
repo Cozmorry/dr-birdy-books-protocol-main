@@ -47,6 +47,230 @@ body {
   }
 }
 
+/* Dark mode support for admin dashboard */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #050814;
+  color: #f1f5f9;
+}
+
+.dark .bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #050814, #0a0e27) !important;
+}
+
+/* Override primary gradient colors in dark mode */
+.dark .from-primary-50,
+.dark .to-primary-100 {
+  background: transparent !important;
+}
+
+/* Ensure login page gradient is dark - use high specificity */
+.dark .login-page-container {
+  background: linear-gradient(to bottom right, #000000, #1a1a1a, #000000) !important;
+}
+
+.dark .login-page-container.bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #000000, #1a1a1a, #000000) !important;
+}
+
+.dark .login-page-container.from-primary-50 {
+  background: linear-gradient(to bottom right, #000000, #1a1a1a, #000000) !important;
+}
+
+.dark .bg-white {
+  background-color: #0a0e27 !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #050814 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #0a0e27 !important;
+}
+
+.dark .bg-gray-900 {
+  background-color: #050814 !important;
+}
+
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-400 {
+  color: #64748b !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #1a202c !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #2d3748 !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #cbd5e1 !important;
+}
+
+/* Ensure input icons are visible in dark mode */
+.dark .login-page-container .absolute svg,
+.dark .login-page-container svg.text-gray-400 {
+  color: #ff0000 !important;
+}
+
+.dark input[type="text"],
+.dark input[type="password"],
+.dark input[type="email"],
+.dark .login-page-container input {
+  color: #ff00ff !important;
+  background-color: #2a2a2a !important;
+}
+
+.dark input[type="text"]::placeholder,
+.dark input[type="password"]::placeholder,
+.dark input[type="email"]::placeholder,
+.dark .login-page-container input::placeholder {
+  color: #00ff00 !important;
+  opacity: 1 !important;
+}
+
+.dark .bg-red-50 {
+  background-color: rgba(127, 29, 29, 0.3) !important;
+}
+
+.dark .text-red-800 {
+  color: #fca5a5 !important;
+}
+
+.dark .border-red-200 {
+  border-color: #7f1d1d !important;
+}
+
+.dark .text-red-600 {
+  color: #f87171 !important;
+}
+
+.dark .bg-primary-600 {
+  background-color: #2563eb !important;
+}
+
+.dark .bg-primary-700 {
+  background-color: #1d4ed8 !important;
+}
+
+.dark .text-primary-600 {
+  color: #60a5fa !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .bg-primary-50 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.dark .text-primary-700 {
+  color: #93c5fd !important;
+}
+
+.dark .bg-gray-800 {
+  background-color: #1e293b !important;
+}
+
+.dark .bg-red-100 {
+  background-color: rgba(127, 29, 29, 0.4) !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #1a202c !important;
+}
+
+.dark .hover\:bg-red-100:hover {
+  background-color: rgba(127, 29, 29, 0.5) !important;
+}
+
+/* Catch-all for text visibility in dark mode */
+.dark {
+  color: #f1f5f9 !important;
+}
+
+/* Login page text visibility */
+.dark h1 {
+  color: #f1f5f9 !important;
+}
+
+.dark h2 {
+  color: #f1f5f9 !important;
+}
+
+.dark p {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-xs {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark h1.text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+/* Ensure login page text is highly visible in dark mode - use high specificity */
+.dark .login-page-container .login-title,
+.dark .login-page-container h1.login-title,
+.dark .login-page-container h1 {
+  color: #00ff00 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .login-page-container .login-subtitle,
+.dark .login-page-container p.login-subtitle,
+.dark .login-page-container p {
+  color: #00ffff !important;
+}
+
+.dark .login-page-container .login-footer,
+.dark .login-page-container .login-footer p,
+.dark .login-page-container .login-footer * {
+  color: #ffff00 !important;
+}
+
+
+
 
 
 
