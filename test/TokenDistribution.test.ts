@@ -13,9 +13,10 @@ describe("Dr. Birdy Books Token Distribution System", function () {
   let teamMember2: any;
   let airdropWallet: any;
 
-  const TEAM_ALLOCATION = ethers.parseEther("150000"); // 150,000 tokens
+  const TEAM_ALLOCATION_STANDARD = ethers.parseEther("162500"); // 162,500 tokens (Joseph, AJ, Dsign, Birdy)
+  const TEAM_ALLOCATION_DEVELOPER = ethers.parseEther("100000"); // 100,000 tokens (Morris - Developer)
   const AIRDROP_ALLOCATION = ethers.parseEther("250000"); // 250,000 tokens
-  const TOTAL_DISTRIBUTED = ethers.parseEther("1000000"); // 1M tokens
+  const TOTAL_DISTRIBUTED = ethers.parseEther("1000000"); // 1M tokens (4×162.5k + 100k + 250k)
   const VESTING_DURATION = 365 * 24 * 60 * 60; // 365 days
   const VESTING_CLIFF = 90 * 24 * 60 * 60; // 90 days
 
@@ -67,13 +68,22 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       "FlexibleTieredStaking"
     );
 
-    const [mockRouter, mockOracle, mockGateway, mockStaking] =
-      await Promise.all([
-        MockRouterFactory.deploy(),
-        MockOracleFactory.deploy(),
-        MockGatewayFactory.deploy(),
-        MockStakingFactory.deploy(),
-      ]);
+    // Deploy contracts without staking first (needs token address)
+    const [mockRouter, mockOracle, mockGateway] = await Promise.all([
+      MockRouterFactory.deploy(),
+      MockOracleFactory.deploy(),
+      MockGatewayFactory.deploy(),
+    ]);
+
+    // Wait for token deployment
+    await token.waitForDeployment();
+
+    // Now deploy staking with correct constructor args
+    const mockStaking = await MockStakingFactory.deploy(
+      await token.getAddress(),
+      await mockOracle.getAddress(),
+      await mockOracle.getAddress() // using same oracle for backup
+    );
 
     // Initialize token contract first
     try {
@@ -140,7 +150,8 @@ describe("Dr. Birdy Books Token Distribution System", function () {
     });
 
     it("Should have correct team allocation amounts", async function () {
-      expect(await distribution.getTeamAllocation()).to.equal(TEAM_ALLOCATION);
+      expect(await distribution.getTeamAllocation()).to.equal(TEAM_ALLOCATION_STANDARD);
+      expect(await distribution.getDeveloperAllocation()).to.equal(TEAM_ALLOCATION_DEVELOPER);
       expect(await distribution.getAirdropAllocation()).to.equal(
         AIRDROP_ALLOCATION
       );
@@ -165,9 +176,12 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       await distribution.initializeVesting();
 
       const teamMembers = await distribution.getTeamMembers();
-      for (const member of teamMembers) {
+      for (let i = 0; i < teamMembers.length; i++) {
+        const member = teamMembers[i];
         const vestingInfo = await distribution.getVestingInfo(member);
-        expect(vestingInfo.totalAmount).to.equal(TEAM_ALLOCATION);
+        // Morris (developer, index 4) gets 100k, others get 162.5k
+        const expectedAmount = i === 4 ? TEAM_ALLOCATION_DEVELOPER : TEAM_ALLOCATION_STANDARD;
+        expect(vestingInfo.totalAmount).to.equal(expectedAmount);
         expect(vestingInfo.claimed).to.equal(0);
       }
     });
@@ -254,15 +268,15 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       await ethers.provider.send("evm_mine", []);
 
       const claimable = await distribution.calculateClaimable(
-        user1.address // AJ wallet
+        user1.address // AJ wallet (standard allocation)
       );
-      expect(claimable).to.equal(TEAM_ALLOCATION);
+      expect(claimable).to.equal(TEAM_ALLOCATION_STANDARD);
 
       const initialBalance = await token.balanceOf(user1.address);
       await distribution.connect(user1).claimVestedTokens();
       const finalBalance = await token.balanceOf(user1.address);
 
-      expect(finalBalance - initialBalance).to.equal(TEAM_ALLOCATION);
+      expect(finalBalance - initialBalance).to.equal(TEAM_ALLOCATION_STANDARD);
     });
 
     it("Should track claimed amounts correctly", async function () {
@@ -401,7 +415,9 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       const distributionBalance = await token.balanceOf(
         await distribution.getAddress()
       );
-      expect(distributionBalance).to.equal(TEAM_ALLOCATION * 5n); // 5 team members
+      // 4 standard (162.5k) + 1 developer (100k) = 750k total
+      const expectedTeamTotal = (TEAM_ALLOCATION_STANDARD * 4n) + TEAM_ALLOCATION_DEVELOPER;
+      expect(distributionBalance).to.equal(expectedTeamTotal);
     });
   });
 
@@ -464,11 +480,11 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       await ethers.provider.send("evm_increaseTime", [VESTING_CLIFF + 1]);
       await ethers.provider.send("evm_mine", []);
 
-      // Get initial vesting info for one member
+      // Get initial vesting info for one member (user1 is AJ - standard allocation)
       const initialVestingInfo = await distribution.getVestingInfo(
         user1.address
       );
-      expect(initialVestingInfo.totalAmount).to.equal(TEAM_ALLOCATION);
+      expect(initialVestingInfo.totalAmount).to.equal(TEAM_ALLOCATION_STANDARD);
 
       // Update team wallets
       const tx = await distribution.updateTeamWallets(
@@ -661,7 +677,7 @@ describe("Dr. Birdy Books Token Distribution System", function () {
         initialClaimable,
         ethers.parseEther("10") // Allow for small differences
       );
-      expect(newVestingInfo.totalAmount).to.equal(TEAM_ALLOCATION);
+      expect(newVestingInfo.totalAmount).to.equal(TEAM_ALLOCATION_STANDARD); // newTeamMember2 is AJ replacement - standard allocation
 
       // New wallet should be able to claim remaining tokens
       const remainingClaimable = await distribution.calculateClaimable(
@@ -669,7 +685,7 @@ describe("Dr. Birdy Books Token Distribution System", function () {
       );
       expect(remainingClaimable).to.be.gt(0);
       expect(remainingClaimable + newVestingInfo.claimed).to.be.lte(
-        TEAM_ALLOCATION
+        TEAM_ALLOCATION_STANDARD
       );
     });
 

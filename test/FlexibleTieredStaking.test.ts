@@ -29,21 +29,19 @@ describe("FlexibleTieredStaking", function () {
         ethers.getContractFactory("FlexibleTieredStaking"),
       ]);
 
-    // Deploy all contracts
+    // Deploy contracts except staking (needs token address)
     const [
       primaryOracleInstance,
       backupOracleInstance,
       tokenInstance,
       mockRouterInstance,
       gatewayInstance,
-      stakingInstance,
     ] = await Promise.all([
       MockOracle.deploy(),
       MockOracle.deploy(),
       MockToken.deploy("Test Token", "TEST", TOTAL_SUPPLY),
       MockRouterFactory.deploy(),
       GatewayFactory.deploy(),
-      Staking.deploy(),
     ]);
 
     // Wait for deployments
@@ -53,21 +51,21 @@ describe("FlexibleTieredStaking", function () {
       tokenInstance.waitForDeployment(),
       mockRouterInstance.waitForDeployment(),
       gatewayInstance.waitForDeployment(),
-      stakingInstance.waitForDeployment(),
     ]);
 
     // Assign instances
     primaryOracle = primaryOracleInstance;
     backupOracle = backupOracleInstance;
     token = tokenInstance;
-    staking = stakingInstance;
 
-    // Initialize the contract
-    await staking.initialize(
+    // Now deploy staking with correct constructor arguments
+    const stakingInstance = await Staking.deploy(
       await token.getAddress(),
       await primaryOracle.getAddress(),
       await backupOracle.getAddress()
     );
+    await stakingInstance.waitForDeployment();
+    staking = stakingInstance;
 
     // Set oracle prices for USD value calculations
     const price = 100 * 10 ** 8; // $100 per token
