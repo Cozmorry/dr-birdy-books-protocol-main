@@ -57,17 +57,33 @@ async function main() {
     console.log("\n1️⃣ Deploying ArweaveGateway...");
     const ArweaveGateway = await ethers.getContractFactory("ArweaveGateway");
     const gateway = await ArweaveGateway.deploy();
+    const gatewayTx = gateway.deploymentTransaction();
+    if (gatewayTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await gatewayTx.wait(2); // Wait for 2 confirmations
+    }
     await gateway.waitForDeployment();
     deployed.gateway = await gateway.getAddress();
     console.log("✅ ArweaveGateway deployed to:", deployed.gateway);
+    
+    // Small delay to ensure nonce is synced
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // 2. TokenDistribution
     console.log("\n2️⃣ Deploying TokenDistribution...");
     const TokenDistribution = await ethers.getContractFactory("TokenDistribution");
     const distribution = await TokenDistribution.deploy();
+    const distributionTx = distribution.deploymentTransaction();
+    if (distributionTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await distributionTx.wait(2);
+    }
     await distribution.waitForDeployment();
     deployed.distribution = await distribution.getAddress();
     console.log("✅ TokenDistribution deployed to:", deployed.distribution);
+    
+    // Small delay to ensure nonce is synced
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // 3. ImprovedTimelock
     console.log("\n3️⃣ Deploying ImprovedTimelock...");
@@ -76,6 +92,11 @@ async function main() {
       deployer.address, // admin
       2 * 24 * 60 * 60  // 2 days delay
     );
+    const timelockTx = timelock.deploymentTransaction();
+    if (timelockTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await timelockTx.wait(2);
+    }
     await timelock.waitForDeployment();
     deployed.timelock = await timelock.getAddress();
     console.log("✅ ImprovedTimelock deployed to:", deployed.timelock);
@@ -98,9 +119,15 @@ async function main() {
     console.log("\n   📝 Step 2a: Deploying ReflectiveToken Implementation...");
     const ReflectiveToken = await ethers.getContractFactory("ReflectiveToken");
     const tokenImplementation = await ReflectiveToken.deploy();
+    const implTx = tokenImplementation.deploymentTransaction();
+    if (implTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await implTx.wait(2);
+    }
     await tokenImplementation.waitForDeployment();
     const tokenImplementationAddress = await tokenImplementation.getAddress();
     console.log("   ✅ Implementation deployed to:", tokenImplementationAddress);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Step 2b: Encode initialize data
     console.log("\n   📝 Step 2b: Encoding initialize call data...");
@@ -117,9 +144,15 @@ async function main() {
     console.log("\n   📝 Step 2c: Deploying ProxyAdmin...");
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
     const proxyAdmin = await ProxyAdmin.deploy(deployer.address);
+    const adminTx = proxyAdmin.deploymentTransaction();
+    if (adminTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await adminTx.wait(2);
+    }
     await proxyAdmin.waitForDeployment();
     deployed.proxyAdmin = await proxyAdmin.getAddress();
     console.log("   ✅ ProxyAdmin deployed to:", deployed.proxyAdmin);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Step 2d: Deploy TransparentUpgradeableProxy
     console.log("\n   📝 Step 2d: Deploying TransparentUpgradeableProxy...");
@@ -129,9 +162,15 @@ async function main() {
       deployed.proxyAdmin,
       initializeData
     );
+    const proxyTx = tokenProxy.deploymentTransaction();
+    if (proxyTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await proxyTx.wait(2);
+    }
     await tokenProxy.waitForDeployment();
     deployed.token = await tokenProxy.getAddress();
     deployed.tokenImplementation = tokenImplementationAddress;
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     console.log("\n✅ ReflectiveToken Proxy deployed to:", deployed.token);
     console.log("   📝 Implementation deployed to:", deployed.tokenImplementation);
@@ -152,10 +191,16 @@ async function main() {
       primaryOracle,
       backupOracle
     );
+    const stakingTx = staking.deploymentTransaction();
+    if (stakingTx) {
+      console.log("   ⏳ Waiting for confirmation...");
+      await stakingTx.wait(2);
+    }
     await staking.waitForDeployment();
     deployed.staking = await staking.getAddress();
     console.log("✅ FlexibleTieredStaking deployed to:", deployed.staking);
     console.log("   ✅ Constructor initialized with token and oracles");
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // =========================================================================
     // STEP 4: Post-deployment configuration
@@ -169,20 +214,26 @@ async function main() {
     // Set staking contract
     console.log("\n📝 Setting staking contract on token...");
     const setStakingTx = await token.setStakingContract(deployed.staking);
-    await setStakingTx.wait();
+    console.log("   ⏳ Waiting for confirmation...");
+    await setStakingTx.wait(2);
     console.log("✅ Staking contract set");
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Set timelock contract
     console.log("\n📝 Setting timelock contract...");
     const setTimelockTx = await token.setTimelock(deployed.timelock);
-    await setTimelockTx.wait();
+    console.log("   ⏳ Waiting for confirmation...");
+    await setTimelockTx.wait(2);
     console.log("✅ Timelock contract set");
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Set distribution contract
     console.log("\n📝 Setting distribution contract...");
     const setDistributionTx = await token.setDistributionContract(deployed.distribution);
-    await setDistributionTx.wait();
+    console.log("   ⏳ Waiting for confirmation...");
+    await setDistributionTx.wait(2);
     console.log("✅ Distribution contract set");
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Create Uniswap pair (will fail on localhost with mock router, that's OK)
     console.log("\n📝 Creating Uniswap pair...");
