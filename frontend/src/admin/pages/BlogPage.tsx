@@ -12,6 +12,8 @@ export default function BlogPage() {
     content: '',
     status: 'draft' as 'draft' | 'published',
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -20,6 +22,8 @@ export default function BlogPage() {
     content: '',
     status: 'draft' as 'draft' | 'published',
   });
+  const [editSelectedImage, setEditSelectedImage] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     loadPosts();
@@ -55,6 +59,8 @@ export default function BlogPage() {
       content: post.content || '',
       status: post.status || 'draft',
     });
+    setEditSelectedImage(null);
+    setEditImagePreview(post.imageUrl || null);
   };
 
   const handleUpdatePost = async (e: React.FormEvent) => {
@@ -63,9 +69,11 @@ export default function BlogPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await api.updateBlogPost(editingPost._id, editFormData);
+      const response = await api.updateBlogPost(editingPost._id, editFormData, editSelectedImage);
       if (response.success) {
         setEditingPost(null);
+        setEditSelectedImage(null);
+        setEditImagePreview(null);
         loadPosts();
       } else {
         alert(response.message || 'Failed to update post');
@@ -96,11 +104,13 @@ export default function BlogPage() {
 
     try {
       console.log('Creating blog post:', formData);
-      const response = await api.createBlogPost(formData);
+      const response = await api.createBlogPost(formData, selectedImage);
       console.log('Create post response:', response);
       if (response.success) {
         setShowCreateModal(false);
         setFormData({ title: '', excerpt: '', content: '', status: 'draft' });
+        setSelectedImage(null);
+        setImagePreview(null);
         // Reload posts after a short delay to ensure DB is updated
         setTimeout(() => {
           loadPosts();
@@ -114,6 +124,30 @@ export default function BlogPage() {
       alert(error.response?.data?.message || error.message || 'Failed to create post');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -245,6 +279,27 @@ export default function BlogPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Featured Image (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status
                 </label>
                 <select
@@ -333,6 +388,27 @@ export default function BlogPage() {
                   placeholder="Enter post content"
                   rows={10}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Featured Image (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditImageSelect}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                {editImagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={editImagePreview}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

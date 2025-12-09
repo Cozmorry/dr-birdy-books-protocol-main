@@ -34,7 +34,8 @@ export const uploadToS3 = async (
   fileBuffer: Buffer,
   key: string,
   contentType: string,
-  metadata?: { [key: string]: string }
+  metadata?: { [key: string]: string },
+  isPublic: boolean = false
 ): Promise<string> => {
   try {
     const params: AWS.S3.PutObjectRequest = {
@@ -44,6 +45,11 @@ export const uploadToS3 = async (
       ContentType: contentType,
       Metadata: metadata || {},
     };
+
+    // Set ACL to public-read if the file should be publicly accessible
+    if (isPublic) {
+      params.ACL = 'public-read';
+    }
 
     const result = await s3.upload(params).promise();
     console.log('✅ File uploaded to S3:', result.Key, 'Location:', result.Location);
@@ -184,9 +190,12 @@ export const generatePresignedDownloadUrl = async (
       Expires: expiresIn,
     });
 
+    console.log(`🔗 Generated pre-signed URL for key: ${key}, expires in: ${expiresIn}s`);
     return url;
   } catch (error: any) {
     console.error('❌ S3 presigned URL error:', error);
+    console.error('   Key:', key);
+    console.error('   ExpiresIn:', expiresIn);
     throw new Error(`Failed to generate presigned URL: ${error.message}`);
   }
 };
