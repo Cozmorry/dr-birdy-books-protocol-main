@@ -4,11 +4,19 @@ import { ethers } from "hardhat";
  * Disable unstaking waiting time for testing
  */
 async function main() {
-  const STAKING_ADDRESS = "0x23A94f5C6FCb46EbB5888E02CF66eB80E13CE822"; // Latest testnet deployment
-
   const [deployer] = await ethers.getSigners();
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
+  
+  // Get staking address from network config
+  const { getContractAddresses } = require("../frontend/src/config/networks");
+  const contractAddresses = getContractAddresses(chainId);
+  const STAKING_ADDRESS = contractAddresses.flexibleTieredStaking;
+
   console.log("⏱️  Disabling Unstaking Waiting Time\n");
+  console.log("Network:", network.name, "Chain ID:", chainId);
   console.log("Deployer:", deployer.address);
+  console.log("Staking Contract:", STAKING_ADDRESS);
 
   const staking = await ethers.getContractAt("FlexibleTieredStaking", STAKING_ADDRESS);
 

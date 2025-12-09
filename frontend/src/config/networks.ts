@@ -56,6 +56,7 @@ export const CONTRACT_ADDRESSES = {
     improvedTimelock: '0xD865B5f889903F01e98e3598C7d68De5dF5E6E0c', // ✅ MAINNET - Deployed Dec 8, 2025
     proxyAdmin: '0x279fC8Ba58A9e40bf19Be5ff38E538762D2A23B9', // ✅ MAINNET - ProxyAdmin for upgradeability
     tokenImplementation: '0xcA848B2BB36b6E6e12E0D21B649A74fdbA48dcb0', // ℹ️ INFO - Implementation contract (users don't interact with this)
+    treasuryYieldStrategy: '0x1eDa0B2c614890DD974336bBEdE5aB4F4a55666f', // ✅ MAINNET - Deployed Dec 8, 2025 for automated buybacks
   },
   [BASE_TESTNET.chainId]: {
     reflectiveToken: '0xB49872C1aD8a052f1369ABDfC890264938647EB6', // ✅ PROXY - Deployed Dec 8, 2025 with manual proxy pattern
