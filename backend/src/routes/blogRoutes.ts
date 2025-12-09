@@ -7,6 +7,7 @@ import {
   deleteBlogPost,
 } from '../controllers/blogController';
 import { authenticate } from '../middleware/auth';
+import { upload, handleUploadError } from '../middleware/upload';
 
 const router = express.Router();
 
@@ -15,8 +16,9 @@ router.get('/', getBlogPosts);
 router.get('/:id', getBlogPost);
 
 // Protected routes (Admin only)
-router.post('/', authenticate, createBlogPost);
-router.put('/:id', authenticate, updateBlogPost);
+// Allow optional image upload for blog posts
+router.post('/', authenticate, upload.single('image'), handleUploadError, createBlogPost);
+router.put('/:id', authenticate, upload.single('image'), handleUploadError, updateBlogPost);
 router.delete('/:id', authenticate, deleteBlogPost);
 
 export default router;

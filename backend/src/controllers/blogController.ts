@@ -2,6 +2,8 @@ import { Response } from 'express';
 import BlogPost from '../models/BlogPost';
 import Analytics from '../models/Analytics';
 import { AuthRequest } from '../middleware/auth';
+import { uploadToS3 } from '../services/s3Service';
+import path from 'path';
 
 // @desc    Get all blog posts (with filters)
 // @route   GET /api/blog
@@ -154,6 +156,49 @@ export const createBlogPost = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
     
+    // Handle image upload if file is provided
+    let finalImageUrl = imageUrl;
+    if (req.file && req.file.buffer) {
+      try {
+        const storageType = (process.env.STORAGE_TYPE || 'mongodb').toLowerCase();
+        
+        if (storageType === 's3') {
+          // Upload blog image to S3
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const ext = path.extname(req.file.originalname);
+          const nameWithoutExt = path.basename(req.file.originalname, ext);
+          const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
+          const filename = `blog-${uniqueSuffix}-${sanitizedName}${ext}`;
+          const s3Key = `blog-images/${filename}`;
+          
+          await uploadToS3(
+            req.file.buffer,
+            s3Key,
+            req.file.mimetype,
+            {
+              originalName: req.file.originalname,
+              uploadedBy: req.admin?.id?.toString() || 'unknown',
+              uploadedByName: req.admin?.username || 'Admin',
+            }
+          );
+          
+          // Generate S3 URL (or use CloudFront if configured)
+          const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'dr-birdy-books-files';
+          const region = process.env.AWS_REGION || 'us-east-1';
+          finalImageUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${s3Key}`;
+          
+          console.log('✅ Blog image uploaded to S3:', finalImageUrl);
+        } else {
+          // For MongoDB/other storage, you could upload to files endpoint first
+          // For now, we'll just use the provided imageUrl
+          console.log('⚠️  Image upload only supported with S3 storage');
+        }
+      } catch (imageError: any) {
+        console.error('❌ Blog image upload error:', imageError);
+        // Continue without image if upload fails
+      }
+    }
+    
     const post = await BlogPost.create({
       title,
       content,
@@ -161,7 +206,7 @@ export const createBlogPost = async (req: AuthRequest, res: Response): Promise<v
       author: req.admin?.username || 'Admin',
       authorId: req.admin?.id,
       slug,
-      imageUrl,
+      imageUrl: finalImageUrl,
       tags: tags || [],
       status: status || 'draft',
     });
@@ -206,11 +251,54 @@ export const updateBlogPost = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
     
+    // Handle image upload if new file is provided
+    let finalImageUrl = imageUrl !== undefined ? imageUrl : post.imageUrl;
+    if (req.file && req.file.buffer) {
+      try {
+        const storageType = (process.env.STORAGE_TYPE || 'mongodb').toLowerCase();
+        
+        if (storageType === 's3') {
+          // Upload blog image to S3
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const ext = path.extname(req.file.originalname);
+          const nameWithoutExt = path.basename(req.file.originalname, ext);
+          const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
+          const filename = `blog-${uniqueSuffix}-${sanitizedName}${ext}`;
+          const s3Key = `blog-images/${filename}`;
+          
+          await uploadToS3(
+            req.file.buffer,
+            s3Key,
+            req.file.mimetype,
+            {
+              originalName: req.file.originalname,
+              uploadedBy: req.admin?.id?.toString() || 'unknown',
+              uploadedByName: req.admin?.username || 'Admin',
+            }
+          );
+          
+          // Generate S3 URL
+          const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'dr-birdy-books-files';
+          const region = process.env.AWS_REGION || 'us-east-1';
+          finalImageUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${s3Key}`;
+          
+          console.log('✅ Blog image uploaded to S3:', finalImageUrl);
+        } else {
+          console.log('⚠️  Image upload only supported with S3 storage');
+        }
+      } catch (imageError: any) {
+        console.error('❌ Blog image upload error:', imageError);
+        // Continue without updating image if upload fails
+      }
+    }
+    
     // Update fields
     if (title) post.title = title;
     if (content) post.content = content;
     if (excerpt) post.excerpt = excerpt;
-    if (imageUrl !== undefined) post.imageUrl = imageUrl;
+    if (imageUrl !== undefined || (req.file && req.file.buffer)) {
+      post.imageUrl = finalImageUrl;
+    }
     if (tags) post.tags = tags;
     if (status) post.status = status;
     

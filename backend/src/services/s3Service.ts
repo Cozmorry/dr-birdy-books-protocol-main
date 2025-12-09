@@ -8,7 +8,19 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION || 'us-east-1',
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'dr-birdy-books-files';
+// Support both AWS_S3_BUCKET and AWS_S3_BUCKET_NAME for backward compatibility
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'dr-birdy-books-files';
+
+// Log S3 configuration on initialization (only in development or if explicitly enabled)
+if (process.env.NODE_ENV === 'development' || process.env.LOG_S3_CONFIG === 'true') {
+  const storageType = (process.env.STORAGE_TYPE || 'mongodb').toLowerCase();
+  if (storageType === 's3') {
+    console.log('☁️  S3 Service initialized');
+    console.log(`   Bucket: ${BUCKET_NAME}`);
+    console.log(`   Region: ${process.env.AWS_REGION || 'us-east-1'}`);
+    console.log(`   Access Key ID: ${process.env.AWS_ACCESS_KEY_ID ? '***' + process.env.AWS_ACCESS_KEY_ID.slice(-4) : 'NOT SET'}`);
+  }
+}
 
 /**
  * Upload file to S3

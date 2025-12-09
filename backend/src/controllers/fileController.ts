@@ -5,6 +5,7 @@ import Analytics from '../models/Analytics';
 import { AuthRequest } from '../middleware/auth';
 import { verifyUserAccess, getUserTier } from '../config/blockchain';
 import { uploadToGridFS, downloadFromGridFS, deleteFromGridFS, fileExistsInGridFS, getFileMetadata, getGridFSBucket } from '../services/gridfsService';
+import { uploadToS3, downloadFromS3, deleteFromS3, generatePresignedDownloadUrl } from '../services/s3Service';
 import {
   checkDailyLimit,
   checkMonthlyQuota,
@@ -67,30 +68,61 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
     const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
     const filename = `${uniqueSuffix}-${sanitizedName}${ext}`;
     
-    // Upload to MongoDB GridFS
+    // Determine storage type from environment variable
+    const storageType = (process.env.STORAGE_TYPE || 'mongodb').toLowerCase();
+    
+    // Upload to storage (S3 or MongoDB GridFS)
     let storagePath: string;
+    let actualStorageType: 's3' | 'mongodb' | 'local';
+    
     try {
-      console.log('📤 Uploading file to MongoDB GridFS...', {
-        filename,
-        size: req.file.size,
-        mimeType: req.file.mimetype,
-      });
-      
-      const gridFSFileId = await uploadToGridFS(req.file.buffer, filename, {
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        uploadedBy: req.admin?.id,
-        uploadedByName: req.admin?.username || 'Admin',
-      });
-      
-      console.log('✅ File uploaded to GridFS with ID:', gridFSFileId.toString());
-      storagePath = gridFSFileId.toString();
-    } catch (gridFSError: any) {
-      console.error('❌ GridFS upload error:', gridFSError);
+      if (storageType === 's3') {
+        console.log('📤 Uploading file to AWS S3...', {
+          filename,
+          size: req.file.size,
+          mimeType: req.file.mimetype,
+        });
+        
+        // Generate S3 key (path in bucket)
+        const s3Key = `files/${filename}`;
+        storagePath = await uploadToS3(
+          req.file.buffer,
+          s3Key,
+          req.file.mimetype,
+          {
+            originalName: req.file.originalname,
+            uploadedBy: req.admin?.id?.toString() || 'unknown',
+            uploadedByName: req.admin?.username || 'Admin',
+          }
+        );
+        
+        console.log('✅ File uploaded to S3 with key:', storagePath);
+        actualStorageType = 's3';
+      } else {
+        // Default to MongoDB GridFS
+        console.log('📤 Uploading file to MongoDB GridFS...', {
+          filename,
+          size: req.file.size,
+          mimeType: req.file.mimetype,
+        });
+        
+        const gridFSFileId = await uploadToGridFS(req.file.buffer, filename, {
+          originalName: req.file.originalname,
+          mimeType: req.file.mimetype,
+          uploadedBy: req.admin?.id,
+          uploadedByName: req.admin?.username || 'Admin',
+        });
+        
+        console.log('✅ File uploaded to GridFS with ID:', gridFSFileId.toString());
+        storagePath = gridFSFileId.toString();
+        actualStorageType = 'mongodb';
+      }
+    } catch (uploadError: any) {
+      console.error(`❌ ${storageType === 's3' ? 'S3' : 'GridFS'} upload error:`, uploadError);
       res.status(500).json({
         success: false,
-        message: 'Failed to upload file to MongoDB',
-        error: gridFSError.message,
+        message: `Failed to upload file to ${storageType === 's3' ? 'S3' : 'MongoDB'}`,
+        error: uploadError.message,
       });
       return;
     }
@@ -110,7 +142,7 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       fileSize: req.file.size,
       description,
       tier: tier,
-      storageType: 'mongodb' as const,
+      storageType: actualStorageType,
       storagePath,
       uploadedBy: req.admin?.id,
       uploadedByName: req.admin?.username || 'Admin',
@@ -509,118 +541,144 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       }
     }
     
-    // Download file from MongoDB GridFS using streaming for better performance
+    // Download file from storage (S3 or MongoDB GridFS)
     console.log('📥 Download request:', {
       fileId: id,
       storagePath: file.storagePath,
       storageType: file.storageType,
     });
     
-    // Set headers immediately (before any async operations)
-    // Important: Set these headers before streaming starts
-    res.setHeader('Content-Type', file.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
-    res.setHeader('Content-Length', file.fileSize);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    
-    // Ensure response is not buffered
-    res.flushHeaders();
-    
-    // Stream file directly from GridFS (don't load into memory)
-    // Start streaming immediately - don't wait for existence check
-    try {
-      console.log('📤 Streaming file from GridFS...');
-      const bucket = getGridFSBucket();
-      const objectId = new mongoose.Types.ObjectId(file.storagePath);
-      const downloadStream = bucket.openDownloadStream(objectId);
+    // Record download stats BEFORE streaming starts (to prevent multiple recordings)
+    if (verifiedWalletAddress) {
+      const downloadKey = token 
+        ? `token:${token}` 
+        : `file:${id}:wallet:${verifiedWalletAddress}`;
       
-      // Handle stream errors early
-      downloadStream.on('error', (error: any) => {
-        console.error('❌ GridFS stream error:', error);
-        if (!res.headersSent) {
-          res.status(404).json({
-            success: false,
-            message: 'File not found in storage',
-          });
-        } else {
-          res.end();
-        }
-      });
+      // Check if we've already recorded this download recently (within last 30 seconds)
+      const downloadCache = (global as any).downloadCache || new Map();
+      (global as any).downloadCache = downloadCache;
       
-      // Record download stats BEFORE streaming starts (to prevent multiple recordings)
-      // Use token as unique identifier to prevent duplicate recordings
-      // If using token, mark it as used; if not, use file+wallet combination
-      if (verifiedWalletAddress) {
-        const downloadKey = token 
-          ? `token:${token}` 
-          : `file:${id}:wallet:${verifiedWalletAddress}`;
+      const cacheKey = downloadKey;
+      const lastRecorded = downloadCache.get(cacheKey);
+      const now = Date.now();
+      
+      // Only record if not recorded in the last 30 seconds
+      if (!lastRecorded || (now - lastRecorded) > 30000) {
+        downloadCache.set(cacheKey, now);
         
-        // Check if we've already recorded this download recently (within last 30 seconds)
-        // This prevents duplicate recordings from browser retries/range requests
-        const downloadCache = (global as any).downloadCache || new Map();
-        (global as any).downloadCache = downloadCache;
-        
-        const cacheKey = downloadKey;
-        const lastRecorded = downloadCache.get(cacheKey);
-        const now = Date.now();
-        
-        // Only record if not recorded in the last 30 seconds
-        if (!lastRecorded || (now - lastRecorded) > 30000) {
-          downloadCache.set(cacheKey, now);
-          
-          // Clean up old cache entries (older than 5 minutes)
-          for (const [key, timestamp] of downloadCache.entries()) {
-            if (now - (timestamp as number) > 300000) {
-              downloadCache.delete(key);
-            }
+        // Clean up old cache entries (older than 5 minutes)
+        for (const [key, timestamp] of downloadCache.entries()) {
+          if (now - (timestamp as number) > 300000) {
+            downloadCache.delete(key);
           }
-          
-          // Record download asynchronously (don't block the stream)
-          Promise.all([
-            recordDownload(verifiedWalletAddress, file.fileSize),
-            file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
-            Analytics.create({
-              eventType: 'file_download',
-              userId: verifiedWalletAddress || (walletAddress as string) || undefined,
-              fileId: file._id,
-              metadata: {
-                tier: file.tier,
-                fileType: file.fileType,
-                fileSize: file.fileSize,
-              },
-              timestamp: new Date(),
-            }),
-          ]).catch((err) => {
-            console.error('Error recording download stats:', err);
-            // Don't fail the download if stats recording fails
-          });
-          
-          console.log(`📊 Download recorded for ${verifiedWalletAddress}, file ${id}`);
-        } else {
-          console.log(`⏭️  Skipping duplicate download recording for ${cacheKey} (recorded ${Math.floor((now - lastRecorded) / 1000)}s ago)`);
         }
-      }
-      
-      // Pipe the stream directly to response (starts immediately)
-      downloadStream.pipe(res);
-      
-      // Log completion
-      downloadStream.on('end', () => {
-        console.log('✅ File stream completed');
-      });
-      
-    } catch (gridFSError: any) {
-      console.error('❌ GridFS stream setup error:', gridFSError);
-      if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: 'Failed to download file from storage',
-          error: gridFSError.message,
+        
+        // Record download asynchronously (don't block the stream)
+        Promise.all([
+          recordDownload(verifiedWalletAddress, file.fileSize),
+          file.updateOne({ $inc: { downloads: 1 } }), // Increment download count
+          Analytics.create({
+            eventType: 'file_download',
+            userId: verifiedWalletAddress || (walletAddress as string) || undefined,
+            fileId: file._id,
+            metadata: {
+              tier: file.tier,
+              fileType: file.fileType,
+              fileSize: file.fileSize,
+            },
+            timestamp: new Date(),
+          }),
+        ]).catch((err) => {
+          console.error('Error recording download stats:', err);
+          // Don't fail the download if stats recording fails
         });
+        
+        console.log(`📊 Download recorded for ${verifiedWalletAddress}, file ${id}`);
+      } else {
+        console.log(`⏭️  Skipping duplicate download recording for ${cacheKey} (recorded ${Math.floor((now - lastRecorded) / 1000)}s ago)`);
       }
-      return;
+    }
+    
+    // Handle S3 downloads
+    if (file.storageType === 's3') {
+      try {
+        console.log('📤 Downloading file from S3...');
+        const fileBuffer = await downloadFromS3(file.storagePath);
+        
+        // Set headers
+        res.setHeader('Content-Type', file.mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+        res.setHeader('Content-Length', file.fileSize);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        
+        // Send file buffer
+        res.send(fileBuffer);
+        console.log('✅ File downloaded from S3');
+      } catch (s3Error: any) {
+        console.error('❌ S3 download error:', s3Error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: 'Failed to download file from S3',
+            error: s3Error.message,
+          });
+        }
+        return;
+      }
+    } else {
+      // Handle MongoDB GridFS downloads using streaming
+      // Set headers immediately (before any async operations)
+      res.setHeader('Content-Type', file.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+      res.setHeader('Content-Length', file.fileSize);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      
+      // Ensure response is not buffered
+      res.flushHeaders();
+      
+      // Stream file directly from GridFS (don't load into memory)
+      try {
+        console.log('📤 Streaming file from GridFS...');
+        const bucket = getGridFSBucket();
+        const objectId = new mongoose.Types.ObjectId(file.storagePath);
+        const downloadStream = bucket.openDownloadStream(objectId);
+        
+        // Handle stream errors early
+        downloadStream.on('error', (error: any) => {
+          console.error('❌ GridFS stream error:', error);
+          if (!res.headersSent) {
+            res.status(404).json({
+              success: false,
+              message: 'File not found in storage',
+            });
+          } else {
+            res.end();
+          }
+        });
+        
+        // Pipe the stream directly to response (starts immediately)
+        downloadStream.pipe(res);
+        
+        // Log completion
+        downloadStream.on('end', () => {
+          console.log('✅ File stream completed');
+        });
+        
+      } catch (gridFSError: any) {
+        console.error('❌ GridFS stream setup error:', gridFSError);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: 'Failed to download file from storage',
+            error: gridFSError.message,
+          });
+        }
+        return;
+      }
     }
   } catch (error: any) {
     console.error('Download file error:', error);
@@ -689,12 +747,18 @@ export const deleteFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     
-    // Delete file from MongoDB GridFS
+    // Delete file from storage (S3 or MongoDB GridFS)
     try {
-      await deleteFromGridFS(file.storagePath);
+      if (file.storageType === 's3') {
+        await deleteFromS3(file.storagePath);
+        console.log('✅ File deleted from S3');
+      } else {
+        await deleteFromGridFS(file.storagePath);
+        console.log('✅ File deleted from GridFS');
+      }
     } catch (error) {
-      console.error('Failed to delete file from GridFS:', error);
-      // Continue with database record deletion even if GridFS deletion fails
+      console.error(`Failed to delete file from ${file.storageType}:`, error);
+      // Continue with database record deletion even if storage deletion fails
     }
     
     // Delete database record
