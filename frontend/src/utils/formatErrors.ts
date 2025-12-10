@@ -85,7 +85,7 @@ export function formatUserError(
   if (errorLower.includes('minimum staking duration') || errorLower.includes('cannot unstake')) {
     return {
       title: 'Unstaking Not Available Yet',
-      message: 'You need to wait at least 24 hours after staking before you can unstake your tokens.'
+      message: 'You need to wait at least 7 days after staking before you can unstake your tokens.'
     };
   }
 
