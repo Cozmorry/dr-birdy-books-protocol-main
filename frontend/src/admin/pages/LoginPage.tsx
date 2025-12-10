@@ -117,7 +117,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-300 dark:drop-shadow login-footer">
-          <p>© 2024 Dr. Birdy Books. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Dr. Birdy Books. All rights reserved.</p>
         </div>
       </div>
     </div>
