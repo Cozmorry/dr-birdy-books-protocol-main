@@ -85,13 +85,45 @@ class ApiClient {
     return response.data;
   }
 
-  async createBlogPost(data: any) {
-    const response = await this.client.post('/blog', data);
+  async createBlogPost(data: any, image?: File | null) {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    formData.append('content', data.content);
+    formData.append('excerpt', data.excerpt);
+    formData.append('status', data.status || 'draft');
+    if (data.tags) {
+      formData.append('tags', JSON.stringify(data.tags));
+    }
+    if (image) {
+      formData.append('image', image);
+    }
+
+    const response = await this.client.post('/blog', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 
-  async updateBlogPost(id: string, data: any) {
-    const response = await this.client.put(`/blog/${id}`, data);
+  async updateBlogPost(id: string, data: any, image?: File | null) {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    formData.append('content', data.content);
+    formData.append('excerpt', data.excerpt);
+    formData.append('status', data.status || 'draft');
+    if (data.tags) {
+      formData.append('tags', JSON.stringify(data.tags));
+    }
+    if (image) {
+      formData.append('image', image);
+    }
+
+    const response = await this.client.put(`/blog/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 

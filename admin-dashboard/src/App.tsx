@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
-import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import FilesPage from './pages/FilesPage';
@@ -30,11 +29,6 @@ function App() {
   return (
     <Routes>
       <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
-      />
-      
-      <Route
         path="/"
         element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" replace />}
       >
@@ -51,6 +45,14 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
+
 
 
 

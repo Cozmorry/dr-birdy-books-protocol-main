@@ -140,29 +140,31 @@ contract ReflectiveToken is
     uint256 private constant MIN_SLIPPAGE = 950; // 95% minimum expected output (in basis points)
 
     // Limits
-    uint256 public maxTxAmount = _TOTAL_SUPPLY / 100; // 1% of supply
-    uint256 public swapThreshold = _TOTAL_SUPPLY / 100; // 1% of supply
+    uint256 public maxTxAmount; // 1% of supply
+    uint256 public swapThreshold; // 1% of supply
 
     // Fee Structure (in basis points)
-    uint256 public taxFee = 100; // 1%
-    uint256 public liquidityFee = 200; // 2%
-    uint256 public marketingFee = 200; // 2%
-    uint256 public totalFee = taxFee + liquidityFee + marketingFee;
+    uint256 public taxFee; // 1%
+    uint256 public liquidityFee; // 2%
+    uint256 public marketingFee; // 2%
+    uint256 public totalFee;
 
     // Slippage configuration (in basis points) - OPTIMIZED FOR BASE LAUNCH
-    uint256 public swapSlippageBps = 50; // 0.5% default for low-liquidity swaps
-    uint256 public liquiditySlippageBps = 30; // 0.3% default for liquidity operations
+    uint256 public swapSlippageBps; // 0.5% default for low-liquidity swaps
+    uint256 public liquiditySlippageBps; // 0.3% default for liquidity operations
 
     // Addresses
     address public uniswapRouter;
     address public marketingWallet;
     address public stakingContract;
     address public arweaveGateway;
-    address public immutable WETH = 0x4200000000000000000000000000000000000006;
+    address public constant WETH = 0x4200000000000000000000000000000000000006;
     address public pairAddress;
     address public timelock;
     uint256 public timelockDelay;
     TokenDistribution public tokenDistribution;
+    address public yieldStrategy; // TreasuryYieldStrategy for automated buybacks
+    uint256 public yieldStrategyFeeBps; // 50% of marketing fee goes to yield (in basis points)
 
     // Reflection Tracking
     uint256 private _rTotal;
@@ -170,9 +172,9 @@ contract ReflectiveToken is
     uint256 private _rFeeTotal;
 
     // State
-    bool public tradingEnabled = true;
-    bool public swapEnabled = true;
-    bool public inSwap = false;
+    bool public tradingEnabled;
+    bool public swapEnabled;
+    bool public inSwap;
     bool public swapped;
 
     // Exclusions and Tracking
@@ -222,6 +224,9 @@ contract ReflectiveToken is
         uint256 liquidityAdded
     );
     event MarketingFeeDistributed(uint256 amount);
+    event YieldStrategyFeeSent(uint256 amount);
+    event YieldStrategySet(address yieldStrategy);
+    event YieldStrategyFeeBpsUpdated(uint256 newBps);
     event SlippageUpdated(
         uint256 swapSlippageBps,
         uint256 liquiditySlippageBps
@@ -265,14 +270,16 @@ contract ReflectiveToken is
         // Validate addresses
         require(_uniswapRouter != address(0), "Invalid router address");
         require(_marketingWallet != address(0), "Invalid marketing wallet");
-        require(_stakingContract != address(0), "Invalid staking contract");
+        // Note: staking contract can be zero initially and set later via setStakingContract()
+        // require(_stakingContract != address(0), "Invalid staking contract");
         require(_arweaveGateway != address(0), "Invalid Arweave gateway");
         require(_priceOracle != address(0), "Invalid price oracle");
 
-        // Initialize OpenZeppelin upgradeable contracts
+        // Initialize OpenZeppelin upgradeable contracts (in correct order)
+        // Order must be: Ownable -> ReentrancyGuard -> ERC20
+        __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __ERC20_init(_NAME, _SYMBOL);
-        __Ownable_init_unchained(msg.sender);
 
         // Set basic state variables without external calls
         ethUsdFeed = AggregatorV3Interface(_priceOracle);
@@ -282,14 +289,34 @@ contract ReflectiveToken is
         arweaveGateway = _arweaveGateway;
         // timelock will be set later via setTimelock()
 
-        // Manually set owner as backup (in case __Ownable_init_unchained doesn't work)
-        _transferOwnership(msg.sender);
-
-        // Debug: Check if ownership was set
+        // Verify ownership was set correctly
         require(
             owner() == msg.sender,
             "Ownership not set correctly during initialization"
         );
+
+        // Initialize state variables (moved from declarations for upgrade safety)
+        maxTxAmount = _TOTAL_SUPPLY / 100; // 1% of supply
+        swapThreshold = _TOTAL_SUPPLY / 100; // 1% of supply
+        
+        // Fee Structure (in basis points)
+        taxFee = 100; // 1%
+        liquidityFee = 200; // 2%
+        marketingFee = 200; // 2%
+        totalFee = taxFee + liquidityFee + marketingFee;
+        
+        // Slippage configuration (in basis points)
+        swapSlippageBps = 50; // 0.5% default for low-liquidity swaps
+        liquiditySlippageBps = 30; // 0.3% default for liquidity operations
+        
+        // State flags
+        tradingEnabled = true;
+        swapEnabled = true;
+        inSwap = false;
+        swapped = false;
+        
+        // Yield strategy fee
+        yieldStrategyFeeBps = 5000; // 50% of marketing fee goes to yield
 
         // Initialize reflection system FIRST
         _rTotal = (MAX - (MAX % _TOTAL_SUPPLY));
@@ -399,6 +426,27 @@ contract ReflectiveToken is
         require(_arweaveGateway != address(0), "Invalid gateway address");
         arweaveGateway = _arweaveGateway;
         emit ArweaveGatewaySet(_arweaveGateway);
+    }
+
+    /**
+     * @notice Set yield strategy address for automated buybacks (only owner)
+     * @dev Sets the TreasuryYieldStrategy address to receive marketing fees
+     * @param _yieldStrategy Address of the yield strategy contract
+     */
+    function setYieldStrategy(address _yieldStrategy) external onlyOwner {
+        yieldStrategy = _yieldStrategy;
+        emit YieldStrategySet(_yieldStrategy);
+    }
+
+    /**
+     * @notice Set percentage of marketing fee that goes to yield strategy (only owner)
+     * @dev Sets the split between marketing wallet and yield strategy
+     * @param _feeBps Fee percentage in basis points (e.g., 5000 = 50%)
+     */
+    function setYieldStrategyFeeBps(uint256 _feeBps) external onlyOwner {
+        require(_feeBps <= 10000, "Cannot exceed 100%");
+        yieldStrategyFeeBps = _feeBps;
+        emit YieldStrategyFeeBpsUpdated(_feeBps);
     }
 
     /**
@@ -1071,8 +1119,10 @@ contract ReflectiveToken is
         require(recipient != address(0), "RT: Transfer to zero address");
         require(amount > 0, "RT: Transfer amount must be greater than zero");
 
-        // Check staking contract balance (it's excluded, so check _tOwned)
-        require(_tOwned[stakingContract] >= amount, "RT: Insufficient _tOwned balance in staking contract");
+        // Check staking contract balance using balanceOf (works correctly for excluded addresses)
+        // balanceOf() returns _tOwned for excluded addresses, which is what we need
+        uint256 stakingBalance = balanceOf(stakingContract);
+        require(stakingBalance >= amount, "RT: Insufficient balance in staking contract");
 
         // Perform the transfer from staking contract (excluded) to user (may be non-excluded)
         // No fees when staking contract is involved
@@ -1197,14 +1247,35 @@ contract ReflectiveToken is
     }
 
     /**
-     * @dev Distributes the marketing fee to the marketing wallet.
+     * @dev Distributes the marketing fee to the marketing wallet and yield strategy.
      * @param ethReceived Total ETH received from the swap.
      */
     function _distributeMarketingFee(uint256 ethReceived) private {
         uint256 marketingShare = (ethReceived * marketingFee) /
             (marketingFee + liquidityFee);
-        payable(marketingWallet).transfer(marketingShare);
-        emit MarketingFeeDistributed(marketingShare);
+        
+        // Split marketing fee between marketing wallet and yield strategy
+        if (yieldStrategy != address(0) && yieldStrategyFeeBps > 0) {
+            uint256 yieldStrategyShare = (marketingShare * yieldStrategyFeeBps) / 10000;
+            uint256 marketingWalletShare = marketingShare - yieldStrategyShare;
+            
+            // Send to yield strategy (will auto-execute buyback if enabled)
+            (bool success, ) = payable(yieldStrategy).call{value: yieldStrategyShare}("");
+            if (success) {
+                emit YieldStrategyFeeSent(yieldStrategyShare);
+            }
+            
+            // Send remaining to marketing wallet
+            if (marketingWalletShare > 0) {
+                payable(marketingWallet).transfer(marketingWalletShare);
+            }
+            
+            emit MarketingFeeDistributed(marketingWalletShare);
+        } else {
+            // No yield strategy set, send all to marketing wallet
+            payable(marketingWallet).transfer(marketingShare);
+            emit MarketingFeeDistributed(marketingShare);
+        }
     }
 
     // Arweave transaction verification
@@ -1329,7 +1400,7 @@ contract ReflectiveToken is
             "Distribution contract not set"
         );
 
-        uint256 totalToDistribute = 1_000_000 * 10 ** 18; // 1M tokens (10% of supply)
+        uint256 totalToDistribute = 1_000_000 * 10 ** 18; // 1M tokens (10% of supply: 750k team + 250k airdrop)
         require(
             balanceOf(address(this)) >= totalToDistribute,
             "Insufficient contract balance"

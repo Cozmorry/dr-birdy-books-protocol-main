@@ -21,14 +21,13 @@ describe("ReflectiveToken", function () {
   beforeEach(async function () {
     [owner, user1, user2, marketingWallet] = await ethers.getSigners();
 
-    // Deploy contracts in parallel
+    // Deploy contracts in phases (staking needs token address)
     const [
       Gateway,
       Distribution,
       Timelock,
       MockRouterFactory,
       MockOracleFactory,
-      Staking,
       Token,
     ] = await Promise.all([
       ethers.getContractFactory("ArweaveGateway"),
@@ -36,18 +35,16 @@ describe("ReflectiveToken", function () {
       ethers.getContractFactory("ImprovedTimelock"),
       ethers.getContractFactory("MockUniswapRouter"),
       ethers.getContractFactory("MockPriceOracle"),
-      ethers.getContractFactory("FlexibleTieredStaking"),
       ethers.getContractFactory("ReflectiveToken"),
     ]);
 
-    // Deploy all contracts
+    // Deploy all contracts except staking (which needs token address)
     const [
       gatewayInstance,
       distributionInstance,
       timelockInstance,
       mockRouterInstance,
       mockOracleInstance,
-      stakingInstance,
       tokenInstance,
     ] = await Promise.all([
       Gateway.deploy(),
@@ -55,20 +52,27 @@ describe("ReflectiveToken", function () {
       Timelock.deploy(owner.address, 86400),
       MockRouterFactory.deploy(),
       MockOracleFactory.deploy(),
-      Staking.deploy(),
-      Token.deploy(),
+      Token.deploy(), // ReflectiveToken has empty constructor
     ]);
 
-    // Wait for all deployments
+    // Wait for deployments
     await Promise.all([
       gatewayInstance.waitForDeployment(),
       distributionInstance.waitForDeployment(),
       timelockInstance.waitForDeployment(),
       mockRouterInstance.waitForDeployment(),
       mockOracleInstance.waitForDeployment(),
-      stakingInstance.waitForDeployment(),
       tokenInstance.waitForDeployment(),
     ]);
+
+    // Now deploy staking with correct constructor arguments
+    const Staking = await ethers.getContractFactory("FlexibleTieredStaking");
+    const stakingInstance = await Staking.deploy(
+      await tokenInstance.getAddress(),
+      await mockOracleInstance.getAddress(),
+      await mockOracleInstance.getAddress() // using same oracle for backup
+    );
+    await stakingInstance.waitForDeployment();
 
     // Assign instances
     gateway = gatewayInstance;

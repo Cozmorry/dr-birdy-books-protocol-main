@@ -22,6 +22,7 @@ interface ContentDownloadsProps {
   userTier: number;
   hasAccess: boolean;
   isLoading: boolean;
+  onRefreshTier?: () => Promise<void>;
 }
 
 export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
@@ -29,6 +30,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   userTier,
   hasAccess,
   isLoading,
+  onRefreshTier,
 }) => {
   const { addToast } = useToast();
   const [availableFiles, setAvailableFiles] = useState<ContentFile[]>([]);
@@ -195,11 +197,16 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     // User must have unlocked the required tier or higher
     if (userTier >= 0) {
       const canAccess = file.tier <= userTier;
-      console.log(`[canAccessFile] File: ${file.fileName}, file.tier: ${file.tier}, userTier: ${userTier}, canAccess: ${canAccess}`);
+      // Only log in development mode and for debugging
+      if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_TIER === 'true') {
+        console.log(`[canAccessFile] File: ${file.fileName}, file.tier: ${file.tier}, userTier: ${userTier}, canAccess: ${canAccess}`);
+      }
       return canAccess;
     }
     // No tier unlocked
-    console.log(`[canAccessFile] File: ${file.fileName}, userTier: ${userTier}, NO TIER UNLOCKED`);
+    if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_TIER === 'true') {
+      console.log(`[canAccessFile] File: ${file.fileName}, userTier: ${userTier}, NO TIER UNLOCKED`);
+    }
     return false;
   };
 
@@ -297,6 +304,28 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
 
     setDownloadingFileId(file.id);
     
+    // Log current frontend tier state for debugging
+    console.log('[handleDownload] Frontend tier state:', {
+      userTier,
+      fileTier: file.tier,
+      canAccess: canAccessFile(file),
+      userAddress: userInfo.address,
+    });
+    
+    // Refresh tier from blockchain before download to ensure we have latest data
+    // The backend will verify anyway, but this helps prevent user confusion
+    if (onRefreshTier) {
+      try {
+        console.log('[handleDownload] Refreshing tier from blockchain...');
+        await onRefreshTier();
+        // Small delay to allow state to update
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (refreshError) {
+        console.warn('[handleDownload] Failed to refresh tier, proceeding anyway:', refreshError);
+        // Continue with download - backend will verify tier anyway
+      }
+    }
+    
     try {
       if (file.fileData) {
         // Download from base64 data (local files)
@@ -339,6 +368,29 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
             title: 'Download Limit Exceeded',
             message: `${message}${remaining ? `\n${remaining}` : ''}${resetTime ? `\n${resetTime}` : ''}`,
             duration: 8000, // Show for 8 seconds
+          });
+        } else if (presignedResponse.status === 403 && errorData.message?.includes('tier')) {
+          // Insufficient tier access
+          const requiredTier = errorData.requiredTierName || `Tier ${(errorData.requiredTier ?? 0) + 1}`;
+          const userTier = errorData.userTierName || (errorData.userTier === -1 ? 'None' : `Tier ${(errorData.userTier ?? -1) + 1}`);
+          const detailedMessage = `This file requires ${requiredTier} access.\nYour current tier: ${userTier}.\n\nNote: Tier is calculated based on USD value of staked tokens, not token count. If you just staked, please wait a few seconds and try again, or refresh the page.`;
+          
+          addToast({
+            type: 'error',
+            title: 'Insufficient Tier Access',
+            message: detailedMessage,
+            duration: 10000, // Show for 10 seconds
+          });
+          
+          // Log detailed tier information for debugging
+          console.error('[Download Error] Tier mismatch:', {
+            fileTier: file.tier,
+            requiredTier: errorData.requiredTier,
+            requiredTierName: errorData.requiredTierName,
+            userTier: errorData.userTier,
+            userTierName: errorData.userTierName,
+            frontendUserTier: userTier,
+            file: file.fileName,
           });
         } else {
           addToast({

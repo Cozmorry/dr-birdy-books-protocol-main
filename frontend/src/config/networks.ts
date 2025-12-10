@@ -21,6 +21,7 @@ export const LOCALHOST: NetworkConfig = {
   blockExplorer: ''
 };
 
+// Mainnet is the primary network, testnet and localhost are for development
 export const SUPPORTED_NETWORKS = [BASE_MAINNET, BASE_TESTNET, LOCALHOST];
 
 // Oracle configurations for each network
@@ -48,18 +49,23 @@ export const ORACLE_CONFIGS = {
 // Contract addresses for different networks
 export const CONTRACT_ADDRESSES = {
   [BASE_MAINNET.chainId]: {
-    reflectiveToken: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
-    tokenDistribution: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
-    flexibleTieredStaking: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
-    arweaveGateway: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
-    improvedTimelock: '0x0000000000000000000000000000000000000000', // Update with actual Base Mainnet address
+    reflectiveToken: '0xD19f1c7941244270c71a4c3dF4CC0A8baFC48134', // ✅ PROXY - Deployed Dec 8, 2025 with manual proxy pattern
+    tokenDistribution: '0xc83aF4E8CE625B323E6C97284889d2eA4137fEd7', // ✅ MAINNET - Deployed Dec 8, 2025
+    flexibleTieredStaking: '0xDe739Dd135Ffb5899e10F0a373fb9E0F61571e12', // ✅ MAINNET - Deployed Dec 8, 2025
+    arweaveGateway: '0x85169f06166F40B61A134Fe80Fa4bE8c371A457e', // ✅ MAINNET - Deployed Dec 8, 2025
+    improvedTimelock: '0xD865B5f889903F01e98e3598C7d68De5dF5E6E0c', // ✅ MAINNET - Deployed Dec 8, 2025
+    proxyAdmin: '0x279fC8Ba58A9e40bf19Be5ff38E538762D2A23B9', // ✅ MAINNET - ProxyAdmin for upgradeability
+    tokenImplementation: '0xcA848B2BB36b6E6e12E0D21B649A74fdbA48dcb0', // ℹ️ INFO - Implementation contract (users don't interact with this)
+    treasuryYieldStrategy: '0x1eDa0B2c614890DD974336bBEdE5aB4F4a55666f', // ✅ MAINNET - Deployed Dec 8, 2025 for automated buybacks
   },
   [BASE_TESTNET.chainId]: {
-    reflectiveToken: '0xdEA33fCB6BDCaB788De398A636a1227122Ae3d7D', // ✅ WORKING - Non-upgradeable version
-    tokenDistribution: '0x0e9697F783654d5F26f41dA15FbAc449fF4Ddf5d', // Deployed on Base Sepolia
-    flexibleTieredStaking: '0xAa3cA3eF0619dfA1753385C32C3De16f04c4b93c', // ✅ UPDATED - Redeployed with new owner: 0x27799bb35820Ecb2814Ac2484bA34AD91bbda198
-    arweaveGateway: '0xb37EE17a794013fFDfE87E5921eE7984588A8eC7', // Deployed on Base Sepolia
-    improvedTimelock: '0x937D2960F0BA86a2c829CC6F5921E8b3725d08dA', // Deployed on Base Sepolia
+    reflectiveToken: '0xB49872C1aD8a052f1369ABDfC890264938647EB6', // ✅ PROXY - Deployed Dec 8, 2025 with manual proxy pattern
+    tokenDistribution: '0x59ff0451A0718237CAd0FDb0835338180C66580e', // ✅ UPDATED - New deployment Dec 8, 2025
+    flexibleTieredStaking: '0x23A94f5C6FCb46EbB5888E02CF66eB80E13CE822', // ✅ UPDATED - New deployment Dec 8, 2025
+    arweaveGateway: '0x64E4EFc69A94aeEB23Efb1E2629386C71e01cde4', // ✅ UPDATED - New deployment Dec 8, 2025
+    improvedTimelock: '0x986Aa78997327B9a9b7507429a6cE72A5De993e3', // ✅ UPDATED - New deployment Dec 8, 2025
+    proxyAdmin: '0x5627785DBcfEdEc7f2ff4c1f2E94928825A3449B', // ✅ NEW - ProxyAdmin for upgradeability
+    tokenImplementation: '0x82d0079cB7D5fE492B673a3d9ad24fFA1c4E5882', // ℹ️ INFO - Implementation contract (users don't interact with this)
   },
   [LOCALHOST.chainId]: {
     reflectiveToken: '0x4213F020e9430F3549614231A4Dc06226FEEae40',

@@ -2,13 +2,324 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Admin dashboard primary colors */
+/* Dark mode overrides - use plain CSS to avoid circular dependencies */
+
+/* Dark mode background overrides */
+.dark .bg-white {
+  background-color: #0a0e27 !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #050814 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #0a0e27 !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: #1a202c !important;
+}
+
+/* Override colored card backgrounds for dark mode */
+.dark .bg-blue-50 {
+  background-color: rgba(15, 30, 69, 0.6) !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: rgba(38, 15, 75, 0.6) !important;
+}
+
+.dark .bg-orange-50 {
+  background-color: rgba(62, 23, 9, 0.6) !important;
+}
+
+/* Override text colors */
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+/* Override red alert colors */
+.dark .bg-red-50 {
+  background-color: rgba(127, 29, 29, 0.3) !important;
+}
+
+.dark .bg-red-100 {
+  background-color: rgba(127, 29, 29, 0.5) !important;
+}
+
+.dark .text-red-800 {
+  color: #fca5a5 !important;
+}
+
+.dark .border-red-200 {
+  border-color: #7f1d1d !important;
+}
+
+/* Override yellow warning colors */
+.dark .bg-yellow-50 {
+  background-color: rgba(78, 65, 20, 0.5) !important;
+}
+
+.dark .bg-yellow-100 {
+  background-color: rgba(78, 65, 20, 0.6) !important;
+}
+
+.dark .border-yellow-200 {
+  border-color: #4f4620 !important;
+}
+
+.dark .text-yellow-800 {
+  color: #fef3c7 !important;
+}
+
+/* Override badge/pill colors for dark mode */
+.dark .bg-blue-100 {
+  background-color: rgba(30, 58, 138, 0.4) !important;
+}
+
+.dark .text-blue-800 {
+  color: #93c5fd !important;
+}
+
+.dark .bg-green-100 {
+  background-color: rgba(20, 83, 45, 0.4) !important;
+}
+
+.dark .text-green-800 {
+  color: #86efac !important;
+}
+
+.dark .bg-purple-100 {
+  background-color: rgba(76, 29, 149, 0.4) !important;
+}
+
+.dark .text-purple-600 {
+  color: #d8b4fe !important;
+}
+
+/* Override hover and button states for dark mode */
+.dark .hover\:bg-gray-100:hover {
+  background-color: #1a202c !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #1a202c !important;
+}
+
+.dark .bg-gray-300 {
+  background-color: #2d3748 !important;
+}
+
+.dark .text-gray-500 {
+  color: #a0aec0 !important;
+}
+
+.dark .focus\:ring-blue-500:focus {
+  --tw-ring-color: #3b82f6 !important;
+}
+
+.dark .hover\:text-blue-600:hover {
+  color: #60a5fa !important;
+}
+
+.dark .hover\:text-blue-800:hover {
+  color: #93c5fd !important;
+}
+
+.dark .bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+.dark .hover\:bg-blue-700:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.dark .text-blue-600 {
+  color: #60a5fa !important;
+}
+
+/* Style link buttons in dark mode to be more visible */
+.dark a {
+  color: #60a5fa !important;
+}
+
+.dark a:hover {
+  color: #93c5fd !important;
+  text-decoration: underline;
+}
+
+/* Ensure flex link buttons stand out */
+.dark .flex.items-center > a {
+  color: #60a5fa !important;
+}
+
+/* Ensure text-blue-600 stays blue in dark mode */
+.dark .text-blue-600,
+.dark button.text-blue-600 {
+  color: #60a5fa !important;
+}
+
+.dark .hover\:text-blue-800:hover,
+.dark button.text-blue-600:hover {
+  color: #93c5fd !important;
+}
+
+/* Override pink/rose colors for dark mode */
+.dark .bg-pink-100,
+.dark .bg-rose-100 {
+  background-color: rgba(190, 24, 93, 0.5) !important;
+}
+
+.dark .text-pink-800,
+.dark .text-rose-800 {
+  color: #fbcfe8 !important;
+}
+
+.dark .bg-pink-50,
+.dark .bg-rose-50 {
+  background-color: rgba(190, 24, 93, 0.4) !important;
+}
+
+/* Ensure all buttons in dark mode have good contrast */
+.dark button {
+  color: inherit !important;
+}
+
+.dark button[class*="pink"],
+.dark button[class*="rose"] {
+  background-color: rgba(190, 24, 93, 0.5) !important;
+  color: #fbcfe8 !important;
+}
+
+/* Catch-all for light backgrounds with invisible text - force light text */
+.dark [class*="bg-"] {
+  color: #f1f5f9 !important;
+}
+
+/* Override for active navigation items - use blue color instead of white */
+.dark .bg-primary-50.dark\:bg-primary-900 {
+  background-color: #1e3a8a !important;
+  color: inherit !important;
+}
+
+.dark .bg-primary-900 {
+  background-color: #1e3a8a !important;
+  color: inherit !important;
+}
+
+/* Specific override for active navigation links in admin sidebar - must override the catch-all */
+.dark nav a.bg-primary-900,
+.dark nav a.bg-primary-900 *,
+.dark nav a.bg-primary-900 span,
+.dark nav a.bg-primary-900 svg,
+.dark nav a[class*="bg-primary-900"],
+.dark nav a[class*="bg-primary-900"] *,
+.dark nav a[class*="bg-primary-900"] span {
+  color: #60a5fa !important;
+}
+
+.dark .bg-primary-900.text-primary-700.dark\:text-blue-400,
+.dark .bg-primary-900.dark\:text-blue-400,
+.dark .bg-primary-900 .text-primary-700.dark\:text-blue-400,
+.dark .bg-primary-900 .dark\:text-blue-400,
+.dark [class*="bg-primary-900"][class*="text-blue-400"],
+.dark [class*="bg-primary-900"] [class*="text-blue-400"] {
+  color: #60a5fa !important;
+}
+
+/* Override for avatar/profile icon in admin sidebar */
+.dark .bg-primary-100.dark\:bg-blue-900,
+.dark .bg-primary-100.dark\:bg-primary-900,
+.dark div[class*="bg-primary-100"][class*="dark:bg-blue-900"],
+.dark div[class*="bg-primary-100"][class*="dark:bg-primary-900"],
+.dark .bg-primary-100 {
+  background-color: #1e3a8a !important;
+}
+
+.dark .bg-primary-100.dark\:bg-blue-900 .text-primary-700.dark\:text-blue-200,
+.dark .bg-primary-100.dark\:bg-primary-900 .text-primary-700.dark\:text-primary-300,
+.dark .bg-primary-100.dark\:bg-blue-900 span,
+.dark .bg-primary-100.dark\:bg-primary-900 span,
+.dark div[class*="bg-primary-100"][class*="dark:bg-blue-900"] span,
+.dark div[class*="bg-primary-100"][class*="dark:bg-primary-900"] span,
+.dark .bg-primary-100 span[class*="text-primary-700"],
+.dark .bg-primary-100 span[class*="dark:text-blue-200"],
+.dark .bg-primary-100 span[class*="dark:text-primary-300"] {
+  color: #bfdbfe !important;
+}
+
+/* Ensure headings and text are visible in dark mode */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: #f1f5f9 !important;
+}
+
+.dark p {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+/* Override border colors */
+.dark .border-gray-200 {
+  border-color: #1a202c !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #2d3748 !important;
+}
+
+/* Input and form element fixes */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #0f1419 !important;
+  color: #ffffff !important;
+  border-color: #2d3748 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #9ca3af !important;
+}
+
 @layer utilities {
   .bg-primary-50 {
     background-color: #f0f9ff;
   }
   .bg-primary-100 {
     background-color: #dbeafe;
+  }
+  
+  .dark .bg-primary-100 {
+    background-color: #1e3a8a !important;
   }
   .bg-primary-600 {
     background-color: #2563eb;
@@ -22,6 +333,128 @@
   .border-primary-600 {
     border-color: #2563eb;
   }
+}
+
+/* Dark mode shadow overrides */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Fix text visibility in dark mode - ensure all text in dark cards is readable */
+.dark p,
+.dark span,
+.dark div {
+  color: inherit;
+}
+
+/* Override specific light text colors in dark mode */
+.dark .text-blue-100 {
+  color: #bfdbfe !important;
+}
+
+.dark .text-blue-50 {
+  color: #bfdbfe !important;
+}
+
+.dark .text-indigo-100 {
+  color: #c7d2fe !important;
+}
+
+.dark .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+/* Login page dark mode styles */
+.dark .login-page-container {
+  background: linear-gradient(to bottom right, #000000, #1a1a1a, #000000) !important;
+}
+
+.dark .login-page-container .login-title,
+.dark .login-page-container h1.login-title,
+.dark .login-page-container h1 {
+  color: #00ff00 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .login-page-container .login-subtitle,
+.dark .login-page-container p.login-subtitle,
+.dark .login-page-container p {
+  color: #00ffff !important;
+}
+
+.dark .login-page-container .login-footer,
+.dark .login-page-container .login-footer p,
+.dark .login-page-container .login-footer * {
+  color: #ffff00 !important;
+}
+
+/* Ensure input icons (person and lock) are visible in dark mode */
+.dark .login-page-container .absolute svg,
+.dark .login-page-container svg.text-gray-400,
+.dark .login-page-container .absolute svg.text-gray-400,
+.dark .login-page-container .relative .absolute svg,
+.dark .login-page-container svg.text-gray-400.dark\:text-gray-300 {
+  color: #cbd5e1 !important;
+  fill: #cbd5e1 !important;
+  stroke: #cbd5e1 !important;
+}
+
+.dark .login-page-container input[type="text"],
+.dark .login-page-container input[type="password"],
+.dark .login-page-container input[type="email"],
+.dark .login-page-container input {
+  color: #ff00ff !important;
+  background-color: #2a2a2a !important;
+}
+
+.dark .login-page-container input[type="text"]::placeholder,
+.dark .login-page-container input[type="password"]::placeholder,
+.dark .login-page-container input[type="email"]::placeholder,
+.dark .login-page-container input::placeholder {
+  color: #00ff00 !important;
+  opacity: 1 !important;
+}
+
+/* Force text visibility in dark mode white cards */
+.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+.dark .bg-white * {
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-white p {
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-white span {
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-white div {
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-white h1,
+.dark .bg-white h2,
+.dark .bg-white h3,
+.dark .bg-white h4,
+.dark .bg-white h5,
+.dark .bg-white h6 {
+  color: #f1f5f9 !important;
 }
 
 @layer base {
@@ -93,4 +526,86 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Tier cards dark mode overrides - ensure text is visible */
+.dark .bg-green-50,
+.dark .bg-green-100 {
+  background-color: #14532d !important;
+}
+
+.dark .bg-blue-50,
+.dark .bg-blue-100 {
+  background-color: #1e3a8a !important;
+}
+
+.dark .bg-purple-50,
+.dark .bg-purple-100 {
+  background-color: #581c87 !important;
+}
+
+.dark .text-green-900,
+.dark .bg-green-50 .text-green-900,
+.dark .bg-green-100 .text-green-900,
+.dark .bg-green-50[class*="text-green-900"],
+.dark .bg-green-100[class*="text-green-900"] {
+  color: #86efac !important;
+}
+
+.dark .text-green-700,
+.dark .bg-green-50 .text-green-700,
+.dark .bg-green-100 .text-green-700,
+.dark .bg-green-50[class*="text-green-700"],
+.dark .bg-green-100[class*="text-green-700"] {
+  color: #4ade80 !important;
+}
+
+.dark .text-green-800,
+.dark .bg-green-100 .text-green-800,
+.dark .bg-green-100[class*="text-green-800"] {
+  color: #86efac !important;
+}
+
+.dark .text-blue-900,
+.dark .bg-blue-50 .text-blue-900,
+.dark .bg-blue-100 .text-blue-900,
+.dark .bg-blue-50[class*="text-blue-900"],
+.dark .bg-blue-100[class*="text-blue-900"] {
+  color: #93c5fd !important;
+}
+
+.dark .text-blue-700,
+.dark .bg-blue-50 .text-blue-700,
+.dark .bg-blue-100 .text-blue-700,
+.dark .bg-blue-50[class*="text-blue-700"],
+.dark .bg-blue-100[class*="text-blue-700"] {
+  color: #60a5fa !important;
+}
+
+.dark .text-blue-800,
+.dark .bg-blue-100 .text-blue-800,
+.dark .bg-blue-100[class*="text-blue-800"] {
+  color: #93c5fd !important;
+}
+
+.dark .text-purple-900,
+.dark .bg-purple-50 .text-purple-900,
+.dark .bg-purple-100 .text-purple-900,
+.dark .bg-purple-50[class*="text-purple-900"],
+.dark .bg-purple-100[class*="text-purple-900"] {
+  color: #c4b5fd !important;
+}
+
+.dark .text-purple-700,
+.dark .bg-purple-50 .text-purple-700,
+.dark .bg-purple-100 .text-purple-700,
+.dark .bg-purple-50[class*="text-purple-700"],
+.dark .bg-purple-100[class*="text-purple-700"] {
+  color: #a78bfa !important;
+}
+
+.dark .text-purple-800,
+.dark .bg-purple-100 .text-purple-800,
+.dark .bg-purple-100[class*="text-purple-800"] {
+  color: #c4b5fd !important;
 }

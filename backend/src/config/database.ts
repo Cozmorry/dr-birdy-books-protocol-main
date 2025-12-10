@@ -49,8 +49,25 @@ export const connectDatabase = async (): Promise<void> => {
     console.log(`📊 Database: ${mongoose.connection.name}`);
     console.log(`🌐 Host: ${mongoose.connection.host}:${mongoose.connection.port}`);
     
-    // Initialize GridFS after connection
-    initGridFS();
+    // Log storage type
+    const storageType = (process.env.STORAGE_TYPE || 'mongodb').toLowerCase();
+    console.log(`💾 Storage Type: ${storageType.toUpperCase()}`);
+    
+    if (storageType === 's3') {
+      console.log('☁️  Using AWS S3 for file storage');
+      const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'not-set';
+      const region = process.env.AWS_REGION || 'not-set';
+      console.log(`   Bucket: ${bucketName}`);
+      console.log(`   Region: ${region}`);
+    } else if (storageType === 'mongodb') {
+      console.log('📦 Using MongoDB GridFS for file storage');
+      // Initialize GridFS only when using MongoDB storage
+      initGridFS();
+    } else {
+      console.log(`📁 Using ${storageType} storage`);
+      // Initialize GridFS for backward compatibility
+      initGridFS();
+    }
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
     process.exit(1);

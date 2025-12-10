@@ -61,7 +61,9 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "addTier"
       | "allowance"
       | "backupPriceOracle"
+      | "deployToYield"
       | "emergencyWithdraw"
+      | "emergencyWithdrawFromYield"
       | "firstStakeTimestamp"
       | "gasRefundReward"
       | "getContractBalances"
@@ -75,12 +77,16 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "getUserFiles"
       | "getUserStakingInfo"
       | "getUserTier"
+      | "getYieldInfo"
       | "grantRole"
       | "hasAccess"
       | "hasRole"
       | "lastUnstakeTimestamp"
       | "logFileAccess"
+      | "maxYieldDeploymentBps"
       | "meetsTierRequirement"
+      | "minStakingDurationOverride"
+      | "minStakingDurationOverrideEnabled"
       | "owner"
       | "pause"
       | "paused"
@@ -91,9 +97,14 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "revokeRole"
       | "setBackupPriceOracle"
       | "setGasRefundReward"
+      | "setMaxYieldDeployment"
+      | "setMinStakingDurationOverride"
       | "setPrimaryPriceOracle"
       | "setStakingToken"
       | "setUniswapPair"
+      | "setYieldDeployedShares"
+      | "setYieldEnabled"
+      | "setYieldStrategy"
       | "stake"
       | "stakeBatch"
       | "stakeTimestamp"
@@ -109,12 +120,18 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "userStakedTokens"
       | "verifyStaker"
       | "withdrawETH"
+      | "withdrawFromYield"
+      | "yieldDeployedShares"
+      | "yieldEnabled"
+      | "yieldStrategy"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
       | "FileAccessLogged"
       | "GasRefundRewardSet"
+      | "MaxYieldDeploymentUpdated"
+      | "MinStakingDurationOverrideSet"
       | "OwnershipTransferred"
       | "Paused"
       | "RoleAdminChanged"
@@ -130,6 +147,11 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "Unpaused"
       | "Unstaked"
       | "UserFileAdded"
+      | "YieldDeposited"
+      | "YieldEnabled"
+      | "YieldSharesAdjusted"
+      | "YieldStrategySet"
+      | "YieldWithdrawn"
   ): EventFragment;
 
   encodeFunctionData(
@@ -174,7 +196,15 @@ export interface FlexibleTieredStakingInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "deployToYield",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "emergencyWithdraw",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "emergencyWithdrawFromYield",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -230,6 +260,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "getYieldInfo",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "grantRole",
     values: [BytesLike, AddressLike]
   ): string;
@@ -250,8 +284,20 @@ export interface FlexibleTieredStakingInterface extends Interface {
     values: [AddressLike, BigNumberish, string]
   ): string;
   encodeFunctionData(
+    functionFragment: "maxYieldDeploymentBps",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "meetsTierRequirement",
     values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "minStakingDurationOverride",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "minStakingDurationOverrideEnabled",
+    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
@@ -285,6 +331,14 @@ export interface FlexibleTieredStakingInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "setMaxYieldDeployment",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setMinStakingDurationOverride",
+    values: [BigNumberish, boolean]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setPrimaryPriceOracle",
     values: [AddressLike]
   ): string;
@@ -294,6 +348,18 @@ export interface FlexibleTieredStakingInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "setUniswapPair",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setYieldDeployedShares",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setYieldEnabled",
+    values: [boolean]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setYieldStrategy",
     values: [AddressLike]
   ): string;
   encodeFunctionData(functionFragment: "stake", values: [BigNumberish]): string;
@@ -347,6 +413,22 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "withdrawETH",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "withdrawFromYield",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "yieldDeployedShares",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "yieldEnabled",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "yieldStrategy",
+    values?: undefined
+  ): string;
 
   decodeFunctionResult(
     functionFragment: "DEFAULT_ADMIN_ROLE",
@@ -384,7 +466,15 @@ export interface FlexibleTieredStakingInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "deployToYield",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "emergencyWithdraw",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "emergencyWithdrawFromYield",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -436,6 +526,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "getUserTier",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getYieldInfo",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "grantRole", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "hasAccess", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "hasRole", data: BytesLike): Result;
@@ -448,7 +542,19 @@ export interface FlexibleTieredStakingInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "maxYieldDeploymentBps",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "meetsTierRequirement",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "minStakingDurationOverride",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "minStakingDurationOverrideEnabled",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -477,6 +583,14 @@ export interface FlexibleTieredStakingInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setMaxYieldDeployment",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setMinStakingDurationOverride",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setPrimaryPriceOracle",
     data: BytesLike
   ): Result;
@@ -486,6 +600,18 @@ export interface FlexibleTieredStakingInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setUniswapPair",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setYieldDeployedShares",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setYieldEnabled",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setYieldStrategy",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
@@ -530,6 +656,22 @@ export interface FlexibleTieredStakingInterface extends Interface {
     functionFragment: "withdrawETH",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawFromYield",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "yieldDeployedShares",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "yieldEnabled",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "yieldStrategy",
+    data: BytesLike
+  ): Result;
 }
 
 export namespace FileAccessLoggedEvent {
@@ -562,6 +704,31 @@ export namespace GasRefundRewardSetEvent {
   export type OutputTuple = [gasRefundReward: bigint];
   export interface OutputObject {
     gasRefundReward: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace MaxYieldDeploymentUpdatedEvent {
+  export type InputTuple = [newMaxBps: BigNumberish];
+  export type OutputTuple = [newMaxBps: bigint];
+  export interface OutputObject {
+    newMaxBps: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace MinStakingDurationOverrideSetEvent {
+  export type InputTuple = [seconds_: BigNumberish, enabled: boolean];
+  export type OutputTuple = [seconds_: bigint, enabled: boolean];
+  export interface OutputObject {
+    seconds_: bigint;
+    enabled: boolean;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -833,6 +1000,69 @@ export namespace UserFileAddedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace YieldDepositedEvent {
+  export type InputTuple = [amount: BigNumberish, shares: BigNumberish];
+  export type OutputTuple = [amount: bigint, shares: bigint];
+  export interface OutputObject {
+    amount: bigint;
+    shares: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace YieldEnabledEvent {
+  export type InputTuple = [enabled: boolean];
+  export type OutputTuple = [enabled: boolean];
+  export interface OutputObject {
+    enabled: boolean;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace YieldSharesAdjustedEvent {
+  export type InputTuple = [oldShares: BigNumberish, newShares: BigNumberish];
+  export type OutputTuple = [oldShares: bigint, newShares: bigint];
+  export interface OutputObject {
+    oldShares: bigint;
+    newShares: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace YieldStrategySetEvent {
+  export type InputTuple = [strategy: AddressLike];
+  export type OutputTuple = [strategy: string];
+  export interface OutputObject {
+    strategy: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace YieldWithdrawnEvent {
+  export type InputTuple = [shares: BigNumberish, amount: BigNumberish];
+  export type OutputTuple = [shares: bigint, amount: bigint];
+  export interface OutputObject {
+    shares: bigint;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export interface FlexibleTieredStaking extends BaseContract {
   connect(runner?: ContractRunner | null): FlexibleTieredStaking;
   waitForDeployment(): Promise<this>;
@@ -922,7 +1152,15 @@ export interface FlexibleTieredStaking extends BaseContract {
 
   backupPriceOracle: TypedContractMethod<[], [string], "view">;
 
+  deployToYield: TypedContractMethod<
+    [amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   emergencyWithdraw: TypedContractMethod<[], [void], "nonpayable">;
+
+  emergencyWithdrawFromYield: TypedContractMethod<[], [void], "nonpayable">;
 
   firstStakeTimestamp: TypedContractMethod<
     [arg0: AddressLike],
@@ -1008,6 +1246,20 @@ export interface FlexibleTieredStaking extends BaseContract {
     "view"
   >;
 
+  getYieldInfo: TypedContractMethod<
+    [],
+    [
+      [string, bigint, bigint, bigint, boolean] & {
+        strategyAddress: string;
+        deployedShares: bigint;
+        totalValue: bigint;
+        apyBps: bigint;
+        isActive: boolean;
+      }
+    ],
+    "view"
+  >;
+
   grantRole: TypedContractMethod<
     [role: BytesLike, account: AddressLike],
     [void],
@@ -1034,11 +1286,17 @@ export interface FlexibleTieredStaking extends BaseContract {
     "nonpayable"
   >;
 
+  maxYieldDeploymentBps: TypedContractMethod<[], [bigint], "view">;
+
   meetsTierRequirement: TypedContractMethod<
     [user: AddressLike, tierIndex: BigNumberish],
     [boolean],
     "view"
   >;
+
+  minStakingDurationOverride: TypedContractMethod<[], [bigint], "view">;
+
+  minStakingDurationOverrideEnabled: TypedContractMethod<[], [boolean], "view">;
 
   owner: TypedContractMethod<[], [string], "view">;
 
@@ -1080,6 +1338,18 @@ export interface FlexibleTieredStaking extends BaseContract {
     "nonpayable"
   >;
 
+  setMaxYieldDeployment: TypedContractMethod<
+    [_maxBps: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setMinStakingDurationOverride: TypedContractMethod<
+    [_seconds: BigNumberish, _enabled: boolean],
+    [void],
+    "nonpayable"
+  >;
+
   setPrimaryPriceOracle: TypedContractMethod<
     [_primaryPriceOracle: AddressLike],
     [void],
@@ -1094,6 +1364,24 @@ export interface FlexibleTieredStaking extends BaseContract {
 
   setUniswapPair: TypedContractMethod<
     [_uniswapPair: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setYieldDeployedShares: TypedContractMethod<
+    [newShares: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setYieldEnabled: TypedContractMethod<
+    [_enabled: boolean],
+    [void],
+    "nonpayable"
+  >;
+
+  setYieldStrategy: TypedContractMethod<
+    [_strategy: AddressLike],
     [void],
     "nonpayable"
   >;
@@ -1160,6 +1448,18 @@ export interface FlexibleTieredStaking extends BaseContract {
     "nonpayable"
   >;
 
+  withdrawFromYield: TypedContractMethod<
+    [shares: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  yieldDeployedShares: TypedContractMethod<[], [bigint], "view">;
+
+  yieldEnabled: TypedContractMethod<[], [boolean], "view">;
+
+  yieldStrategy: TypedContractMethod<[], [string], "view">;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -1222,7 +1522,13 @@ export interface FlexibleTieredStaking extends BaseContract {
     nameOrSignature: "backupPriceOracle"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "deployToYield"
+  ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "emergencyWithdraw"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "emergencyWithdrawFromYield"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "firstStakeTimestamp"
@@ -1318,6 +1624,21 @@ export interface FlexibleTieredStaking extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getYieldInfo"
+  ): TypedContractMethod<
+    [],
+    [
+      [string, bigint, bigint, bigint, boolean] & {
+        strategyAddress: string;
+        deployedShares: bigint;
+        totalValue: bigint;
+        apyBps: bigint;
+        isActive: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "grantRole"
   ): TypedContractMethod<
     [role: BytesLike, account: AddressLike],
@@ -1345,12 +1666,21 @@ export interface FlexibleTieredStaking extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "maxYieldDeploymentBps"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "meetsTierRequirement"
   ): TypedContractMethod<
     [user: AddressLike, tierIndex: BigNumberish],
     [boolean],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "minStakingDurationOverride"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "minStakingDurationOverrideEnabled"
+  ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
@@ -1398,6 +1728,16 @@ export interface FlexibleTieredStaking extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "setMaxYieldDeployment"
+  ): TypedContractMethod<[_maxBps: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setMinStakingDurationOverride"
+  ): TypedContractMethod<
+    [_seconds: BigNumberish, _enabled: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setPrimaryPriceOracle"
   ): TypedContractMethod<
     [_primaryPriceOracle: AddressLike],
@@ -1410,6 +1750,15 @@ export interface FlexibleTieredStaking extends BaseContract {
   getFunction(
     nameOrSignature: "setUniswapPair"
   ): TypedContractMethod<[_uniswapPair: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setYieldDeployedShares"
+  ): TypedContractMethod<[newShares: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setYieldEnabled"
+  ): TypedContractMethod<[_enabled: boolean], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setYieldStrategy"
+  ): TypedContractMethod<[_strategy: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "stake"
   ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
@@ -1467,6 +1816,18 @@ export interface FlexibleTieredStaking extends BaseContract {
   getFunction(
     nameOrSignature: "withdrawETH"
   ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "withdrawFromYield"
+  ): TypedContractMethod<[shares: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "yieldDeployedShares"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "yieldEnabled"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "yieldStrategy"
+  ): TypedContractMethod<[], [string], "view">;
 
   getEvent(
     key: "FileAccessLogged"
@@ -1481,6 +1842,20 @@ export interface FlexibleTieredStaking extends BaseContract {
     GasRefundRewardSetEvent.InputTuple,
     GasRefundRewardSetEvent.OutputTuple,
     GasRefundRewardSetEvent.OutputObject
+  >;
+  getEvent(
+    key: "MaxYieldDeploymentUpdated"
+  ): TypedContractEvent<
+    MaxYieldDeploymentUpdatedEvent.InputTuple,
+    MaxYieldDeploymentUpdatedEvent.OutputTuple,
+    MaxYieldDeploymentUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "MinStakingDurationOverrideSet"
+  ): TypedContractEvent<
+    MinStakingDurationOverrideSetEvent.InputTuple,
+    MinStakingDurationOverrideSetEvent.OutputTuple,
+    MinStakingDurationOverrideSetEvent.OutputObject
   >;
   getEvent(
     key: "OwnershipTransferred"
@@ -1587,6 +1962,41 @@ export interface FlexibleTieredStaking extends BaseContract {
     UserFileAddedEvent.OutputTuple,
     UserFileAddedEvent.OutputObject
   >;
+  getEvent(
+    key: "YieldDeposited"
+  ): TypedContractEvent<
+    YieldDepositedEvent.InputTuple,
+    YieldDepositedEvent.OutputTuple,
+    YieldDepositedEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldEnabled"
+  ): TypedContractEvent<
+    YieldEnabledEvent.InputTuple,
+    YieldEnabledEvent.OutputTuple,
+    YieldEnabledEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldSharesAdjusted"
+  ): TypedContractEvent<
+    YieldSharesAdjustedEvent.InputTuple,
+    YieldSharesAdjustedEvent.OutputTuple,
+    YieldSharesAdjustedEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldStrategySet"
+  ): TypedContractEvent<
+    YieldStrategySetEvent.InputTuple,
+    YieldStrategySetEvent.OutputTuple,
+    YieldStrategySetEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldWithdrawn"
+  ): TypedContractEvent<
+    YieldWithdrawnEvent.InputTuple,
+    YieldWithdrawnEvent.OutputTuple,
+    YieldWithdrawnEvent.OutputObject
+  >;
 
   filters: {
     "FileAccessLogged(address,uint256,string,uint256)": TypedContractEvent<
@@ -1609,6 +2019,28 @@ export interface FlexibleTieredStaking extends BaseContract {
       GasRefundRewardSetEvent.InputTuple,
       GasRefundRewardSetEvent.OutputTuple,
       GasRefundRewardSetEvent.OutputObject
+    >;
+
+    "MaxYieldDeploymentUpdated(uint256)": TypedContractEvent<
+      MaxYieldDeploymentUpdatedEvent.InputTuple,
+      MaxYieldDeploymentUpdatedEvent.OutputTuple,
+      MaxYieldDeploymentUpdatedEvent.OutputObject
+    >;
+    MaxYieldDeploymentUpdated: TypedContractEvent<
+      MaxYieldDeploymentUpdatedEvent.InputTuple,
+      MaxYieldDeploymentUpdatedEvent.OutputTuple,
+      MaxYieldDeploymentUpdatedEvent.OutputObject
+    >;
+
+    "MinStakingDurationOverrideSet(uint256,bool)": TypedContractEvent<
+      MinStakingDurationOverrideSetEvent.InputTuple,
+      MinStakingDurationOverrideSetEvent.OutputTuple,
+      MinStakingDurationOverrideSetEvent.OutputObject
+    >;
+    MinStakingDurationOverrideSet: TypedContractEvent<
+      MinStakingDurationOverrideSetEvent.InputTuple,
+      MinStakingDurationOverrideSetEvent.OutputTuple,
+      MinStakingDurationOverrideSetEvent.OutputObject
     >;
 
     "OwnershipTransferred(address,address)": TypedContractEvent<
@@ -1774,6 +2206,61 @@ export interface FlexibleTieredStaking extends BaseContract {
       UserFileAddedEvent.InputTuple,
       UserFileAddedEvent.OutputTuple,
       UserFileAddedEvent.OutputObject
+    >;
+
+    "YieldDeposited(uint256,uint256)": TypedContractEvent<
+      YieldDepositedEvent.InputTuple,
+      YieldDepositedEvent.OutputTuple,
+      YieldDepositedEvent.OutputObject
+    >;
+    YieldDeposited: TypedContractEvent<
+      YieldDepositedEvent.InputTuple,
+      YieldDepositedEvent.OutputTuple,
+      YieldDepositedEvent.OutputObject
+    >;
+
+    "YieldEnabled(bool)": TypedContractEvent<
+      YieldEnabledEvent.InputTuple,
+      YieldEnabledEvent.OutputTuple,
+      YieldEnabledEvent.OutputObject
+    >;
+    YieldEnabled: TypedContractEvent<
+      YieldEnabledEvent.InputTuple,
+      YieldEnabledEvent.OutputTuple,
+      YieldEnabledEvent.OutputObject
+    >;
+
+    "YieldSharesAdjusted(uint256,uint256)": TypedContractEvent<
+      YieldSharesAdjustedEvent.InputTuple,
+      YieldSharesAdjustedEvent.OutputTuple,
+      YieldSharesAdjustedEvent.OutputObject
+    >;
+    YieldSharesAdjusted: TypedContractEvent<
+      YieldSharesAdjustedEvent.InputTuple,
+      YieldSharesAdjustedEvent.OutputTuple,
+      YieldSharesAdjustedEvent.OutputObject
+    >;
+
+    "YieldStrategySet(address)": TypedContractEvent<
+      YieldStrategySetEvent.InputTuple,
+      YieldStrategySetEvent.OutputTuple,
+      YieldStrategySetEvent.OutputObject
+    >;
+    YieldStrategySet: TypedContractEvent<
+      YieldStrategySetEvent.InputTuple,
+      YieldStrategySetEvent.OutputTuple,
+      YieldStrategySetEvent.OutputObject
+    >;
+
+    "YieldWithdrawn(uint256,uint256)": TypedContractEvent<
+      YieldWithdrawnEvent.InputTuple,
+      YieldWithdrawnEvent.OutputTuple,
+      YieldWithdrawnEvent.OutputObject
+    >;
+    YieldWithdrawn: TypedContractEvent<
+      YieldWithdrawnEvent.InputTuple,
+      YieldWithdrawnEvent.OutputTuple,
+      YieldWithdrawnEvent.OutputObject
     >;
   };
 }

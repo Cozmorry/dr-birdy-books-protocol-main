@@ -98,16 +98,24 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
       
       if (data.success && data.data && data.data.posts) {
         // Transform API response to match component interface
-        const transformedPosts: BlogPost[] = data.data.posts.map((post: any) => ({
-          id: post._id || post.id,
-          title: post.title,
-          content: post.content,
-          excerpt: post.excerpt,
-          author: post.author,
-          publishedAt: post.publishedAt || post.createdAt,
-          imageUrl: post.imageUrl,
-          tags: post.tags || [],
-        }));
+        const transformedPosts: BlogPost[] = data.data.posts.map((post: any) => {
+          console.log('📝 Blog post loaded:', {
+            id: post._id || post.id,
+            title: post.title,
+            imageUrl: post.imageUrl,
+            imageUrlType: post.imageUrl ? (post.imageUrl.includes('presigned') ? 'pre-signed' : 'direct') : 'none'
+          });
+          return {
+            id: post._id || post.id,
+            title: post.title,
+            content: post.content,
+            excerpt: post.excerpt,
+            author: post.author,
+            publishedAt: post.publishedAt || post.createdAt,
+            imageUrl: post.imageUrl,
+            tags: post.tags || [],
+          };
+        });
         
         setPosts(transformedPosts);
       } else {
@@ -195,7 +203,18 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
             <img
               src={selectedPost.imageUrl}
               alt={selectedPost.title}
-              className="w-full h-64 object-cover rounded-lg mb-6"
+              className="w-full h-96 md:h-[500px] object-cover rounded-lg mb-6"
+              onError={(e) => {
+                console.error('❌ Image failed to load:', selectedPost.imageUrl);
+                console.error('Error event:', e);
+                const target = e.target as HTMLImageElement;
+                console.error('Image element:', target);
+                // Hide broken image
+                target.style.display = 'none';
+              }}
+              onLoad={() => {
+                console.log('✅ Image loaded successfully:', selectedPost.imageUrl);
+              }}
             />
           )}
 
@@ -289,6 +308,17 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ hasAccess }) => {
                       src={post.imageUrl}
                       alt={post.title}
                       className="w-32 h-32 object-cover rounded-lg"
+                      onError={(e) => {
+                        console.error('❌ Image failed to load:', post.imageUrl);
+                        console.error('Error event:', e);
+                        const target = e.target as HTMLImageElement;
+                        console.error('Image element:', target);
+                        // Hide broken image
+                        target.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log('✅ Image loaded successfully:', post.imageUrl);
+                      }}
                     />
                   </div>
                 )}

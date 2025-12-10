@@ -8,7 +8,19 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION || 'us-east-1',
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'dr-birdy-books-files';
+// Support both AWS_S3_BUCKET and AWS_S3_BUCKET_NAME for backward compatibility
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'dr-birdy-books-files';
+
+// Log S3 configuration on initialization (only in development or if explicitly enabled)
+if (process.env.NODE_ENV === 'development' || process.env.LOG_S3_CONFIG === 'true') {
+  const storageType = (process.env.STORAGE_TYPE || 'mongodb').toLowerCase();
+  if (storageType === 's3') {
+    console.log('☁️  S3 Service initialized');
+    console.log(`   Bucket: ${BUCKET_NAME}`);
+    console.log(`   Region: ${process.env.AWS_REGION || 'us-east-1'}`);
+    console.log(`   Access Key ID: ${process.env.AWS_ACCESS_KEY_ID ? '***' + process.env.AWS_ACCESS_KEY_ID.slice(-4) : 'NOT SET'}`);
+  }
+}
 
 /**
  * Upload file to S3
@@ -22,7 +34,8 @@ export const uploadToS3 = async (
   fileBuffer: Buffer,
   key: string,
   contentType: string,
-  metadata?: { [key: string]: string }
+  metadata?: { [key: string]: string },
+  isPublic: boolean = false
 ): Promise<string> => {
   try {
     const params: AWS.S3.PutObjectRequest = {
@@ -32,6 +45,11 @@ export const uploadToS3 = async (
       ContentType: contentType,
       Metadata: metadata || {},
     };
+
+    // Set ACL to public-read if the file should be publicly accessible
+    if (isPublic) {
+      params.ACL = 'public-read';
+    }
 
     const result = await s3.upload(params).promise();
     console.log('✅ File uploaded to S3:', result.Key, 'Location:', result.Location);
@@ -172,9 +190,12 @@ export const generatePresignedDownloadUrl = async (
       Expires: expiresIn,
     });
 
+    console.log(`🔗 Generated pre-signed URL for key: ${key}, expires in: ${expiresIn}s`);
     return url;
   } catch (error: any) {
     console.error('❌ S3 presigned URL error:', error);
+    console.error('   Key:', key);
+    console.error('   ExpiresIn:', expiresIn);
     throw new Error(`Failed to generate presigned URL: ${error.message}`);
   }
 };

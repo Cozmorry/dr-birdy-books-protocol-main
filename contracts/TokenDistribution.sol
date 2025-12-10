@@ -37,9 +37,11 @@ contract TokenDistribution is
     address public airdropWallet;
 
     // Allocation amounts (in wei)
-    uint256 public constant TEAM_ALLOCATION = 150_000 * 10 ** 18; // 150,000 tokens per team member
+    // Team allocations: 1.625% for J, A, D, B (162,500 tokens each), 1% for Developer (100,000 tokens)
+    uint256 public constant TEAM_ALLOCATION_STANDARD = 162_500 * 10 ** 18; // 162,500 tokens (1.625%) for J, A, D, B
+    uint256 public constant TEAM_ALLOCATION_DEVELOPER = 100_000 * 10 ** 18; // 100,000 tokens (1%) for Developer
     uint256 public constant AIRDROP_ALLOCATION = 250_000 * 10 ** 18; // 250,000 tokens for airdrop
-    uint256 public constant TOTAL_DISTRIBUTED = 1_000_000 * 10 ** 18; // 1M tokens (10% of supply)
+    uint256 public constant TOTAL_DISTRIBUTED = 1_000_000 * 10 ** 18; // 1M tokens (10% of supply: 750k team + 250k airdrop)
 
     // Vesting configuration
     uint256 public constant VESTING_DURATION = 365 days; // 1 year vesting
@@ -171,20 +173,65 @@ contract TokenDistribution is
     /**
      * @notice Initialize vesting schedules for team members
      * @dev Can only be called once by owner
+     * @dev Sets different allocations: 1.625% (162,500) for J, A, D, B; 1% (100,000) for Developer
+     * @dev Validates that total allocations match TOTAL_DISTRIBUTED
      */
     function initializeVesting() external onlyOwner vestingNotInitialized {
         uint256 startTime = block.timestamp;
+        
+        // Verify teamMembers array has exactly 5 members
+        require(teamMembers.length == 5, "Team members array must have exactly 5 members");
+        
+        // J, A, D, B get 1.625% (162,500 tokens each)
+        vestingInfo[josephWallet] = VestingInfo({
+            totalAmount: TEAM_ALLOCATION_STANDARD,
+            startTime: startTime,
+            duration: VESTING_DURATION,
+            claimed: 0,
+            isActive: true
+        });
 
-        for (uint256 i = 0; i < teamMembers.length; i++) {
-            address member = teamMembers[i];
-            vestingInfo[member] = VestingInfo({
-                totalAmount: TEAM_ALLOCATION,
-                startTime: startTime,
-                duration: VESTING_DURATION,
-                claimed: 0,
-                isActive: true
-            });
-        }
+        vestingInfo[ajWallet] = VestingInfo({
+            totalAmount: TEAM_ALLOCATION_STANDARD,
+            startTime: startTime,
+            duration: VESTING_DURATION,
+            claimed: 0,
+            isActive: true
+        });
+
+        vestingInfo[dsignWallet] = VestingInfo({
+            totalAmount: TEAM_ALLOCATION_STANDARD,
+            startTime: startTime,
+            duration: VESTING_DURATION,
+            claimed: 0,
+            isActive: true
+        });
+
+        vestingInfo[birdyWallet] = VestingInfo({
+            totalAmount: TEAM_ALLOCATION_STANDARD,
+            startTime: startTime,
+            duration: VESTING_DURATION,
+            claimed: 0,
+            isActive: true
+        });
+
+        // Developer (Morris) gets 1% (100,000 tokens)
+        vestingInfo[developerWallet] = VestingInfo({
+            totalAmount: TEAM_ALLOCATION_DEVELOPER,
+            startTime: startTime,
+            duration: VESTING_DURATION,
+            claimed: 0,
+            isActive: true
+        });
+
+        // Validate total allocations match TOTAL_DISTRIBUTED
+        // 4 × 162,500 + 1 × 100,000 + 250,000 (airdrop) = 1,000,000
+        uint256 totalTeamAllocation = (TEAM_ALLOCATION_STANDARD * 4) + TEAM_ALLOCATION_DEVELOPER;
+        uint256 expectedTotal = totalTeamAllocation + AIRDROP_ALLOCATION;
+        require(
+            expectedTotal == TOTAL_DISTRIBUTED,
+            "Total allocations do not match TOTAL_DISTRIBUTED"
+        );
 
         vestingInitialized = true;
         emit VestingInitialized(startTime);
@@ -355,11 +402,19 @@ contract TokenDistribution is
     }
 
     /**
-     * @notice Get team allocation amount
-     * @return Amount allocated to each team member
+     * @notice Get standard team allocation amount (for J, A, D, B)
+     * @return Amount allocated to standard team members (1.625%)
      */
     function getTeamAllocation() external pure returns (uint256) {
-        return TEAM_ALLOCATION;
+        return TEAM_ALLOCATION_STANDARD;
+    }
+
+    /**
+     * @notice Get developer allocation amount (for Morris)
+     * @return Amount allocated to developer (1%)
+     */
+    function getDeveloperAllocation() external pure returns (uint256) {
+        return TEAM_ALLOCATION_DEVELOPER;
     }
 
     /**

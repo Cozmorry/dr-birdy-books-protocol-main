@@ -4,7 +4,9 @@
 export * as arweaveGatewaySol from "./ArweaveGateway.sol";
 export * as flexibleTieredStakingSol from "./FlexibleTieredStaking.sol";
 export * as reflectiveTokenSol from "./ReflectiveToken.sol";
+export * as treasuryYieldStrategySol from "./TreasuryYieldStrategy.sol";
 export * as mocks from "./mocks";
+export { IYieldStrategy__factory } from "./IYieldStrategy__factory";
 export { ImprovedTimelock__factory } from "./ImprovedTimelock__factory";
 export { SimpleStaking__factory } from "./SimpleStaking__factory";
 export { SimpleStakingV2__factory } from "./SimpleStakingV2__factory";

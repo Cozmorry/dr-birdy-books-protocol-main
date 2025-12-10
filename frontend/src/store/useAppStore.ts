@@ -321,15 +321,25 @@ export const useAppStore = create<AppState>()(
         ]);
 
         const [stakedAmount, , hasAccess, canUnstake] = stakingInfo;
-        const [tierIndex] = tierInfo;
+        const [tierIndex, tierName] = tierInfo;
 
         console.log('[loadUserInfo] Raw data:', {
           balance: balance.toString(),
           stakedAmount: stakedAmount.toString(),
           tierIndex: tierIndex.toString(),
+          tierName: tierName || 'N/A',
           hasAccess,
           canUnstake
         });
+        
+        // Log tier calculation details for debugging
+        if (Number(tierIndex) === -1) {
+          console.warn('[loadUserInfo] User has no tier (tierIndex = -1). This might indicate:');
+          console.warn('  1. Staked amount USD value is below all tier thresholds');
+          console.warn('  2. Oracle price feed is not working correctly');
+          console.warn('  3. Tier thresholds are set incorrectly');
+          console.warn(`  Staked amount: ${ethers.formatEther(stakedAmount)} tokens`);
+        }
 
         const userInfo: UserInfo = {
           address: account,
@@ -683,9 +693,36 @@ export const useAppStore = create<AppState>()(
         // Transaction succeeded - refresh user data
         const { loadUserInfo } = get();
         try {
-          // Wait a moment for blockchain state to propagate
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          await loadUserInfo(userAddress);
+          // Wait for blockchain state to propagate and TierUpdated event to be emitted
+          // Tier calculation depends on oracle price updates, so we need more time
+          console.log('[stakeTokens] Waiting for blockchain state to update...');
+          await new Promise(resolve => setTimeout(resolve, 3000)); // Increased to 3 seconds
+          
+          // Retry logic to ensure tier is updated
+          let retries = 0;
+          const maxRetries = 5;
+          let tierUpdated = false;
+          
+          while (retries < maxRetries && !tierUpdated) {
+            await loadUserInfo(userAddress);
+            
+            // Check if tier was actually updated by comparing with previous tier
+            const currentUserInfo = get().userInfo;
+            if (currentUserInfo && currentUserInfo.address === userAddress) {
+              console.log(`[stakeTokens] User tier after refresh: ${currentUserInfo.tier}`);
+              // If we got a valid tier (>= 0), consider it updated
+              // Otherwise, wait a bit more and retry
+              if (currentUserInfo.tier >= 0 || retries >= maxRetries - 1) {
+                tierUpdated = true;
+              } else {
+                console.log(`[stakeTokens] Tier not updated yet, retrying... (${retries + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+              }
+            }
+            retries++;
+          }
+          
+          console.log(`[stakeTokens] User info refresh completed after ${retries} attempts`);
         } catch (refreshError) {
           console.warn('Failed to refresh user info after staking:', refreshError);
           // Don't fail the whole operation if refresh fails
@@ -735,9 +772,9 @@ export const useAppStore = create<AppState>()(
         const chainId = Number(network.chainId);
         console.log('Current network:', network.name, 'Chain ID:', chainId);
         
-        // Check if on correct network (Base Sepolia = 84532, Base Mainnet = 8453)
-        if (chainId !== 84532 && chainId !== 8453 && chainId !== 31337) {
-          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Sepolia (Chain ID: 84532) or Base Mainnet (Chain ID: 8453).`);
+        // Check if on correct network (Base Mainnet = 8453, Base Sepolia = 84532)
+        if (chainId !== 8453 && chainId !== 84532 && chainId !== 31337) {
+          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`);
         }
         
         // Check ETH balance for gas
@@ -1005,9 +1042,9 @@ export const initializeContracts = async (provider: ethers.BrowserProvider | nul
 
     if (!hasDeployedContracts) {
       console.warn('Contracts not deployed on chain ID:', chainId);
-      console.warn('Please switch to Base Sepolia (84532) or Localhost (31337)');
+      console.warn('Please switch to Base Mainnet (8453), Base Sepolia (84532), or Localhost (31337)');
       useAppStore.getState().setContractsError(
-        `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Sepolia Testnet (Chain ID: 84532).`
+        `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`
       );
       // Don't set contracts if they don't exist
       useAppStore.getState().setContracts({

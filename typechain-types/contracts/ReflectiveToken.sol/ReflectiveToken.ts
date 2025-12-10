@@ -85,6 +85,8 @@ export interface ReflectiveTokenInterface extends Interface {
       | "setSwapThreshold"
       | "setTimelock"
       | "setTradingEnabled"
+      | "setYieldStrategy"
+      | "setYieldStrategyFeeBps"
       | "stakingContract"
       | "swapEnabled"
       | "swapSlippageBps"
@@ -109,6 +111,8 @@ export interface ReflectiveTokenInterface extends Interface {
       | "updateArweaveGateway"
       | "updateMarketingWallet"
       | "verifyArweaveTransaction"
+      | "yieldStrategy"
+      | "yieldStrategyFeeBps"
   ): FunctionFragment;
 
   getEvent(
@@ -136,6 +140,9 @@ export interface ReflectiveTokenInterface extends Interface {
       | "TimelockSet"
       | "TokensBurned"
       | "Transfer"
+      | "YieldStrategyFeeBpsUpdated"
+      | "YieldStrategyFeeSent"
+      | "YieldStrategySet"
   ): EventFragment;
 
   encodeFunctionData(
@@ -360,6 +367,14 @@ export interface ReflectiveTokenInterface extends Interface {
     values: [boolean]
   ): string;
   encodeFunctionData(
+    functionFragment: "setYieldStrategy",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setYieldStrategyFeeBps",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "stakingContract",
     values?: undefined
   ): string;
@@ -439,6 +454,14 @@ export interface ReflectiveTokenInterface extends Interface {
   encodeFunctionData(
     functionFragment: "verifyArweaveTransaction",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "yieldStrategy",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "yieldStrategyFeeBps",
+    values?: undefined
   ): string;
 
   decodeFunctionResult(
@@ -636,6 +659,14 @@ export interface ReflectiveTokenInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setYieldStrategy",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setYieldStrategyFeeBps",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "stakingContract",
     data: BytesLike
   ): Result;
@@ -711,6 +742,14 @@ export interface ReflectiveTokenInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "verifyArweaveTransaction",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "yieldStrategy",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "yieldStrategyFeeBps",
     data: BytesLike
   ): Result;
 }
@@ -1070,6 +1109,42 @@ export namespace TransferEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace YieldStrategyFeeBpsUpdatedEvent {
+  export type InputTuple = [newBps: BigNumberish];
+  export type OutputTuple = [newBps: bigint];
+  export interface OutputObject {
+    newBps: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace YieldStrategyFeeSentEvent {
+  export type InputTuple = [amount: BigNumberish];
+  export type OutputTuple = [amount: bigint];
+  export interface OutputObject {
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace YieldStrategySetEvent {
+  export type InputTuple = [yieldStrategy: AddressLike];
+  export type OutputTuple = [yieldStrategy: string];
+  export interface OutputObject {
+    yieldStrategy: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export interface ReflectiveToken extends BaseContract {
   connect(runner?: ContractRunner | null): ReflectiveToken;
   waitForDeployment(): Promise<this>;
@@ -1404,6 +1479,18 @@ export interface ReflectiveToken extends BaseContract {
     "nonpayable"
   >;
 
+  setYieldStrategy: TypedContractMethod<
+    [_yieldStrategy: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setYieldStrategyFeeBps: TypedContractMethod<
+    [_feeBps: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   stakingContract: TypedContractMethod<[], [string], "view">;
 
   swapEnabled: TypedContractMethod<[], [boolean], "view">;
@@ -1491,6 +1578,10 @@ export interface ReflectiveToken extends BaseContract {
     [boolean],
     "view"
   >;
+
+  yieldStrategy: TypedContractMethod<[], [string], "view">;
+
+  yieldStrategyFeeBps: TypedContractMethod<[], [bigint], "view">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
@@ -1795,6 +1886,12 @@ export interface ReflectiveToken extends BaseContract {
     nameOrSignature: "setTradingEnabled"
   ): TypedContractMethod<[enabled: boolean], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setYieldStrategy"
+  ): TypedContractMethod<[_yieldStrategy: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setYieldStrategyFeeBps"
+  ): TypedContractMethod<[_feeBps: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "stakingContract"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -1882,6 +1979,12 @@ export interface ReflectiveToken extends BaseContract {
   getFunction(
     nameOrSignature: "verifyArweaveTransaction"
   ): TypedContractMethod<[txId: string], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "yieldStrategy"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "yieldStrategyFeeBps"
+  ): TypedContractMethod<[], [bigint], "view">;
 
   getEvent(
     key: "AddressBlacklisted"
@@ -2043,6 +2146,27 @@ export interface ReflectiveToken extends BaseContract {
     TransferEvent.InputTuple,
     TransferEvent.OutputTuple,
     TransferEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldStrategyFeeBpsUpdated"
+  ): TypedContractEvent<
+    YieldStrategyFeeBpsUpdatedEvent.InputTuple,
+    YieldStrategyFeeBpsUpdatedEvent.OutputTuple,
+    YieldStrategyFeeBpsUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldStrategyFeeSent"
+  ): TypedContractEvent<
+    YieldStrategyFeeSentEvent.InputTuple,
+    YieldStrategyFeeSentEvent.OutputTuple,
+    YieldStrategyFeeSentEvent.OutputObject
+  >;
+  getEvent(
+    key: "YieldStrategySet"
+  ): TypedContractEvent<
+    YieldStrategySetEvent.InputTuple,
+    YieldStrategySetEvent.OutputTuple,
+    YieldStrategySetEvent.OutputObject
   >;
 
   filters: {
@@ -2297,6 +2421,39 @@ export interface ReflectiveToken extends BaseContract {
       TransferEvent.InputTuple,
       TransferEvent.OutputTuple,
       TransferEvent.OutputObject
+    >;
+
+    "YieldStrategyFeeBpsUpdated(uint256)": TypedContractEvent<
+      YieldStrategyFeeBpsUpdatedEvent.InputTuple,
+      YieldStrategyFeeBpsUpdatedEvent.OutputTuple,
+      YieldStrategyFeeBpsUpdatedEvent.OutputObject
+    >;
+    YieldStrategyFeeBpsUpdated: TypedContractEvent<
+      YieldStrategyFeeBpsUpdatedEvent.InputTuple,
+      YieldStrategyFeeBpsUpdatedEvent.OutputTuple,
+      YieldStrategyFeeBpsUpdatedEvent.OutputObject
+    >;
+
+    "YieldStrategyFeeSent(uint256)": TypedContractEvent<
+      YieldStrategyFeeSentEvent.InputTuple,
+      YieldStrategyFeeSentEvent.OutputTuple,
+      YieldStrategyFeeSentEvent.OutputObject
+    >;
+    YieldStrategyFeeSent: TypedContractEvent<
+      YieldStrategyFeeSentEvent.InputTuple,
+      YieldStrategyFeeSentEvent.OutputTuple,
+      YieldStrategyFeeSentEvent.OutputObject
+    >;
+
+    "YieldStrategySet(address)": TypedContractEvent<
+      YieldStrategySetEvent.InputTuple,
+      YieldStrategySetEvent.OutputTuple,
+      YieldStrategySetEvent.OutputObject
+    >;
+    YieldStrategySet: TypedContractEvent<
+      YieldStrategySetEvent.InputTuple,
+      YieldStrategySetEvent.OutputTuple,
+      YieldStrategySetEvent.OutputObject
     >;
   };
 }

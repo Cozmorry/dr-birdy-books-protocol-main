@@ -10,14 +10,14 @@ const DEPLOYMENT_CONFIG = {
   PRIMARY_ORACLE: "0x71041dDDaD356F8F9546D0Ba93B54C0b4C458375", // Chainlink ETH/USD on Base (verified)
   BACKUP_ORACLE: "0x72AFAECF99C9d9C8215fF44C77B94B99C28741e8", // Chainlink BTC/USD on Base (verified)
 
-  // TODO: Team Wallet Addresses (UPDATE THESE) add team wallet
+  // Team Wallet Addresses
   TEAM_WALLETS: {
-    JOSEPH: "0x0000000000000000000000000000000000000001", // Replace with actual
-    AJ: "0x0000000000000000000000000000000000000002", // Replace with actual
-    DSIGN: "0x0000000000000000000000000000000000000003", // Replace with actual
-    DEVELOPER: "0xe409c2f794647ac4940d7f1b6506790098bba136", // Replace with actual
-    BIRDY: "0xBdfa2B3e272fd2A26fa0Dd923697f3492Dd079cF", // Provided
-    AIRDROP: "0x0000000000000000000000000000000000000005", // Replace with actual
+    JOSEPH: "0x4d8b10e7d6bff54c8c1c1c42240c74e173c5f8ed", // J - 1.625%
+    AJ: "0xdd82052fbc8edc7091dafa1540f16c63c51cb2fb", // A - 1.625%
+    DSIGN: "0x130678ed1594929c02da4c10ab11a848df727eea", // D - 1.625%
+    DEVELOPER: "0xe409c2f794647ac4940d7f1b6506790098bba136", // Morris - 1%
+    BIRDY: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // B - 1.625%
+    AIRDROP: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // Replace with actual
   },
 
   // Token Configuration
@@ -44,8 +44,14 @@ const DEPLOYMENT_CONFIG = {
   },
 
   // Distribution Configuration
+  // Total Supply: 10,000,000 tokens
+  // Team Allocations:
+  //   - J, A, D, B: 1.625% each = 162,500 tokens each
+  //   - Morris (Developer): 1% = 100,000 tokens
+  //   - Total Team: 750,000 tokens (7.5%)
   DISTRIBUTION_CONFIG: {
-    TEAM_ALLOCATION: "150000", // 150,000 tokens per team member
+    TEAM_ALLOCATION_STANDARD: "162500", // 162,500 tokens (1.625%) for J, A, D, B
+    TEAM_ALLOCATION_DEVELOPER: "100000", // 100,000 tokens (1%) for Morris
     AIRDROP_ALLOCATION: "250000", // 250,000 tokens for airdrop
     VESTING_DURATION: 31536000, // 365 days in seconds
     VESTING_CLIFF: 7776000, // 90 days in seconds
@@ -80,9 +86,9 @@ function validateConfig() {
 
   // Check team wallets
   const teamWallets = Object.values(config.TEAM_WALLETS);
-  for (const wallet of teamWallets) {
-    if (wallet === "0x0000000000000000000000000000000000000000") {
-      throw new Error("Team wallet addresses not updated");
+  for (const [key, wallet] of Object.entries(config.TEAM_WALLETS)) {
+    if (wallet === "0x0000000000000000000000000000000000000000" && key !== "DSIGN") {
+      throw new Error(`Team wallet ${key} not updated`);
     }
   }
 

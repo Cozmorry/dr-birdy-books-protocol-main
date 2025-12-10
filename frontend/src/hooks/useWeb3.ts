@@ -113,8 +113,7 @@ export const useWeb3 = () => {
         account: accounts[0],
         chainId,
         isConnected: true,
-        // Currently using Base Sepolia testnet (84532) - contracts deployed
-        // Base Mainnet (8453) will be enabled when contracts are deployed
+        // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
         isCorrectNetwork,
       });
       
@@ -131,14 +130,33 @@ export const useWeb3 = () => {
         setError('Connection rejected. Please approve the connection request in your wallet.');
       } else if (err.code === -32002) {
         setError('Connection request already pending. Please check your wallet and approve or reject the pending request.');
-      } else if (err.message?.includes('Failed to connect to MetaMask')) {
-        setError('MetaMask connection failed. Please ensure MetaMask is unlocked and try again. If the issue persists, refresh the page.');
-      } else if (err.message?.includes('User rejected')) {
+      } else if (err.message?.includes('Failed to connect to MetaMask') || 
+                 err.message?.includes('connect') && err.message?.includes('MetaMask')) {
+        setError('Unable to connect to MetaMask. Please ensure MetaMask is installed, unlocked, and try again. If the issue persists, refresh the page.');
+      } else if (err.message?.includes('User rejected') || err.message?.includes('rejected')) {
         setError('Connection was rejected. Please click "Connect" again and approve the request in MetaMask.');
-      } else if (err.message?.includes('already pending')) {
+      } else if (err.message?.includes('already pending') || err.message?.includes('pending')) {
         setError('A connection request is already pending. Please check your MetaMask extension and approve or reject it.');
+      } else if (err.message?.includes('not installed') || err.message?.includes('No wallet')) {
+        setError('No wallet detected. Please install MetaMask or another Web3 wallet to continue.');
+      } else if (err.message?.includes('unlocked') || err.message?.includes('locked')) {
+        setError('Please unlock your MetaMask wallet and try again.');
       } else {
-        const errorMessage = err.message || 'Failed to connect wallet. Please try again.';
+        // Clean up technical error messages for user display
+        let errorMessage = err.message || 'Failed to connect wallet. Please try again.';
+        
+        // Remove technical details
+        errorMessage = errorMessage.replace(/chrome-extension:\/\/[^\s]+/gi, '');
+        errorMessage = errorMessage.replace(/scripts\/inpage\.js[^\s]*/gi, '');
+        errorMessage = errorMessage.replace(/at\s+[^\s]+\s+\([^)]+\)/gi, '');
+        errorMessage = errorMessage.replace(/Error:\s*/gi, '');
+        errorMessage = errorMessage.trim();
+        
+        // If message is still too technical, provide a friendly default
+        if (errorMessage.length > 200 || errorMessage.includes('Object.connect') || errorMessage.includes('async s')) {
+          errorMessage = 'Unable to connect to your wallet. Please ensure MetaMask is installed and unlocked, then try again.';
+        }
+        
         setError(errorMessage);
       }
     } finally {
@@ -187,9 +205,8 @@ export const useWeb3 = () => {
       return;
     }
 
-    // Default to Base Sepolia testnet for now (contracts deployed)
-    // Switch to BASE_MAINNET when contracts are deployed to mainnet
-    const targetNetwork = BASE_TESTNET;
+    // Default to Base Mainnet (contracts deployed)
+    const targetNetwork = BASE_MAINNET;
     
     try {
       await window.ethereum.request({
@@ -267,8 +284,7 @@ export const useWeb3 = () => {
             account: accounts[0],
             chainId,
             isConnected: true,
-            // Currently using Base Sepolia testnet (84532) - contracts deployed
-            // Base Mainnet (8453) will be enabled when contracts are deployed
+            // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
             isCorrectNetwork: hasDeployedContracts && (
               chainId === BASE_MAINNET.chainId || 
               chainId === BASE_TESTNET.chainId || 
@@ -308,8 +324,7 @@ export const useWeb3 = () => {
       setWeb3State(prev => ({
         ...prev,
         chainId: newChainId,
-        // Currently using Base Sepolia testnet (84532) - contracts deployed
-        // Base Mainnet (8453) will be enabled when contracts are deployed
+        // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
         isCorrectNetwork: hasDeployedContracts && (
           newChainId === BASE_MAINNET.chainId || 
           newChainId === BASE_TESTNET.chainId || 
