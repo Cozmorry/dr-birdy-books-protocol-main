@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Separator } from './ui/separator';
-import { BookOpen, Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare, Menu, X } from 'lucide-react';
+import { Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare, Menu, X } from 'lucide-react';
 import { ethers } from 'ethers';
 import { FeedbackModal } from './FeedbackModal';
 import ThemeToggle from './ThemeToggle';
@@ -99,11 +99,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <Link to="/" className="flex items-center flex-shrink-0">
-            <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
-            <div className="hidden xs:block">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Dr. Birdy Books</h1>
-              <p className="text-xs text-gray-600 dark:text-gray-400 hidden sm:block">Protocol</p>
-            </div>
+            <img 
+              src="/birdy%20logo.png" 
+              alt="Dr. Birdy Books" 
+              className="h-14 w-auto sm:h-16 sm:w-auto object-contain min-w-[200px] max-w-[300px]"
+            />
           </Link>
 
           {/* Desktop Navigation Links */}

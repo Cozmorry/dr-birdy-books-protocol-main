@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useFeedbackBadge } from '../hooks/useFeedbackBadge';
 import ThemeToggle from '../../components/ThemeToggle';
 import {
-  BookOpen,
   LayoutDashboard,
   FileText,
   BarChart3,
@@ -56,10 +55,11 @@ export default function DashboardLayout() {
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-primary-600 rounded-lg">
-                <BookOpen className="h-6 w-6 text-white" />
-              </div>
-              <span className="ml-3 text-lg font-semibold text-gray-900 dark:text-white">Dr. Birdy</span>
+              <img 
+                src="/birdy%20logo.png" 
+                alt="Dr. Birdy Books" 
+                className="h-10 w-auto object-contain max-w-[200px]"
+              />
             </div>
             <button
               onClick={() => setSidebarOpen(false)}

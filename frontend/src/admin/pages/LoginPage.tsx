@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { BookOpen, Lock, User, AlertCircle } from 'lucide-react';
+import { Lock, User, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -28,10 +28,13 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <BookOpen className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img 
+              src="/birdy%20logo.png" 
+              alt="Dr. Birdy Books" 
+              className="h-20 w-auto object-contain max-w-[300px]"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:drop-shadow-lg login-title">Dr. Birdy Books</h1>
           <p className="text-gray-600 dark:text-gray-200 dark:drop-shadow mt-2 login-subtitle">Admin Dashboard</p>
         </div>
 
