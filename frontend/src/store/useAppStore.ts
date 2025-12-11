@@ -801,7 +801,7 @@ export const useAppStore = create<AppState>()(
         console.log('Can unstake:', canUnstake);
         
         if (!canUnstake) {
-          throw new Error('Minimum staking duration not met. You need to wait at least 24 hours after staking before you can unstake.');
+          throw new Error('Minimum staking duration not met. You need to wait at least 7 days after staking before you can unstake.');
         }
         
         if (stakedAmount < amountWei) {

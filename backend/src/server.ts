@@ -17,6 +17,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 import authRoutes from './routes/authRoutes';
 import blogRoutes from './routes/blogRoutes';
 import fileRoutes from './routes/fileRoutes';
+import folderRoutes from './routes/folderRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import feedbackRoutes from './routes/feedbackRoutes';
 
@@ -60,10 +61,25 @@ app.use(helmet({
 }));
 
 // Rate limiting - General API routes
+// More lenient in development mode
+const isDevelopment = process.env.NODE_ENV === 'development';
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  max: isDevelopment 
+    ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000') // 1000 requests in dev
+    : parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // 100 requests in production
   message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// More lenient rate limiter for auth routes (login, token refresh, etc.)
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDevelopment ? 100 : 20, // 100 requests per minute in dev, 20 in production
+  message: 'Too many authentication requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // More lenient rate limiter for feedback routes (admin dashboard needs frequent updates)
@@ -87,6 +103,11 @@ const contentLimiter = rateLimit({
 // Apply rate limiters based on route
 app.use('/api/', (req, res, next) => {
   const path = req.path;
+  
+  // Auth routes get more lenient rate limiting
+  if (path.startsWith('/auth')) {
+    return authLimiter(req, res, next);
+  }
   
   if (path.startsWith('/feedback')) {
     return feedbackLimiter(req, res, next);
@@ -130,6 +151,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/folders', folderRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 

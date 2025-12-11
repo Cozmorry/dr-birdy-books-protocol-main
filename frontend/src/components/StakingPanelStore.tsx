@@ -658,7 +658,7 @@ export const StakingPanelStore: React.FC = () => {
                     Unstaking is currently disabled
                   </p>
                   <p className="text-xs text-yellow-700 mb-2">
-                    You must wait for the minimum staking duration (24 hours) to pass before you can unstake your tokens. 
+                    You must wait for the minimum staking duration (7 days) to pass before you can unstake your tokens. 
                     This is a security feature to ensure stable staking pools.
                   </p>
                   {unstakeAvailableAt && unstakeAvailableAt > new Date() && (

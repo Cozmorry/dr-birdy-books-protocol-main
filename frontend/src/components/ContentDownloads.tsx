@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Download, File, Image, FileText, Video, Music, AlertCircle, Lock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Download, File, Image, FileText, Video, Music, AlertCircle, Lock, Folder, ChevronRight, ChevronDown } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { trackFileDownload } from '../utils/analytics';
 
@@ -15,6 +15,14 @@ interface ContentFile {
   fileData?: string; // Base64 data for local files
   downloadUrl?: string; // API download URL
   downloads?: number; // Download count
+  folder?: {
+    _id: string;
+    name?: string;
+    description?: string;
+    tier?: number;
+    color?: string;
+    icon?: string;
+  } | string | null; // Folder can be object, ID string, or null
 }
 
 interface ContentDownloadsProps {
@@ -40,27 +48,34 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const [downloadStats, setDownloadStats] = useState<any>(null);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filesPerPage, setFilesPerPage] = useState(12);
+  const [filesPerPage] = useState(12);
   const [totalFiles, setTotalFiles] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'downloads' | 'tier'>('tier');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [folders, setFolders] = useState<any[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'list' | 'folders'>('folders');
 
-  useEffect(() => {
-    loadAvailableFiles();
-    loadDownloadStats();
-  }, [userTier, hasAccess, userInfo?.address, currentPage, filesPerPage, sortBy, sortOrder]);
+  // Define functions before useEffect hooks
+  const loadFolders = useCallback(async () => {
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      const response = await fetch(`${API_BASE_URL}/folders?includeInactive=false`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setFolders(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load folders:', error);
+    }
+  }, []);
 
-  useEffect(() => {
-    filterFiles();
-  }, [availableFiles, selectedTier, searchQuery, userTier, sortBy, sortOrder]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedTier]);
-
-  const loadAvailableFiles = async () => {
+  const loadAvailableFiles = useCallback(async () => {
     try {
       // Fetch files from backend API
       const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -70,6 +85,9 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       const params = new URLSearchParams();
       if (walletAddress) {
         params.append('walletAddress', walletAddress);
+      }
+      if (selectedFolder) {
+        params.append('folder', selectedFolder);
       }
       params.append('page', currentPage.toString());
       params.append('limit', filesPerPage.toString());
@@ -108,6 +126,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
             uploadDate: f.createdAt || new Date().toISOString(),
             fileSize: f.fileSize || 0,
             downloads: f.downloads || 0,
+            folder: f.folder,
             downloadUrl: `${API_BASE_URL}/files/${f._id}/download`, // Don't include walletAddress here
           };
         });
@@ -186,7 +205,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
         console.error('Failed to load files from localStorage:', localErr);
       }
     }
-  };
+  }, [userInfo?.address, currentPage, filesPerPage, selectedFolder]);
 
   // Check if user can access a file based on their tier
   const canAccessFile = (file: ContentFile): boolean => {
@@ -210,7 +229,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     return false;
   };
 
-  const filterFiles = () => {
+  const filterFiles = useCallback(() => {
     let filtered = [...availableFiles];
 
     // Show ALL files (don't filter by access - access only affects downloadability)
@@ -265,9 +284,9 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     });
 
     setFilteredFiles(filtered);
-  };
+  }, [availableFiles, selectedTier, searchQuery, sortBy, sortOrder]);
 
-  const loadDownloadStats = async () => {
+  const loadDownloadStats = useCallback(async () => {
     if (!userInfo?.address) return;
     
     try {
@@ -285,7 +304,23 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     } catch (error) {
       console.error('Failed to load download stats:', error);
     }
-  };
+  }, [userInfo?.address]);
+
+  // useEffect hooks after function definitions
+  useEffect(() => {
+    loadFolders();
+    loadAvailableFiles();
+    loadDownloadStats();
+  }, [loadFolders, loadAvailableFiles, loadDownloadStats, userTier, hasAccess, userInfo?.address, currentPage, filesPerPage, sortBy, sortOrder, selectedFolder]);
+
+  useEffect(() => {
+    filterFiles();
+  }, [filterFiles]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTier, selectedFolder]);
 
   const handleDownload = async (file: ContentFile) => {
     if (!userInfo?.address) {
@@ -457,26 +492,6 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     }
   };
 
-  const handlePreview = (file: ContentFile) => {
-    if (file.fileData && ['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(file.fileType.toLowerCase())) {
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head><title>${file.fileName || 'File Preview'}</title></head>
-            <body style="margin:0; padding:20px; text-align:center; background:#f5f5f5;">
-              <h2>${file.description || 'File Preview'}</h2>
-              <img src="${file.fileData}" style="max-width:100%; max-height:80vh; border:1px solid #ddd; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);" />
-              <br><br>
-              <button onclick="window.close()" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">Close</button>
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
-      }
-    }
-  };
-
   const getFileIcon = (fileType: string) => {
     const type = fileType.toLowerCase();
     if (['pdf'].includes(type)) return <FileText className="h-6 w-6 text-red-600" />;
@@ -574,6 +589,28 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
               <option value="2">Tier 3</option>
             </select>
           )}
+          <select
+            value={selectedFolder || ''}
+            onChange={(e) => setSelectedFolder(e.target.value || null)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            title="Filter by folder"
+            aria-label="Filter files by folder"
+          >
+            <option value="">All Folders</option>
+            <option value="null">No Folder</option>
+            {folders.map((folder) => (
+              <option key={folder._id} value={folder._id}>
+                {folder.name}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => setViewMode(viewMode === 'folders' ? 'list' : 'folders')}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            title={`Switch to ${viewMode === 'folders' ? 'list' : 'folder'} view`}
+          >
+            {viewMode === 'folders' ? '📁' : '📋'}
+          </button>
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'downloads' | 'tier')}
@@ -609,6 +646,268 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           <p className="text-sm text-gray-500 mt-2">
             {searchQuery ? 'Try adjusting your search' : 'Files will appear here once uploaded'}
           </p>
+        </div>
+      ) : viewMode === 'folders' && folders.length > 0 ? (
+        <div className="space-y-4">
+          {folders.map((folder) => {
+            const folderFiles = filteredFiles.filter((file) => {
+              if (!file.folder) return false;
+              if (typeof file.folder === 'string') {
+                return file.folder === folder._id;
+              }
+              if (typeof file.folder === 'object' && file.folder !== null && '_id' in file.folder) {
+                return file.folder._id === folder._id;
+              }
+              return false;
+            });
+            const isExpanded = expandedFolders.has(folder._id);
+            
+            if (folderFiles.length === 0 && selectedFolder !== folder._id) return null;
+            
+            return (
+              <div key={folder._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => {
+                    const newExpanded = new Set(expandedFolders);
+                    if (newExpanded.has(folder._id)) {
+                      newExpanded.delete(folder._id);
+                    } else {
+                      newExpanded.add(folder._id);
+                    }
+                    setExpandedFolders(newExpanded);
+                  }}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-4 h-4 rounded"
+                      style={{ backgroundColor: folder.color || '#3B82F6' }}
+                    />
+                    <Folder className="h-5 w-5 text-gray-500" />
+                    <div className="text-left">
+                      <h3 className="font-semibold text-gray-900">{folder.name}</h3>
+                      {folder.description && (
+                        <p className="text-sm text-gray-500">{folder.description}</p>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({folderFiles.length} {folderFiles.length === 1 ? 'file' : 'files'})
+                    </span>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+                {isExpanded && folderFiles.length > 0 && (
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {folderFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start space-x-3 mb-3">
+                          {getFileIcon(file.fileType)}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
+                              {file.fileName}
+                            </h3>
+                            <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                              {file.description || 'No description'}
+                            </p>
+                            <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                              <span className="uppercase">{file.fileType}</span>
+                              {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
+                            </div>
+                            <div className="mt-1">
+                              {file.tier === -1 ? (
+                                <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                                  Admin Only
+                                </span>
+                              ) : (
+                                <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
+                                  file.tier === 0 ? 'bg-green-100 text-green-800' :
+                                  file.tier === 1 ? 'bg-blue-100 text-blue-800' :
+                                  file.tier === 2 ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  Tier {file.tier + 1}
+                                </span>
+                              )}
+                            </div>
+                            {!canAccessFile(file) && (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Locked
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                          <span className="text-xs text-gray-500">
+                            {formatDate(file.uploadDate)}
+                          </span>
+                          {canAccessFile(file) ? (
+                            <button
+                              onClick={() => handleDownload(file)}
+                              disabled={downloadingFileId === file.id}
+                              className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
+                                downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                            >
+                              {downloadingFileId === file.id ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Downloading...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed flex items-center text-sm"
+                              title={file.tier === -1 ? 'Admin only' : `Requires Tier ${file.tier + 1} access`}
+                            >
+                              <Lock className="h-4 w-4 mr-2" />
+                              Locked
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {/* Files without folder */}
+          {filteredFiles.filter((file) => {
+            if (!file.folder) return true;
+            if (typeof file.folder === 'string') return false;
+            if (typeof file.folder === 'object' && file.folder !== null && '_id' in file.folder) {
+              return !file.folder._id;
+            }
+            return true;
+          }).length > 0 && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="p-4 bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <Folder className="h-5 w-5 text-gray-400" />
+                  <h3 className="font-semibold text-gray-900">No Folder</h3>
+                  <span className="text-sm text-gray-500 ml-2">
+                    ({filteredFiles.filter((file) => {
+                      if (!file.folder) return true;
+                      if (typeof file.folder === 'string') return false;
+                      if (typeof file.folder === 'object' && file.folder !== null && '_id' in file.folder) {
+                        return !file.folder._id;
+                      }
+                      return true;
+                    }).length} files)
+                  </span>
+                </div>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredFiles
+                  .filter((file) => {
+                    if (!file.folder) return true;
+                    if (typeof file.folder === 'string') return false;
+                    if (typeof file.folder === 'object' && file.folder !== null && '_id' in file.folder) {
+                      return !file.folder._id;
+                    }
+                    return true;
+                  })
+                  .map((file) => (
+                    <div
+                      key={file.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start space-x-3 mb-3">
+                        {getFileIcon(file.fileType)}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
+                            {file.fileName}
+                          </h3>
+                          <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                            {file.description || 'No description'}
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                            <span className="uppercase">{file.fileType}</span>
+                            {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
+                          </div>
+                          <div className="mt-1">
+                            {file.tier === -1 ? (
+                              <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                                Admin Only
+                              </span>
+                            ) : (
+                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
+                                file.tier === 0 ? 'bg-green-100 text-green-800' :
+                                file.tier === 1 ? 'bg-blue-100 text-blue-800' :
+                                file.tier === 2 ? 'bg-purple-100 text-purple-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                Tier {file.tier + 1}
+                              </span>
+                            )}
+                          </div>
+                          {!canAccessFile(file) && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">
+                                <Lock className="h-3 w-3 mr-1" />
+                                Locked
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <span className="text-xs text-gray-500">
+                          {formatDate(file.uploadDate)}
+                        </span>
+                        {canAccessFile(file) ? (
+                          <button
+                            onClick={() => handleDownload(file)}
+                            disabled={downloadingFileId === file.id}
+                            className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
+                              downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {downloadingFileId === file.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed flex items-center text-sm"
+                            title={file.tier === -1 ? 'Admin only' : `Requires Tier ${file.tier + 1} access`}
+                          >
+                            <Lock className="h-4 w-4 mr-2" />
+                            Locked
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

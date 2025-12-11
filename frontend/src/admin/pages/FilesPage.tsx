@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Upload, Download, Trash2, Edit, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, Download, Trash2, Edit, AlertCircle, CheckCircle, X, Folder, AlertTriangle } from 'lucide-react';
+import FolderSelector from '../components/FolderSelector';
 
 export default function FilesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [files, setFiles] = useState<any[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [description, setDescription] = useState('');
   const [tier, setTier] = useState(-1);
+  const [selectedFolder, setSelectedFolder] = useState('');
+  const [filterFolder, setFilterFolder] = useState(searchParams.get('folder') || '');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingFile, setEditingFile] = useState<any | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const [editTier, setEditTier] = useState(-1);
+  const [editFolder, setEditFolder] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filesPerPage, setFilesPerPage] = useState(20);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -20,18 +27,49 @@ export default function FilesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'downloads'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; fileId: string | null }>({
+    show: false,
+    fileId: null,
+  });
+
+  useEffect(() => {
+    // Read folder from URL params on mount
+    const folderParam = searchParams.get('folder');
+    if (folderParam) {
+      setFilterFolder(folderParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    loadFolders();
+  }, []);
 
   useEffect(() => {
     loadFiles();
-  }, [currentPage, filesPerPage]);
+  }, [currentPage, filesPerPage, filterFolder]);
+
+  const loadFolders = async () => {
+    try {
+      const response = await api.getFolders();
+      if (response.success) {
+        setFolders(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load folders:', error);
+    }
+  };
 
   const loadFiles = async () => {
     try {
       setIsLoading(true);
-      const response = await api.getFiles({
+      const params: any = {
         page: currentPage,
         limit: filesPerPage,
-      });
+      };
+      if (filterFolder) {
+        params.folder = filterFolder;
+      }
+      const response = await api.getFiles(params);
       if (response.success) {
         setFiles(response.data.files);
         if (response.data.pagination) {
@@ -99,13 +137,14 @@ export default function FilesPage() {
     setMessage(null);
 
     try {
-      const response = await api.uploadFile(selectedFile, description, tier);
+      const response = await api.uploadFile(selectedFile, description, tier, selectedFolder || undefined);
       
       if (response.success) {
         setMessage({ type: 'success', text: 'File uploaded successfully!' });
         setSelectedFile(null);
         setDescription('');
         setTier(-1);
+        setSelectedFolder('');
         loadFiles();
         
         // Reset file input
@@ -126,6 +165,7 @@ export default function FilesPage() {
     setEditingFile(file);
     setEditDescription(file.description || '');
     setEditTier(file.tier !== undefined ? file.tier : -1);
+    setEditFolder(file.folder?._id || file.folder || '');
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -137,6 +177,7 @@ export default function FilesPage() {
       await api.updateFile(editingFile._id, {
         description: editDescription,
         tier: editTier,
+        folder: editFolder || null,
       });
       setMessage({ type: 'success', text: 'File updated successfully' });
       setEditingFile(null);
@@ -149,19 +190,24 @@ export default function FilesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    // eslint-disable-next-line no-restricted-globals
-    if (!window.confirm('Are you sure you want to delete this file?')) return;
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirm({ show: true, fileId: id });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.fileId) return;
 
     try {
-      await api.deleteFile(id);
+      await api.deleteFile(deleteConfirm.fileId);
       setMessage({ type: 'success', text: 'File deleted successfully' });
+      setDeleteConfirm({ show: false, fileId: null });
       loadFiles();
     } catch (error: any) {
       setMessage({
         type: 'error',
         text: error.response?.data?.message || 'Failed to delete file',
       });
+      setDeleteConfirm({ show: false, fileId: null });
     }
   };
 
@@ -242,21 +288,40 @@ export default function FilesPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Access Tier
-            </label>
-            <select
-              value={tier}
-              onChange={(e) => setTier(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              disabled={isUploading}
-            >
-              <option value={-1}>Admin Only</option>
-              <option value={0}>Tier 1 ($24)</option>
-              <option value={1}>Tier 2 ($50)</option>
-              <option value={2}>Tier 3 ($1000)</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Access Tier
+              </label>
+              <select
+                value={tier}
+                onChange={(e) => setTier(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                disabled={isUploading}
+              >
+                <option value={-1}>Admin Only</option>
+                <option value={0}>Tier 1 ($24)</option>
+                <option value={1}>Tier 2 ($50)</option>
+                <option value={2}>Tier 3 ($1000)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Folder (Optional)
+              </label>
+              <FolderSelector
+                folders={folders}
+                value={selectedFolder}
+                onChange={setSelectedFolder}
+                disabled={isUploading}
+              />
+              {folders.length === 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Create folders in the Folders page
+                </p>
+              )}
+            </div>
           </div>
 
           <button
@@ -281,9 +346,42 @@ export default function FilesPage() {
 
       {/* Files List */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Uploaded Files ({files.length})
-        </h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Uploaded Files ({files.length})
+            </h2>
+            {filterFolder && (
+              <p className="text-sm text-gray-600 mt-1">
+                Showing files in folder: <span className="font-medium">{folders.find(f => f._id === filterFolder)?.name || 'Unknown'}</span>
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-sm text-gray-700 whitespace-nowrap">Filter by folder:</label>
+            <select
+              value={filterFolder}
+              onChange={(e) => {
+                setFilterFolder(e.target.value);
+                // Update URL params
+                if (e.target.value) {
+                  setSearchParams({ folder: e.target.value });
+                } else {
+                  setSearchParams({});
+                }
+              }}
+              className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            >
+              <option value="">All Folders</option>
+              <option value="null">No Folder</option>
+              {folders.map((folder) => (
+                <option key={folder._id} value={folder._id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {isLoading ? (
           <div className="flex justify-center py-8">
@@ -305,6 +403,9 @@ export default function FilesPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Folder
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Downloads
@@ -332,6 +433,16 @@ export default function FilesPage() {
                       {file.tier === -1 ? 'Admin' : `Tier ${file.tier + 1}`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {file.folder ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                          <Folder className="h-3 w-3" />
+                          {typeof file.folder === 'object' && file.folder !== null ? file.folder.name : 'Unknown'}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {file.downloads}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -344,8 +455,8 @@ export default function FilesPage() {
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(file._id)}
-                          className="text-red-600 hover:text-red-900"
+                          onClick={() => handleDeleteClick(file._id)}
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                           title="Delete file"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -454,20 +565,33 @@ export default function FilesPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Access Tier
-                </label>
-                <select
-                  value={editTier}
-                  onChange={(e) => setEditTier(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value={-1}>Admin Only</option>
-                  <option value={0}>Tier 1 ($24)</option>
-                  <option value={1}>Tier 2 ($50)</option>
-                  <option value={2}>Tier 3 ($1000)</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Access Tier
+                  </label>
+                  <select
+                    value={editTier}
+                    onChange={(e) => setEditTier(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value={-1}>Admin Only</option>
+                    <option value={0}>Tier 1 ($24)</option>
+                    <option value={1}>Tier 2 ($50)</option>
+                    <option value={2}>Tier 3 ($1000)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Folder (Optional)
+                  </label>
+                  <FolderSelector
+                    folders={folders}
+                    value={editFolder}
+                    onChange={setEditFolder}
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
@@ -486,6 +610,47 @@ export default function FilesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Delete File
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Are you sure you want to delete this file? This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm({ show: false, fileId: null })}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
