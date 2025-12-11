@@ -13,6 +13,7 @@ import {
   X,
   Upload,
   MessageSquare,
+  Folder,
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -29,6 +30,7 @@ export default function DashboardLayout() {
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Files', href: '/admin/files', icon: Upload },
+    { name: 'Folders', href: '/admin/folders', icon: Folder },
     { name: 'Blog', href: '/admin/blog', icon: FileText },
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },

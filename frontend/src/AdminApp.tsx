@@ -5,6 +5,8 @@ import LoginPage from './admin/pages/LoginPage';
 import DashboardLayout from './admin/components/DashboardLayout';
 import DashboardPage from './admin/pages/DashboardPage';
 import FilesPage from './admin/pages/FilesPage';
+import FoldersPage from './admin/pages/FoldersPage';
+import FolderDetailPage from './admin/pages/FolderDetailPage';
 import BlogPage from './admin/pages/BlogPage';
 import FeedbackPage from './admin/pages/FeedbackPage';
 import AnalyticsPage from './admin/pages/AnalyticsPage';
@@ -42,6 +44,8 @@ export default function AdminApp() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="files" element={<FilesPage />} />
+        <Route path="folders" element={<FoldersPage />} />
+        <Route path="folders/:id" element={<FolderDetailPage />} />
         <Route path="blog" element={<BlogPage />} />
         <Route path="feedback" element={<FeedbackPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />

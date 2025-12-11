@@ -15,6 +15,7 @@ export interface IFile extends Document {
   uploadedByName: string;
   downloads: number;
   isActive: boolean;
+  folder?: mongoose.Types.ObjectId; // Reference to folder
   metadata?: {
     width?: number;
     height?: number;
@@ -90,6 +91,11 @@ const FileSchema = new Schema<IFile>(
       type: Boolean,
       default: true,
     },
+    folder: {
+      type: Schema.Types.ObjectId,
+      ref: 'Folder',
+      default: null,
+    },
     metadata: {
       type: Schema.Types.Mixed,
     },
@@ -103,6 +109,7 @@ const FileSchema = new Schema<IFile>(
 FileSchema.index({ tier: 1, isActive: 1 });
 FileSchema.index({ fileType: 1 });
 FileSchema.index({ uploadedBy: 1 });
+FileSchema.index({ folder: 1 });
 
 // Explicitly set collection name
 const FileModel = mongoose.model<IFile>('File', FileSchema, 'files');

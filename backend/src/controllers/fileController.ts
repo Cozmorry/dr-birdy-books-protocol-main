@@ -35,11 +35,26 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     
-    const { description } = req.body;
+    const { description, folder } = req.body;
     // Parse tier from form data (multer sends it as string)
     const tierRaw = req.body.tier !== undefined ? req.body.tier : -1;
     const tierValue = isNaN(Number(tierRaw)) ? -1 : Number(tierRaw);
     const tier = tierValue >= -1 && tierValue <= 2 ? tierValue : -1;
+    
+    // Validate folder if provided
+    let folderId = null;
+    if (folder && folder !== 'null' && folder !== '') {
+      const Folder = (await import('../models/Folder')).default;
+      const folderDoc = await Folder.findById(folder);
+      if (!folderDoc) {
+        res.status(400).json({
+          success: false,
+          message: 'Folder not found',
+        });
+        return;
+      }
+      folderId = folder;
+    }
     
     console.log('📝 File upload request:', {
       hasFile: !!req.file,
@@ -142,6 +157,7 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       fileSize: req.file.size,
       description,
       tier: tier,
+      folder: folderId,
       storageType: actualStorageType,
       storagePath,
       uploadedBy: req.admin?.id,
@@ -206,7 +222,7 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
 // @access  Public (with wallet verification)
 export const getFiles = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { tier, fileType, walletAddress, limit = 50, page = 1 } = req.query;
+    const { tier, fileType, folder, walletAddress, limit = 50, page = 1 } = req.query;
     
     const query: any = { isActive: true };
     
@@ -218,6 +234,15 @@ export const getFiles = async (req: AuthRequest, res: Response): Promise<void> =
     // Filter by file type
     if (fileType) {
       query.fileType = fileType;
+    }
+    
+    // Filter by folder
+    if (folder !== undefined) {
+      if (folder === 'null' || folder === '') {
+        query.folder = { $in: [null, undefined] }; // Files without folder
+      } else {
+        query.folder = folder;
+      }
     }
     
     // Note: We no longer filter by user tier access here
@@ -232,6 +257,7 @@ export const getFiles = async (req: AuthRequest, res: Response): Promise<void> =
         .limit(Number(limit))
         .skip(skip)
         .select('-storagePath') // Don't expose storage path to clients
+        .populate('folder', 'name description tier color icon')
         .lean(),
       File.countDocuments(query),
     ]);
@@ -696,7 +722,7 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
 export const updateFile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { description, tier, isActive } = req.body;
+    const { description, tier, folder, isActive } = req.body;
     
     const file = await File.findById(id);
     
@@ -706,6 +732,24 @@ export const updateFile = async (req: AuthRequest, res: Response): Promise<void>
         message: 'File not found',
       });
       return;
+    }
+    
+    // Validate folder if provided
+    if (folder !== undefined) {
+      if (folder && folder !== 'null' && folder !== '') {
+        const Folder = (await import('../models/Folder')).default;
+        const folderDoc = await Folder.findById(folder);
+        if (!folderDoc) {
+          res.status(400).json({
+            success: false,
+            message: 'Folder not found',
+          });
+          return;
+        }
+        file.folder = folder;
+      } else {
+        file.folder = undefined;
+      }
     }
     
     // Update fields

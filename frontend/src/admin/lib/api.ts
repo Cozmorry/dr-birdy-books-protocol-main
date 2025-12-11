@@ -143,11 +143,14 @@ class ApiClient {
     return response.data;
   }
 
-  async uploadFile(file: File, description: string, tier: number) {
+  async uploadFile(file: File, description: string, tier: number, folder?: string) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('description', description);
     formData.append('tier', tier.toString());
+    if (folder) {
+      formData.append('folder', folder);
+    }
 
     const response = await this.client.post('/files/upload', formData, {
       headers: {
@@ -200,6 +203,47 @@ class ApiClient {
 
   async updateFeedbackStatus(id: string, status: string, adminNotes?: string) {
     const response = await this.client.patch(`/feedback/${id}`, { status, adminNotes });
+    return response.data;
+  }
+
+  // Folder endpoints
+  async getFolders(params?: any) {
+    const response = await this.client.get('/folders', { params });
+    return response.data;
+  }
+
+  async getFolder(id: string) {
+    const response = await this.client.get(`/folders/${id}`);
+    return response.data;
+  }
+
+  async getFolderTree(params?: any) {
+    const response = await this.client.get('/folders/tree', { params });
+    return response.data;
+  }
+
+  async createFolder(data: {
+    name: string;
+    description?: string;
+    parentFolder?: string;
+    tier: number;
+    color?: string;
+    icon?: string;
+    order?: number;
+  }) {
+    const response = await this.client.post('/folders', data);
+    return response.data;
+  }
+
+  async updateFolder(id: string, data: any) {
+    const response = await this.client.put(`/folders/${id}`, data);
+    return response.data;
+  }
+
+  async deleteFolder(id: string, moveFilesTo?: string) {
+    const response = await this.client.delete(`/folders/${id}`, {
+      params: { moveFilesTo },
+    });
     return response.data;
   }
 
