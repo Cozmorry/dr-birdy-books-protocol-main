@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Download, File, Image, FileText, Video, Music, AlertCircle, Lock, Folder, ChevronRight, ChevronDown } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { trackFileDownload } from '../utils/analytics';
+import { getIconFromName } from '../utils/iconUtils';
 
 interface ContentFile {
   id: string;
@@ -57,6 +59,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list' | 'folders'>('folders');
+  const navigate = useNavigate();
 
   // Define functions before useEffect hooks
   const loadFolders = useCallback(async () => {
@@ -323,7 +326,10 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   }, [searchQuery, selectedTier, selectedFolder]);
 
   const handleDownload = async (file: ContentFile) => {
+    console.log('[handleDownload] Called with file:', file.id, file.fileName);
+    
     if (!userInfo?.address) {
+      console.log('[handleDownload] No wallet address, returning');
       addToast({
         type: 'warning',
         title: 'Wallet Required',
@@ -334,9 +340,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
 
     // Prevent multiple simultaneous downloads of the same file
     if (downloadingFileId === file.id) {
+      console.log('[handleDownload] Already downloading this file, returning');
       return;
     }
 
+    console.log('[handleDownload] Starting download process...');
     setDownloadingFileId(file.id);
     
     // Log current frontend tier state for debugging
@@ -440,6 +448,18 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
 
       const presignedData = await presignedResponse.json();
       
+      // Validate response
+      if (!presignedData.success || !presignedData.downloadUrl) {
+        console.error('[Download Error] Invalid presigned response:', presignedData);
+        addToast({
+          type: 'error',
+          title: 'Download Failed',
+          message: presignedData.message || 'Invalid download URL received from server',
+        });
+        setDownloadingFileId(null);
+        return;
+      }
+      
       // Show quota warning if present
       if (presignedData.warning) {
         const usedGB = (presignedData.warning.used / (1024 * 1024 * 1024)).toFixed(2);
@@ -455,19 +475,52 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
         // Continue with download automatically (no confirmation needed)
       }
 
-      // Step 2: Directly navigate to download URL (browser handles download natively)
-      // This avoids loading the entire file into memory first
-      const downloadUrl = `${API_BASE_URL}${presignedData.downloadUrl}`;
+      // Step 2: Construct download URL
+      // The downloadUrl from backend is relative (e.g., /files/:id/download?token=...)
+      // We need to prepend the API base URL
+      let downloadUrl: string;
+      if (presignedData.downloadUrl.startsWith('http://') || presignedData.downloadUrl.startsWith('https://')) {
+        // Already a full URL
+        downloadUrl = presignedData.downloadUrl;
+      } else if (presignedData.downloadUrl.startsWith('/')) {
+        // Relative URL starting with /
+        downloadUrl = `${API_BASE_URL}${presignedData.downloadUrl}`;
+      } else {
+        // Relative URL without leading /
+        downloadUrl = `${API_BASE_URL}/${presignedData.downloadUrl}`;
+      }
       
-      // Create a hidden link and trigger download
-      // The browser will handle the download directly without loading into memory
+      console.log('[Download] Presigned data:', presignedData);
+      console.log('[Download] Constructed download URL:', downloadUrl);
+      
+      // Validate URL before proceeding
+      if (!downloadUrl || downloadUrl === 'about:blank' || downloadUrl.trim() === '' || !downloadUrl.startsWith('http')) {
+        console.error('[Download Error] Invalid download URL:', downloadUrl);
+        addToast({
+          type: 'error',
+          title: 'Download Failed',
+          message: 'Invalid download URL. Please try again.',
+        });
+        setDownloadingFileId(null);
+        return;
+      }
+      
+      // Use simple browser-handled download
+      // The server's Content-Disposition header will trigger the download
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = file.fileName || `file.${file.fileType}`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      
+      // Clean up
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+        setDownloadingFileId(null);
+      }, 100);
       
       // Track download in Google Analytics
       trackFileDownload(file.id, file.fileName, file.tier);
@@ -639,74 +692,123 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600">Loading files...</span>
         </div>
-      ) : filteredFiles.length === 0 ? (
-        <div className="text-center py-12">
-          <File className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No files available</p>
-          <p className="text-sm text-gray-500 mt-2">
-            {searchQuery ? 'Try adjusting your search' : 'Files will appear here once uploaded'}
-          </p>
-        </div>
-      ) : viewMode === 'folders' && folders.length > 0 ? (
+      ) : viewMode === 'folders' ? (
         <div className="space-y-4">
-          {folders.map((folder) => {
-            const folderFiles = filteredFiles.filter((file) => {
-              if (!file.folder) return false;
-              if (typeof file.folder === 'string') {
-                return file.folder === folder._id;
-              }
-              if (typeof file.folder === 'object' && file.folder !== null && '_id' in file.folder) {
-                return file.folder._id === folder._id;
-              }
-              return false;
-            });
-            const isExpanded = expandedFolders.has(folder._id);
-            
-            if (folderFiles.length === 0 && selectedFolder !== folder._id) return null;
-            
-            return (
-              <div key={folder._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => {
-                    const newExpanded = new Set(expandedFolders);
-                    if (newExpanded.has(folder._id)) {
-                      newExpanded.delete(folder._id);
-                    } else {
-                      newExpanded.add(folder._id);
-                    }
-                    setExpandedFolders(newExpanded);
-                  }}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded"
-                      style={{ backgroundColor: folder.color || '#3B82F6' }}
-                    />
-                    <Folder className="h-5 w-5 text-gray-500" />
-                    <div className="text-left">
-                      <h3 className="font-semibold text-gray-900">{folder.name}</h3>
-                      {folder.description && (
-                        <p className="text-sm text-gray-500">{folder.description}</p>
-                      )}
+          {(() => {
+            // Build folder tree - get root folders (no parent)
+            const getRootFolders = () => {
+              return folders.filter(f => {
+                const parentId = typeof f.parentFolder === 'string' ? f.parentFolder : f.parentFolder?._id;
+                return !parentId;
+              });
+            };
+
+            // Get child folders of a parent
+            const getChildFolders = (parentId: string) => {
+              return folders.filter(f => {
+                const parentIdValue = typeof f.parentFolder === 'string' ? f.parentFolder : f.parentFolder?._id;
+                return parentIdValue === parentId;
+              });
+            };
+
+            // Render folder tree recursively
+            const renderFolderTree = (parentId: string | null = null, level: number = 0): JSX.Element[] => {
+              const foldersToRender = parentId ? getChildFolders(parentId) : getRootFolders();
+              
+              return foldersToRender.map((folder) => {
+                const folderFiles = filteredFiles.filter((file) => {
+                  if (!file.folder) return false;
+                  if (typeof file.folder === 'string') {
+                    return file.folder === folder._id;
+                  }
+                  if (typeof file.folder === 'object' && file.folder !== null && '_id' in file.folder) {
+                    return file.folder._id === folder._id;
+                  }
+                  return false;
+                });
+                const childFolders = getChildFolders(folder._id);
+                const isExpanded = expandedFolders.has(folder._id);
+                const hasChildren = childFolders.length > 0 || folderFiles.length > 0;
+                
+                // Show all folders, even if empty
+                
+                return (
+                  <div 
+                    key={folder._id} 
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden transition-all duration-200 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md group cursor-pointer active:scale-[0.98]" 
+                    style={{ marginLeft: `${level * 20}px` }}
+                    onClick={(e) => {
+                      // Add visual feedback to entire card
+                      const card = e.currentTarget;
+                      card.style.transform = 'scale(0.98)';
+                      card.style.opacity = '0.9';
+                      setTimeout(() => {
+                        card.style.transform = '';
+                        card.style.opacity = '';
+                        navigate(`/content/folders/${folder._id}`);
+                      }, 150);
+                    }}
+                  >
+                    <div className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-transparent dark:hover:from-primary-900/20 dark:hover:to-transparent transition-all duration-200">
+                      <div className="flex items-center gap-3 flex-1">
+                        {hasChildren && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newExpanded = new Set(expandedFolders);
+                              if (newExpanded.has(folder._id)) {
+                                newExpanded.delete(folder._id);
+                              } else {
+                                newExpanded.add(folder._id);
+                              }
+                              setExpandedFolders(newExpanded);
+                            }}
+                            className="p-1 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded transition-colors z-10"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            )}
+                          </button>
+                        )}
+                        {!hasChildren && <div className="w-6" />}
+                        <div
+                          className="w-4 h-4 rounded flex-shrink-0 shadow-sm transition-transform group-hover:scale-110"
+                          style={{ backgroundColor: folder.color || '#3B82F6' }}
+                        />
+                        {(() => {
+                          const IconComponent = getIconFromName(folder.icon);
+                          return <IconComponent className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0 transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400" />;
+                        })()}
+                        <div className="text-left flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{folder.name}</h3>
+                          {folder.description && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">{folder.description}</p>
+                          )}
+                        </div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-2 whitespace-nowrap px-2 py-1 rounded bg-white/50 dark:bg-gray-700/50 transition-colors">
+                          ({folderFiles.length} {folderFiles.length === 1 ? 'file' : 'files'})
+                          {childFolders.length > 0 && `, ${childFolders.length} ${childFolders.length === 1 ? 'folder' : 'folders'}`}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-sm text-gray-500 ml-2">
-                      ({folderFiles.length} {folderFiles.length === 1 ? 'file' : 'files'})
-                    </span>
-                  </div>
-                  {isExpanded ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500" />
-                  )}
-                </button>
-                {isExpanded && folderFiles.length > 0 && (
-                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {folderFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                      >
+                    {isExpanded && (
+                      <div className="p-4 space-y-4">
+                        {/* Render subfolders */}
+                        {childFolders.length > 0 && (
+                          <div className="space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+                            {renderFolderTree(folder._id, level + 1)}
+                          </div>
+                        )}
+                        {/* Render files in this folder */}
+                        {folderFiles.length > 0 && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {folderFiles.map((file) => (
+                              <div
+                                key={file.id}
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                              >
                         <div className="flex items-start space-x-3 mb-3">
                           {getFileIcon(file.fileType)}
                           <div className="flex-1 min-w-0">
@@ -781,13 +883,32 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                             </button>
                           )}
                         </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              });
+            };
+
+            const treeElements = renderFolderTree();
+            const filteredTree = treeElements.filter((item): item is JSX.Element => item !== null);
+            
+            // Show empty state if no folders
+            if (filteredTree.length === 0 && folders.length === 0) {
+              return (
+                <div className="text-center py-12">
+                  <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">No folders available</p>
+                </div>
+              );
+            }
+            
+            return filteredTree;
+          })()}
           {/* Files without folder */}
           {filteredFiles.filter((file) => {
             if (!file.folder) return true;
@@ -908,6 +1029,14 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
               </div>
             </div>
           )}
+        </div>
+      ) : filteredFiles.length === 0 ? (
+        <div className="text-center py-12">
+          <File className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No files available</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {searchQuery ? 'Try adjusting your search' : 'Files will appear here once uploaded'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

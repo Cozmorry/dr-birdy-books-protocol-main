@@ -9,6 +9,7 @@ import { WalletConnect } from './components/WalletConnect';
 import HomePage from './pages/HomePage';
 import StakingPage from './pages/StakingPage';
 import ContentPage from './pages/ContentPage';
+import FolderDetailPage from './pages/FolderDetailPage';
 import BlogPage from './pages/BlogPage';
 import TierPage from './pages/TierPage';
 import { ToastProvider } from './contexts/ToastContext';
@@ -16,6 +17,25 @@ import { ToastContainer } from './components/ToastContainer';
 import { Onboarding } from './components/Onboarding';
 import { useOnboarding } from './hooks/useOnboarding';
 import AdminRoute from './AdminRoute';
+
+// Wrapper component for FolderDetailPage to access store
+function FolderDetailPageWrapper() {
+  const { userInfo, isLoading, loadUserInfo } = useContractsStore();
+  
+  return (
+    <FolderDetailPage
+      userInfo={userInfo}
+      userTier={userInfo?.tier ?? -1}
+      hasAccess={userInfo?.hasAccess ?? false}
+      isLoading={isLoading}
+      onRefreshTier={async () => {
+        if (userInfo?.address) {
+          await loadUserInfo(userInfo.address);
+        }
+      }}
+    />
+  );
+}
 
 function MainApp() {
   const {
@@ -138,6 +158,7 @@ function MainApp() {
             />
             <Route path="staking" element={<StakingPage />} />
             <Route path="content" element={<ContentPage />} />
+            <Route path="content/folders/:id" element={<FolderDetailPageWrapper />} />
             <Route path="blog" element={<BlogPage />} />
             <Route path="tier" element={<TierPage />} />
           </Route>

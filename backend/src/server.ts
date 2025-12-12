@@ -64,13 +64,17 @@ app.use(helmet({
 // More lenient in development mode
 const isDevelopment = process.env.NODE_ENV === 'development';
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
+  windowMs: isDevelopment ? 60 * 1000 : parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 1 minute in dev, 15 minutes in prod
   max: isDevelopment 
-    ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000') // 1000 requests in dev
+    ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '5000') // 5000 requests per minute in dev
     : parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // 100 requests in production
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and in development if needed
+    return isDevelopment && req.path === '/health';
+  },
 });
 
 // More lenient rate limiter for auth routes (login, token refresh, etc.)
@@ -94,7 +98,16 @@ const feedbackLimiter = rateLimit({
 // More lenient rate limiter for files and blog routes (user-facing content)
 const contentLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 120, // 120 requests per minute (more lenient for content browsing)
+  max: isDevelopment ? 500 : 120, // 500 requests per minute in dev, 120 in production
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// More lenient rate limiter for folders and analytics (admin dashboard needs frequent updates)
+const adminDataLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDevelopment ? 500 : 200, // 500 requests per minute in dev, 200 in production
   message: 'Too many requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -116,6 +129,11 @@ app.use('/api/', (req, res, next) => {
   // Files and blog routes get more lenient rate limiting
   if (path.startsWith('/files') || path.startsWith('/blog')) {
     return contentLimiter(req, res, next);
+  }
+  
+  // Folders and analytics routes need more lenient limits (admin dashboard)
+  if (path.startsWith('/folders') || path.startsWith('/analytics')) {
+    return adminDataLimiter(req, res, next);
   }
   
   // All other routes use general limiter
