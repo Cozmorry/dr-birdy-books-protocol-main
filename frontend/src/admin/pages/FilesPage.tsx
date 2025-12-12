@@ -10,7 +10,8 @@ export default function FilesPage() {
   const [folders, setFolders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, { status: 'pending' | 'uploading' | 'success' | 'error'; message?: string }>>({});
   const [description, setDescription] = useState('');
   const [tier, setTier] = useState(-1);
   const [selectedFolder, setSelectedFolder] = useState('');
@@ -120,41 +121,95 @@ export default function FilesPage() {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles(filesArray);
+      // Initialize upload progress for all files
+      const progress: Record<string, { status: 'pending' | 'uploading' | 'success' | 'error'; message?: string }> = {};
+      filesArray.forEach(file => {
+        progress[file.name] = { status: 'pending' };
+      });
+      setUploadProgress(progress);
     }
   };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedFile || !description) {
-      setMessage({ type: 'error', text: 'Please select a file and provide a description' });
+    if (selectedFiles.length === 0 || !description) {
+      setMessage({ type: 'error', text: 'Please select at least one file and provide a description' });
       return;
     }
 
     setIsUploading(true);
     setMessage(null);
 
+    // Initialize all files as uploading
+    const initialProgress: Record<string, { status: 'pending' | 'uploading' | 'success' | 'error'; message?: string }> = {};
+    selectedFiles.forEach(file => {
+      initialProgress[file.name] = { status: 'uploading' };
+    });
+    setUploadProgress(initialProgress);
+
+    // Upload all files in parallel
+    const uploadPromises = selectedFiles.map(async (file) => {
+      try {
+        const response = await api.uploadFile(file, description, tier, selectedFolder || undefined);
+        
+        if (response.success) {
+          setUploadProgress(prev => ({
+            ...prev,
+            [file.name]: { status: 'success', message: 'Uploaded successfully' }
+          }));
+          return { success: true, fileName: file.name };
+        } else {
+          setUploadProgress(prev => ({
+            ...prev,
+            [file.name]: { status: 'error', message: response.message || 'Upload failed' }
+          }));
+          return { success: false, fileName: file.name, error: response.message || 'Upload failed' };
+        }
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.message || 'Failed to upload file';
+        setUploadProgress(prev => ({
+          ...prev,
+          [file.name]: { status: 'error', message: errorMessage }
+        }));
+        return { success: false, fileName: file.name, error: errorMessage };
+      }
+    });
+
     try {
-      const response = await api.uploadFile(selectedFile, description, tier, selectedFolder || undefined);
-      
-      if (response.success) {
-        setMessage({ type: 'success', text: 'File uploaded successfully!' });
-        setSelectedFile(null);
+      const results = await Promise.all(uploadPromises);
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.filter(r => !r.success).length;
+
+      if (failureCount === 0) {
+        setMessage({ type: 'success', text: `${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully!` });
+      } else if (successCount === 0) {
+        setMessage({ type: 'error', text: `All ${failureCount} file${failureCount > 1 ? 's' : ''} failed to upload` });
+      } else {
+        setMessage({ type: 'error', text: `${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully, ${failureCount} failed` });
+      }
+
+      // Reset form if all uploads succeeded
+      if (failureCount === 0) {
+        setSelectedFiles([]);
         setDescription('');
         setTier(-1);
         setSelectedFolder('');
-        loadFiles();
+        setUploadProgress({});
         
         // Reset file input
         const fileInput = document.getElementById('file-input') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       }
+
+      loadFiles();
     } catch (error: any) {
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Failed to upload file',
+        text: error.response?.data?.message || 'Failed to upload files',
       });
     } finally {
       setIsUploading(false);
@@ -263,14 +318,75 @@ export default function FilesPage() {
             <input
               id="file-input"
               type="file"
+              multiple
               onChange={handleFileSelect}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
               disabled={isUploading}
             />
-            {selectedFile && (
-              <p className="text-xs text-gray-500 mt-1">
-                Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
-              </p>
+            {selectedFiles.length > 0 && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-gray-600 font-medium">
+                  {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected:
+                </p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {selectedFiles.map((file, index) => {
+                    const progress = uploadProgress[file.name];
+                    const status = progress?.status || 'pending';
+                    return (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-700 truncate">{file.name}</p>
+                          <p className="text-gray-500">{formatFileSize(file.size)}</p>
+                        </div>
+                        <div className="ml-2 flex items-center gap-2">
+                          {status === 'uploading' && (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                          )}
+                          {status === 'success' && (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          )}
+                          {status === 'error' && (
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                          )}
+                          {status === 'pending' && !isUploading && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFiles = selectedFiles.filter((_, i) => i !== index);
+                                setSelectedFiles(newFiles);
+                                const newProgress = { ...uploadProgress };
+                                delete newProgress[file.name];
+                                setUploadProgress(newProgress);
+                              }}
+                              className="text-red-600 hover:text-red-800"
+                              title="Remove file"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                          {status === 'pending' && isUploading && (
+                            <div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {Object.values(uploadProgress).some(p => p.status === 'error' && p.message) && (
+                  <div className="mt-2 space-y-1">
+                    {Object.entries(uploadProgress)
+                      .filter(([_, p]) => p.status === 'error' && p.message)
+                      .map(([fileName, progress]) => (
+                        <p key={fileName} className="text-xs text-red-600">
+                          {fileName}: {progress.message}
+                        </p>
+                      ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -326,7 +442,7 @@ export default function FilesPage() {
 
           <button
             type="submit"
-            disabled={isUploading || !selectedFile || !description}
+            disabled={isUploading || selectedFiles.length === 0 || !description}
             className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? (

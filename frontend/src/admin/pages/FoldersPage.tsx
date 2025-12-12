@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Folder, FolderPlus, Edit, Trash2, FolderOpen, ChevronRight, ChevronDown, Eye, File, Download, X, AlertTriangle } from 'lucide-react';
 import { getIconFromName, SUGGESTED_ICONS } from '../utils/iconUtils';
+import FolderSelector from '../components/FolderSelector';
 
 interface FolderData {
   _id: string;
@@ -602,20 +603,11 @@ export default function FoldersPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Parent Folder
                   </label>
-                  <select
+                  <FolderSelector
+                    folders={folders.filter(f => !editingFolder || f._id !== editingFolder._id)}
                     value={formData.parentFolder}
-                    onChange={(e) => setFormData({ ...formData, parentFolder: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">Root (No parent)</option>
-                    {folders
-                      .filter(f => !editingFolder || f._id !== editingFolder._id)
-                      .map((folder) => (
-                        <option key={folder._id} value={folder._id}>
-                          {folder.name}
-                        </option>
-                      ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, parentFolder: value })}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
