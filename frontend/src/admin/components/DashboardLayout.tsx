@@ -55,17 +55,20 @@ export default function DashboardLayout() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center">
+          <div className="flex items-center justify-between min-h-[4rem] px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               <img 
                 src="/birdy%20logo.png" 
                 alt="Dr. Birdy Books" 
-                className="h-10 w-auto object-contain max-w-[200px]"
+                className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover flex-shrink-0"
               />
+              <span className="text-[9px] sm:text-[10px] font-bold tracking-wide text-gray-900 dark:text-gray-100 truncate" style={{ fontFamily: "'Nunito', sans-serif", letterSpacing: '0.02em', lineHeight: '1.2' }}>
+                Dr. Birdy Books Protocol Token
+              </span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex-shrink-0 ml-2"
             >
               <X className="h-6 w-6" />
             </button>
@@ -112,11 +115,11 @@ export default function DashboardLayout() {
           <div className="border-t border-gray-200 dark:border-gray-800 p-4">
             <div className="flex items-center mb-3">
               <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-blue-900 flex items-center justify-center">
-                  <span className="text-primary-700 dark:text-blue-200 font-semibold text-sm">
-                    {admin?.username.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <img 
+                  src="/birdy%20logo.png" 
+                  alt="Dr. Birdy Books" 
+                  className="w-10 h-10 rounded-full object-cover"
+                />
               </div>
               <div className="ml-3 flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">

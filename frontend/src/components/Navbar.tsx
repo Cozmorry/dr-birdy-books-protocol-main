@@ -95,15 +95,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto pl-0 pr-4 sm:pr-6 lg:pr-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
-          <Link to="/" className="flex items-center flex-shrink-0">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
             <img 
               src="/birdy%20logo.png" 
               alt="Dr. Birdy Books" 
-              className="h-14 w-auto sm:h-16 sm:w-auto object-contain min-w-[200px] max-w-[300px]"
+              className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full object-cover flex-shrink-0"
             />
+            <span className="text-[10px] sm:text-xs md:text-sm lg:text-base font-bold tracking-wide text-gray-900 dark:text-gray-100 truncate" style={{ fontFamily: "'Nunito', sans-serif", letterSpacing: '0.02em' }}>
+              Dr. Birdy Books Protocol Token
+            </span>
           </Link>
 
           {/* Desktop Navigation Links */}

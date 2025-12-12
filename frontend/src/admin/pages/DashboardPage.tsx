@@ -100,7 +100,7 @@ export default function DashboardPage() {
             Top Downloaded Files
           </h2>
           {analytics?.topFiles && analytics.topFiles.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[280px] overflow-y-auto">
               {analytics.topFiles.slice(0, 5).map((file: any) => (
                 <div key={file._id} className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             Top Blog Posts
           </h2>
           {analytics?.topBlogPosts && analytics.topBlogPosts.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[280px] overflow-y-auto">
               {analytics.topBlogPosts.slice(0, 5).map((post: any) => (
                 <div key={post._id} className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">

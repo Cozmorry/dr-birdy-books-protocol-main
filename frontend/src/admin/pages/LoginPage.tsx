@@ -32,9 +32,12 @@ export default function LoginPage() {
             <img 
               src="/birdy%20logo.png" 
               alt="Dr. Birdy Books" 
-              className="h-20 w-auto object-contain max-w-[300px]"
+              className="h-20 w-auto object-contain max-w-[300px] rounded-full"
             />
           </div>
+          <p className="text-sm sm:text-base md:text-lg font-bold tracking-wide text-gray-900 dark:text-gray-100 mt-2" style={{ fontFamily: "'Nunito', sans-serif", letterSpacing: '0.02em' }}>
+            Dr. Birdy Books Protocol Token
+          </p>
           <p className="text-gray-600 dark:text-gray-200 dark:drop-shadow mt-2 login-subtitle">Admin Dashboard</p>
         </div>
 
