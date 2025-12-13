@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Folder, FolderPlus, Edit, Trash2, FolderOpen, ChevronRight, ChevronDown, Eye, File, Download, X, AlertTriangle } from 'lucide-react';
+import { Folder, FolderPlus, Edit, Trash2, FolderOpen, ChevronRight, ChevronDown, Eye, File, Download, X, AlertTriangle, Grid3x3, List } from 'lucide-react';
 import { getIconFromName, SUGGESTED_ICONS } from '../utils/iconUtils';
 import FolderSelector from '../components/FolderSelector';
 
@@ -43,6 +43,8 @@ export default function FoldersPage() {
   const [editingFile, setEditingFile] = useState<FileData | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [folderSearchQuery, setFolderSearchQuery] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [deleteFolderConfirm, setDeleteFolderConfirm] = useState<{ show: boolean; folderId: string | null }>({
     show: false,
@@ -333,11 +335,33 @@ export default function FoldersPage() {
   };
 
   const getRootFolders = () => {
-    return folders.filter(f => !f.parentFolder || !f.parentFolder._id);
+    let rootFolders = folders.filter(f => !f.parentFolder || !f.parentFolder._id);
+    
+    // Apply folder search filter
+    if (folderSearchQuery.trim()) {
+      const query = folderSearchQuery.toLowerCase();
+      rootFolders = rootFolders.filter(f => 
+        f.name?.toLowerCase().includes(query) ||
+        f.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    return rootFolders;
   };
 
   const getChildFolders = (parentId: string) => {
-    return folders.filter(f => f.parentFolder?._id === parentId);
+    let childFolders = folders.filter(f => f.parentFolder?._id === parentId);
+    
+    // Apply folder search filter to child folders too
+    if (folderSearchQuery.trim()) {
+      const query = folderSearchQuery.toLowerCase();
+      childFolders = childFolders.filter(f => 
+        f.name?.toLowerCase().includes(query) ||
+        f.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    return childFolders;
   };
 
   const renderFolderTree = (parentId: string | null = null, level: number = 0) => {
@@ -553,12 +577,120 @@ export default function FoldersPage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Folders</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Folders</h2>
+          {/* Search and View Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search folders..."
+              value={folderSearchQuery}
+              onChange={(e) => setFolderSearchQuery(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            />
+            <div className="flex items-center gap-1 border border-gray-300 rounded-md p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                title="Grid view"
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                title="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
         {folders.length === 0 ? (
           <div className="text-center py-12">
             <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">No folders yet</p>
             <p className="text-sm text-gray-500 mt-2">Create your first folder to organize files</p>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {getRootFolders().map((folder) => {
+              const IconComponent = getIconFromName(folder.icon);
+              return (
+                <div
+                  key={folder._id}
+                  onClick={() => handleViewFiles(folder._id)}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 flex flex-col h-full cursor-pointer"
+                >
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div
+                            className="w-5 h-5 rounded flex-shrink-0"
+                            style={{ backgroundColor: folder.color || '#3B82F6' }}
+                          />
+                          <IconComponent className="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate" title={folder.name}>
+                            {folder.name}
+                          </h3>
+                        </div>
+                        {folder.description && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{folder.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-1 mb-3 text-xs text-gray-500 dark:text-gray-400 flex-grow">
+                      <div>Files: {folder.fileCount || 0}</div>
+                      <div>Tier: {folder.tier === -1 ? 'Admin' : `Tier ${folder.tier + 1}`}</div>
+                      {!folder.isActive && (
+                        <div className="text-red-500">Inactive</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewFiles(folder._id);
+                      }}
+                      className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
+                      title="View files"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(folder);
+                      }}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                      title="Edit folder"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(folder._id);
+                      }}
+                      className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                      title="Delete folder"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div>{renderFolderTree()}</div>
