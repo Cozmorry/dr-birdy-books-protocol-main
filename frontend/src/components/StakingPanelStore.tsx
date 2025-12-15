@@ -26,6 +26,15 @@ export const StakingPanelStore: React.FC = () => {
   const { provider, signer } = useWeb3Store();
 
   const [stakeAmount, setStakeAmount] = useState('');
+  const [showTierInfo, setShowTierInfo] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      const stored = window.localStorage.getItem('dbbpt_show_tier_info');
+      return stored !== 'hidden';
+    } catch {
+      return true;
+    }
+  });
   const [unstakeAmount, setUnstakeAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [contractStatus, setContractStatus] = useState<{
@@ -600,7 +609,13 @@ export const StakingPanelStore: React.FC = () => {
       <div className="space-y-6">
         {/* Single Stake */}
         <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Stake Tokens</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-medium text-gray-900">Stake Tokens</h3>
+            <div className="inline-flex items-center rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-[11px] font-medium text-blue-700">
+              <span className="h-2 w-2 rounded-full bg-blue-500 mr-2" />
+              1 DBBPT ≈ $1 USD
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="number"
@@ -626,6 +641,43 @@ export const StakingPanelStore: React.FC = () => {
                 {isProcessing ? 'Approving...' : 'Approve'}
               </button>
             </div>
+          </div>
+
+          {/* Tier Information Message with Hide/Show Toggle */}
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowTierInfo(prev => {
+                  const next = !prev;
+                  try {
+                    window.localStorage.setItem('dbbpt_show_tier_info', next ? 'visible' : 'hidden');
+                  } catch {
+                    // ignore storage errors
+                  }
+                  return next;
+                });
+              }}
+              className="text-xs text-blue-600 hover:text-blue-700 underline"
+            >
+              {showTierInfo ? 'Hide tier staking info' : 'Show tier staking info'}
+            </button>
+
+            {showTierInfo && (
+              <div className="mt-1 rounded-md bg-blue-50 border border-blue-100 p-3 text-xs text-blue-900 space-y-1">
+                <p className="font-semibold">
+                  In the field above where you enter the number of tokens to stake, please keep in mind that to access Dr. Birdy Books tiered content, you must stake a minimum amount of DBBPT tokens equal to the USD value listed below, based on the current token price:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Tier 1: $24 worth of DBBPT tokens</li>
+                  <li>Tier 2: $50 worth of DBBPT tokens</li>
+                  <li>Tier 3: $1,000 worth of DBBPT tokens</li>
+                </ul>
+                <p>
+                  Please enter the number of tokens you want to stake. Make sure your stake meets or exceeds the required amount for the content tier you wish to unlock.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
