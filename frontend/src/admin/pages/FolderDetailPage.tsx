@@ -16,9 +16,10 @@ import {
   CheckCircle,
   AlertTriangle,
   ChevronRight,
+  Eye,
 } from 'lucide-react';
 import FolderSelector from '../components/FolderSelector';
-import { getIconFromName } from '../utils/iconUtils';
+import { getIconFromName, SUGGESTED_ICONS } from '../utils/iconUtils';
 
 interface FileData {
   _id: string;
@@ -42,6 +43,7 @@ interface FolderData {
   fileCount?: number;
   createdAt?: string;
   parentFolder?: any;
+  order?: number;
 }
 
 export default function FolderDetailPage() {
@@ -69,6 +71,21 @@ export default function FolderDetailPage() {
     show: false,
     fileId: null,
   });
+  const [deleteFolderConfirm, setDeleteFolderConfirm] = useState<{ show: boolean; folderId: string | null }>({
+    show: false,
+    folderId: null,
+  });
+  const [editingFolder, setEditingFolder] = useState<FolderData | null>(null);
+  const [folderFormData, setFolderFormData] = useState({
+    name: '',
+    description: '',
+    parentFolder: '',
+    tier: -1,
+    color: '#3B82F6',
+    icon: '',
+    order: 0,
+  });
+  const [isUpdatingFolder, setIsUpdatingFolder] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -257,6 +274,80 @@ export default function FolderDetailPage() {
       console.error('Failed to delete file:', error);
       setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to delete file' });
       setDeleteConfirm({ show: false, fileId: null });
+    }
+  };
+
+  const handleDeleteFolderClick = (folderId: string) => {
+    setDeleteFolderConfirm({ show: true, folderId });
+  };
+
+  const handleDeleteFolderConfirm = async () => {
+    if (!deleteFolderConfirm.folderId) return;
+
+    try {
+      const response = await api.deleteFolder(deleteFolderConfirm.folderId);
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Folder deleted successfully' });
+        setDeleteFolderConfirm({ show: false, folderId: null });
+        loadFolders();
+        loadFolder(); // Refresh current folder
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Failed to delete folder' });
+        setDeleteFolderConfirm({ show: false, folderId: null });
+      }
+    } catch (error: any) {
+      console.error('Failed to delete folder:', error);
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to delete folder' });
+      setDeleteFolderConfirm({ show: false, folderId: null });
+    }
+  };
+
+  const handleViewFolder = (folderId: string) => {
+    navigate(`/admin/folders/${folderId}`);
+  };
+
+  const handleEditFolder = (folder: FolderData) => {
+    setFolderFormData({
+      name: folder.name,
+      description: folder.description || '',
+      parentFolder: folder.parentFolder?._id || '',
+      tier: folder.tier,
+      color: folder.color || '#3B82F6',
+      icon: folder.icon || '',
+      order: folder.order || 0,
+    });
+    setEditingFolder(folder);
+  };
+
+  const handleUpdateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFolder) return;
+
+    try {
+      setIsUpdatingFolder(true);
+      const response = await api.updateFolder(editingFolder._id, {
+        name: folderFormData.name,
+        description: folderFormData.description,
+        parentFolder: folderFormData.parentFolder || null,
+        tier: folderFormData.tier,
+        color: folderFormData.color,
+        icon: folderFormData.icon,
+        order: folderFormData.order,
+      });
+
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Folder updated successfully' });
+        setEditingFolder(null);
+        loadFolders();
+        loadFolder(); // Refresh current folder
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Failed to update folder' });
+      }
+    } catch (error: any) {
+      console.error('Failed to update folder:', error);
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to update folder' });
+    } finally {
+      setIsUpdatingFolder(false);
     }
   };
 
@@ -505,12 +596,14 @@ export default function FolderDetailPage() {
           {subfolders.map((subfolder) => (
             <div
               key={subfolder._id}
-              onClick={() => navigate(`/admin/folders/${subfolder._id}`)}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 flex flex-col h-full cursor-pointer"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 flex flex-col h-full"
             >
               <div className="flex-1 flex flex-col">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
+                  <div 
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => navigate(`/admin/folders/${subfolder._id}`)}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <div
                         className="w-5 h-5 rounded flex-shrink-0"
@@ -533,6 +626,38 @@ export default function FolderDetailPage() {
                   <div>Files: {subfolder.fileCount || 0}</div>
                   <div>Tier: {subfolder.tier === -1 ? 'Admin' : `Tier ${subfolder.tier + 1}`}</div>
                 </div>
+              </div>
+              <div className="flex items-center gap-1 pt-3 border-t border-gray-100 dark:border-gray-700 mt-auto">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewFolder(subfolder._id);
+                  }}
+                  className="flex-1 p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors text-xs font-medium"
+                  title="View folder"
+                >
+                  <Eye className="h-4 w-4 mx-auto" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditFolder(subfolder);
+                  }}
+                  className="flex-1 p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors text-xs font-medium"
+                  title="Edit folder"
+                >
+                  <Edit className="h-4 w-4 mx-auto" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFolderClick(subfolder._id);
+                  }}
+                  className="flex-1 p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors text-xs font-medium"
+                  title="Delete folder"
+                >
+                  <Trash2 className="h-4 w-4 mx-auto" />
+                </button>
               </div>
             </div>
           ))}
@@ -628,11 +753,13 @@ export default function FolderDetailPage() {
                 {subfolders.map((subfolder) => (
                   <tr
                     key={`folder-${subfolder._id}`}
-                    onClick={() => navigate(`/admin/folders/${subfolder._id}`)}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                      <div 
+                        className="flex items-center cursor-pointer"
+                        onClick={() => navigate(`/admin/folders/${subfolder._id}`)}
+                      >
                         <div
                           className="w-4 h-4 rounded mr-3"
                           style={{ backgroundColor: subfolder.color || '#3B82F6' }}
@@ -667,19 +794,38 @@ export default function FolderDetailPage() {
                       {subfolder.createdAt ? formatDate(subfolder.createdAt) : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/folders/${subfolder._id}`);
-                        }}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300"
-                        title="Open folder"
-                      >
-                        {(() => {
-                          const IconComponent = getIconFromName(subfolder.icon);
-                          return <IconComponent className="h-4 w-4" />;
-                        })()}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewFolder(subfolder._id);
+                          }}
+                          className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
+                          title="View folder"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditFolder(subfolder);
+                          }}
+                          className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                          title="Edit folder"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFolderClick(subfolder._id);
+                          }}
+                          className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                          title="Delete folder"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -841,6 +987,155 @@ export default function FolderDetailPage() {
         </div>
       )}
 
+      {/* Edit Folder Modal */}
+      {editingFolder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Folder</h2>
+              <button
+                onClick={() => setEditingFolder(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateFolder} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Folder Name *
+                </label>
+                <input
+                  type="text"
+                  value={folderFormData.name}
+                  onChange={(e) => setFolderFormData({ ...folderFormData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={folderFormData.description}
+                  onChange={(e) => setFolderFormData({ ...folderFormData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Parent Folder
+                </label>
+                <FolderSelector
+                  folders={folders.filter(f => f._id !== editingFolder._id)}
+                  value={folderFormData.parentFolder}
+                  onChange={(value) => setFolderFormData({ ...folderFormData, parentFolder: value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Access Tier
+                </label>
+                <select
+                  value={folderFormData.tier}
+                  onChange={(e) => setFolderFormData({ ...folderFormData, tier: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value={-1}>Admin Only</option>
+                  <option value={0}>Tier 1 ($24)</option>
+                  <option value={1}>Tier 2 ($50)</option>
+                  <option value={2}>Tier 3 ($1000)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Color
+                  </label>
+                  <input
+                    type="color"
+                    value={folderFormData.color}
+                    onChange={(e) => setFolderFormData({ ...folderFormData, color: e.target.value })}
+                    className="w-full h-10 border border-gray-300 dark:border-gray-600 rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Order
+                  </label>
+                  <input
+                    type="number"
+                    value={folderFormData.order}
+                    onChange={(e) => setFolderFormData({ ...folderFormData, order: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Icon (optional)
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={folderFormData.icon}
+                    onChange={(e) => setFolderFormData({ ...folderFormData, icon: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="">Default (Folder)</option>
+                    {SUGGESTED_ICONS.map((iconName) => {
+                      const IconComponent = getIconFromName(iconName);
+                      return (
+                        <option key={iconName} value={iconName}>
+                          {iconName}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {folderFormData.icon && (
+                    <div className="flex items-center justify-center w-10 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700">
+                      {(() => {
+                        const IconComponent = getIconFromName(folderFormData.icon);
+                        return <IconComponent className="h-5 w-5 text-gray-600 dark:text-gray-400" />;
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Select a Lucide icon name (e.g., book, video, file-text)
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingFolder(null)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingFolder}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md transition-colors disabled:opacity-50"
+                >
+                  {isUpdatingFolder ? 'Updating...' : 'Update Folder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirm.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -872,6 +1167,47 @@ export default function FolderDetailPage() {
                 <button
                   type="button"
                   onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Folder Confirmation Modal */}
+      {deleteFolderConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Delete Folder
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Are you sure you want to delete this folder? This action cannot be undone. All files and subfolders in this folder will also be deleted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteFolderConfirm({ show: false, folderId: null })}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteFolderConfirm}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
                   Delete

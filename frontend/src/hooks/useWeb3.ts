@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
 import { BASE_MAINNET, BASE_TESTNET, LOCALHOST, getContractAddresses } from '../config/networks';
 import { trackWalletConnect } from '../utils/analytics';
@@ -24,6 +24,7 @@ export const useWeb3 = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const manuallyDisconnectedRef = useRef(false);
 
   const connectWallet = useCallback(async () => {
     if (typeof window.ethereum === 'undefined') {
@@ -117,6 +118,9 @@ export const useWeb3 = () => {
         isCorrectNetwork,
       });
       
+      // Reset manual disconnect flag since user is connecting
+      manuallyDisconnectedRef.current = false;
+      
       // Track wallet connection in Google Analytics
       const walletType = window.ethereum?.isMetaMask ? 'MetaMask' : 
                         window.ethereum?.isCoinbaseWallet ? 'Coinbase Wallet' : 
@@ -192,6 +196,9 @@ export const useWeb3 = () => {
         isConnected: true,
         isCorrectNetwork: chainId === LOCALHOST.chainId,
       });
+      
+      // Reset manual disconnect flag since user is connecting
+      manuallyDisconnectedRef.current = false;
     } catch (err: any) {
       setError(err.message || 'Failed to connect to localhost node');
     } finally {
@@ -243,6 +250,9 @@ export const useWeb3 = () => {
   }, []);
 
   const disconnect = useCallback(() => {
+    // Mark as manually disconnected to prevent auto-reconnect
+    manuallyDisconnectedRef.current = true;
+    
     setWeb3State({
       provider: null,
       signer: null,
@@ -257,6 +267,9 @@ export const useWeb3 = () => {
   // Auto-reconnect on page load if wallet was previously connected
   useEffect(() => {
     const checkConnection = async () => {
+      // Don't auto-reconnect if user manually disconnected
+      if (manuallyDisconnectedRef.current) return;
+      
       if (typeof window.ethereum === 'undefined') return;
       
       try {
@@ -309,6 +322,8 @@ export const useWeb3 = () => {
       if (accounts.length === 0) {
         disconnect();
       } else {
+        // Reset manual disconnect flag since user has accounts (switched account)
+        manuallyDisconnectedRef.current = false;
         setWeb3State(prev => ({ ...prev, account: accounts[0] }));
       }
     };
