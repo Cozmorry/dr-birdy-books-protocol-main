@@ -742,6 +742,25 @@ export default function FoldersPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Access Tier
+                  </label>
+                  <select
+                    value={formData.tier}
+                    onChange={(e) => setFormData({ ...formData, tier: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value={-1}>Admin Only</option>
+                    <option value={0}>Tier 1 ($24)</option>
+                    <option value={1}>Tier 2 ($50)</option>
+                    <option value={2}>Tier 3 ($1000)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    All files and subfolders will inherit this tier
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

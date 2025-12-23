@@ -133,12 +133,45 @@ export default function FolderDetailPage({
     
     try {
       const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${API_BASE_URL}/folders/${id}`);
+      const walletAddress = userInfo?.address;
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (walletAddress) {
+        params.append('walletAddress', walletAddress);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/folders/${id}?${params.toString()}`);
+      
+      if (response.status === 403) {
+        // Access denied - user doesn't have required tier
+        const errorData = await response.json();
+        addToast({
+          type: 'error',
+          title: 'Access Denied',
+          message: errorData.message || 'You do not have access to this folder. Please unlock the required tier.',
+        });
+        navigate('/content');
+        return;
+      }
       
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setFolder(data.data);
+          const folderData = data.data;
+          
+          // Check access on frontend as well
+          if (walletAddress && !canAccessFolder(folderData.tier)) {
+            addToast({
+              type: 'error',
+              title: 'Access Denied',
+              message: `This folder requires ${folderData.tier === 0 ? 'Tier 1' : folderData.tier === 1 ? 'Tier 2' : 'Tier 3'} access.`,
+            });
+            navigate('/content');
+            return;
+          }
+          
+          setFolder(folderData);
           
           // Only build breadcrumb if we have folders
           if (foldersToUse.length > 0) {
@@ -158,7 +191,7 @@ export default function FolderDetailPage({
     } catch (error) {
       console.error('Failed to load folder:', error);
     }
-  }, [id, buildBreadcrumbPath]);
+  }, [id, buildBreadcrumbPath, userInfo?.address, userTier, navigate, addToast]);
 
   const loadFiles = useCallback(async () => {
     if (!id) return;
@@ -267,6 +300,16 @@ export default function FolderDetailPage({
     if (file.tier === -1) return false;
     if (userTier >= 0) {
       return file.tier <= userTier;
+    }
+    return false;
+  };
+
+  const canAccessFolder = (folderTier: number): boolean => {
+    // Admin folders (-1) are not accessible to regular users
+    if (folderTier === -1) return false;
+    // User must have unlocked the required tier or higher
+    if (userTier >= 0) {
+      return folderTier <= userTier;
     }
     return false;
   };

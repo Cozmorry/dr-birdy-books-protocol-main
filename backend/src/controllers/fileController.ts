@@ -36,13 +36,11 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
     }
     
     const { description, folder } = req.body;
-    // Parse tier from form data (multer sends it as string)
-    const tierRaw = req.body.tier !== undefined ? req.body.tier : -1;
-    const tierValue = isNaN(Number(tierRaw)) ? -1 : Number(tierRaw);
-    const tier = tierValue >= -1 && tierValue <= 2 ? tierValue : -1;
     
-    // Validate folder if provided
+    // Validate folder if provided and inherit its tier
     let folderId = null;
+    let tier = -1; // Default to Admin
+    
     if (folder && folder !== 'null' && folder !== '') {
       const Folder = (await import('../models/Folder')).default;
       const folderDoc = await Folder.findById(folder);
@@ -54,6 +52,13 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
         return;
       }
       folderId = folder;
+      // Inherit tier from parent folder
+      tier = folderDoc.tier;
+    } else {
+      // If no folder, parse tier from request body
+      const tierRaw = req.body.tier !== undefined ? req.body.tier : -1;
+      const tierValue = isNaN(Number(tierRaw)) ? -1 : Number(tierRaw);
+      tier = tierValue >= -1 && tierValue <= 2 ? tierValue : -1;
     }
     
     console.log('📝 File upload request:', {
@@ -61,8 +66,8 @@ export const uploadFile = async (req: AuthRequest, res: Response): Promise<void>
       hasBuffer: !!req.file?.buffer,
       fileSize: req.file?.size,
       originalName: req.file?.originalname,
-      tierRaw: tierRaw,
       tierParsed: tier,
+      folder: folderId,
     });
     
     if (!description) {
@@ -734,7 +739,7 @@ export const updateFile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     
-    // Validate folder if provided
+    // Validate folder if provided and inherit tier
     if (folder !== undefined) {
       if (folder && folder !== 'null' && folder !== '') {
         const Folder = (await import('../models/Folder')).default;
@@ -747,14 +752,31 @@ export const updateFile = async (req: AuthRequest, res: Response): Promise<void>
           return;
         }
         file.folder = folder;
+        // Inherit tier from folder when moving to a folder
+        file.tier = folderDoc.tier;
       } else {
         file.folder = undefined;
+        // If removing from folder, allow tier to be set manually
+        if (tier !== undefined) {
+          file.tier = Number(tier);
+        }
+      }
+    } else if (file.folder) {
+      // File is staying in current folder - tier should match folder
+      const Folder = (await import('../models/Folder')).default;
+      const folderDoc = await Folder.findById(file.folder);
+      if (folderDoc) {
+        file.tier = folderDoc.tier;
+      }
+    } else {
+      // File has no folder - allow tier to be set manually
+      if (tier !== undefined) {
+        file.tier = Number(tier);
       }
     }
     
     // Update fields
     if (description !== undefined) file.description = description;
-    if (tier !== undefined) file.tier = Number(tier);
     if (isActive !== undefined) file.isActive = isActive;
     
     await file.save();

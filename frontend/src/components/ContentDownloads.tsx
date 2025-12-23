@@ -257,7 +257,16 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const loadFolders = useCallback(async () => {
     try {
       const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
-      const response = await fetch(`${API_BASE_URL}/folders?includeInactive=false`);
+      const walletAddress = userInfo?.address;
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('includeInactive', 'false');
+      if (walletAddress) {
+        params.append('walletAddress', walletAddress);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/folders?${params.toString()}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -269,7 +278,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     } catch (error) {
       console.error('Failed to load folders:', error);
     }
-  }, []);
+  }, [userInfo?.address]);
 
   const loadAvailableFiles = useCallback(async () => {
     try {

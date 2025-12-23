@@ -2,13 +2,71 @@ import { Response } from 'express';
 import Folder from '../models/Folder';
 import File from '../models/File';
 import { AuthRequest } from '../middleware/auth';
+import { getUserTier } from '../config/blockchain';
+
+// Helper function to get all descendant folders recursively
+const getAllDescendantFolders = async (folderId: string): Promise<string[]> => {
+  const childFolders = await Folder.find({ parentFolder: folderId }).select('_id').lean();
+  const childIds = childFolders.map(f => f._id.toString());
+  
+  if (childIds.length === 0) {
+    return [];
+  }
+  
+  const allDescendants = [...childIds];
+  for (const childId of childIds) {
+    const grandChildren = await getAllDescendantFolders(childId);
+    allDescendants.push(...grandChildren);
+  }
+  
+  return allDescendants;
+};
+
+// Helper function to get all files in folder tree
+const getAllFilesInFolderTree = async (folderId: string): Promise<string[]> => {
+  const descendantFolderIds = await getAllDescendantFolders(folderId);
+  const allFolderIds = [folderId, ...descendantFolderIds];
+  
+  const files = await File.find({ folder: { $in: allFolderIds } }).select('_id').lean();
+  return files.map(f => f._id.toString());
+};
+
+// Helper function to cascade tier to subfolders
+const cascadeTierToSubfolders = async (folderId: string, newTier: number): Promise<void> => {
+  const descendantFolderIds = await getAllDescendantFolders(folderId);
+  
+  if (descendantFolderIds.length > 0) {
+    await Folder.updateMany(
+      { _id: { $in: descendantFolderIds } },
+      { $set: { tier: newTier } }
+    );
+  }
+};
+
+// Helper function to cascade tier to files
+const cascadeTierToFiles = async (folderId: string, newTier: number): Promise<void> => {
+  const fileIds = await getAllFilesInFolderTree(folderId);
+  
+  if (fileIds.length > 0) {
+    await File.updateMany(
+      { _id: { $in: fileIds } },
+      { $set: { tier: newTier } }
+    );
+  }
+};
+
+// Helper function to check if a folder is an ancestor of another folder
+const isAncestor = async (potentialAncestorId: string, folderId: string): Promise<boolean> => {
+  const descendantIds = await getAllDescendantFolders(folderId);
+  return descendantIds.includes(potentialAncestorId);
+};
 
 // @desc    Get all folders
 // @route   GET /api/folders
 // @access  Public
 export const getFolders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { tier, parentFolder, includeInactive } = req.query;
+    const { tier, parentFolder, includeInactive, walletAddress } = req.query;
     
     const query: any = {};
     
@@ -36,9 +94,32 @@ export const getFolders = async (req: AuthRequest, res: Response): Promise<void>
       .populate('parentFolder', 'name')
       .lean();
     
+    // Filter by user tier access if walletAddress is provided
+    let accessibleFolders = folders;
+    if (walletAddress && typeof walletAddress === 'string') {
+      try {
+        const userTier = await getUserTier(walletAddress);
+        accessibleFolders = folders.filter((folder) => {
+          // Admin folders (-1) are not accessible to regular users
+          if (folder.tier === -1) {
+            return false;
+          }
+          // User must have unlocked the required tier or higher
+          if (folder.tier >= 0) {
+            return userTier >= 0 && userTier >= folder.tier;
+          }
+          return true;
+        });
+      } catch (error) {
+        console.error('Error verifying user tier for folders:', error);
+        // If tier check fails, return empty array for security
+        accessibleFolders = [];
+      }
+    }
+    
     // Get file counts for each folder
     const foldersWithCounts = await Promise.all(
-      folders.map(async (folder) => {
+      accessibleFolders.map(async (folder) => {
         const fileCount = await File.countDocuments({
           folder: folder._id,
           isActive: true,
@@ -70,6 +151,7 @@ export const getFolders = async (req: AuthRequest, res: Response): Promise<void>
 export const getFolder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { walletAddress } = req.query;
     
     const folder = await Folder.findById(id)
       .populate('parentFolder', 'name')
@@ -81,6 +163,46 @@ export const getFolder = async (req: AuthRequest, res: Response): Promise<void> 
         message: 'Folder not found',
       });
       return;
+    }
+    
+    // Verify access if walletAddress is provided
+    if (walletAddress && typeof walletAddress === 'string') {
+      // Admin folders (-1) are not accessible to regular users
+      if (folder.tier === -1) {
+        res.status(403).json({
+          success: false,
+          message: 'Insufficient tier access',
+          requiredTier: folder.tier,
+          requiredTierName: 'Admin',
+        });
+        return;
+      }
+      
+      // Check tier access for tier-restricted folders
+      if (folder.tier >= 0) {
+        try {
+          const userTier = await getUserTier(walletAddress);
+          // User must have unlocked the required tier or higher
+          if (userTier < 0 || userTier < folder.tier) {
+            res.status(403).json({
+              success: false,
+              message: 'Insufficient tier access',
+              requiredTier: folder.tier,
+              userTier,
+              requiredTierName: folder.tier === 0 ? 'Tier 1' : folder.tier === 1 ? 'Tier 2' : 'Tier 3',
+              userTierName: userTier === -1 ? 'None' : userTier === 0 ? 'Tier 1' : userTier === 1 ? 'Tier 2' : 'Tier 3',
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Error verifying tier access:', error);
+          res.status(403).json({
+            success: false,
+            message: 'Unable to verify access',
+          });
+          return;
+        }
+      }
     }
     
     // Get file count
@@ -202,16 +324,95 @@ export const updateFolder = async (req: AuthRequest, res: Response): Promise<voi
           });
           return;
         }
-        // Prevent nested folder depth issues (optional check)
-        // You can add logic here to prevent too deep nesting if needed
+        
+        // Prevent circular dependency (folder cannot be moved into its own descendant)
+        const wouldCreateCircle = await isAncestor(parentFolder, id);
+        if (wouldCreateCircle) {
+          res.status(400).json({
+            success: false,
+            message: 'Cannot move folder into its own subfolder',
+          });
+          return;
+        }
       }
     }
+    
+    // Track if we need to cascade tier changes
+    let needsCascade = false;
+    let newTier = folder.tier;
+    let movedToParent = false;
+    
+    console.log('📝 Update folder request:', {
+      folderId: id,
+      folderName: folder.name,
+      currentTier: folder.tier,
+      currentParent: folder.parentFolder?.toString(),
+      requestedParent: parentFolder,
+      requestedTier: tier,
+    });
     
     // Update fields
     if (name !== undefined) folder.name = name.trim();
     if (description !== undefined) folder.description = description?.trim() || '';
-    if (parentFolder !== undefined) folder.parentFolder = parentFolder === 'null' || parentFolder === '' ? null : parentFolder;
-    if (tier !== undefined) folder.tier = Number(tier) >= -1 && Number(tier) <= 2 ? Number(tier) : folder.tier;
+    
+    // Handle parent folder change - inherit tier from new parent
+    if (parentFolder !== undefined) {
+      const oldParent = folder.parentFolder?.toString();
+      const newParent = parentFolder === 'null' || parentFolder === '' ? null : parentFolder;
+      
+      // If parent is actually changing
+      if (oldParent !== newParent) {
+        console.log('🔄 Parent folder changing:', { oldParent, newParent });
+        folder.parentFolder = newParent;
+        
+        // If moving to a parent folder, inherit its tier
+        if (newParent) {
+          movedToParent = true;
+          const parentDoc = await Folder.findById(newParent);
+          if (parentDoc) {
+            console.log('👨‍👦 Moving to parent folder, inheriting tier:', {
+              parentName: parentDoc.name,
+              parentTier: parentDoc.tier,
+              oldFolderTier: folder.tier,
+            });
+            if (parentDoc.tier !== folder.tier) {
+              newTier = parentDoc.tier;
+              folder.tier = newTier;
+              needsCascade = true;
+              console.log('✅ Tier inherited and will cascade');
+            }
+          }
+        }
+        // If moving to root, allow manual tier update below
+      }
+    }
+    
+    // Handle explicit tier update with cascading
+    // Only allow explicit tier update if NOT moving to a parent folder
+    if (tier !== undefined) {
+      if (movedToParent) {
+        console.log('⚠️ Explicit tier update ignored - folder moved to parent, tier inherited');
+      } else {
+        const tierValue = Number(tier);
+        if (tierValue >= -1 && tierValue <= 2) {
+          if (folder.tier !== tierValue) {
+            console.log('🔄 Explicit tier update:', { oldTier: folder.tier, newTier: tierValue });
+            newTier = tierValue;
+            folder.tier = newTier;
+            needsCascade = true;
+          }
+        }
+      }
+    }
+    
+    // Cascade tier to children if needed
+    if (needsCascade) {
+      console.log('🌊 Cascading tier to subfolders and files:', { folderId: id, newTier });
+      await cascadeTierToSubfolders(id, newTier);
+      await cascadeTierToFiles(id, newTier);
+      console.log('✅ Tier cascade complete');
+    }
+    
     if (color !== undefined) folder.color = color;
     if (icon !== undefined) folder.icon = icon;
     if (order !== undefined) folder.order = Number(order);
@@ -267,7 +468,7 @@ export const deleteFolder = async (req: AuthRequest, res: Response): Promise<voi
     
     if (filesInFolder > 0) {
       if (moveFilesTo) {
-        // Move files to another folder
+        // Move files to another folder and inherit its tier
         const targetFolder = await Folder.findById(moveFilesTo);
         if (!targetFolder) {
           res.status(400).json({
@@ -279,10 +480,13 @@ export const deleteFolder = async (req: AuthRequest, res: Response): Promise<voi
         
         await File.updateMany(
           { folder: id },
-          { folder: moveFilesTo }
+          { 
+            folder: moveFilesTo,
+            tier: targetFolder.tier // Inherit tier from target folder
+          }
         );
       } else {
-        // Move files to root (no folder)
+        // Move files to root (no folder) - keep their current tier
         await File.updateMany(
           { folder: id },
           { $unset: { folder: 1 } }
