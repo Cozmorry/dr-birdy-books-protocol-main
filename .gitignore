@@ -3,10 +3,8 @@
 venv
 # Compilation output
 /dist
-
 # pnpm deploy output
 /bundle
-
 # Hardhat Build Artifacts
 /artifacts
 
@@ -20,3 +18,10 @@ venv
 /coverage
 .DS_Store
 edr-fork-cache
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env

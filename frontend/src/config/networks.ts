@@ -49,14 +49,16 @@ export const ORACLE_CONFIGS = {
 // Contract addresses for different networks
 export const CONTRACT_ADDRESSES = {
   [BASE_MAINNET.chainId]: {
-    reflectiveToken: '0xD19f1c7941244270c71a4c3dF4CC0A8baFC48134', // ✅ PROXY - Deployed Dec 8, 2025 with manual proxy pattern
-    tokenDistribution: '0xc83aF4E8CE625B323E6C97284889d2eA4137fEd7', // ✅ MAINNET - Deployed Dec 8, 2025
-    flexibleTieredStaking: '0xDe739Dd135Ffb5899e10F0a373fb9E0F61571e12', // ✅ MAINNET - Deployed Dec 8, 2025
-    arweaveGateway: '0x85169f06166F40B61A134Fe80Fa4bE8c371A457e', // ✅ MAINNET - Deployed Dec 8, 2025
-    improvedTimelock: '0xD865B5f889903F01e98e3598C7d68De5dF5E6E0c', // ✅ MAINNET - Deployed Dec 8, 2025
-    proxyAdmin: '0x279fC8Ba58A9e40bf19Be5ff38E538762D2A23B9', // ✅ MAINNET - ProxyAdmin for upgradeability
-    tokenImplementation: '0xcA848B2BB36b6E6e12E0D21B649A74fdbA48dcb0', // ℹ️ INFO - Implementation contract (users don't interact with this)
-    treasuryYieldStrategy: '0x1eDa0B2c614890DD974336bBEdE5aB4F4a55666f', // ✅ MAINNET - Deployed Dec 8, 2025 for automated buybacks
+    // 🚨 NEW MAINNET DEPLOYMENT (Jan 2026) - Non-proxy ReflectiveToken
+    reflectiveToken: '0xB8C319AD4ff51476d8D74a038ba277351e52Ed37', // NEW MAINNET TOKEN
+    tokenDistribution: '0x9Dad6e0bE95482B6d3886B6e972c9a897C292cc4', // NEW MAINNET DISTRIBUTION
+    flexibleTieredStaking: '0x8871677b9Aeb46327EbeC4221fCe03E9c1C44dCb', // NEW MAINNET STAKING
+    arweaveGateway: '0xf9Aeb989d3d1Fd187D258305CE1C59F08220E9F8', // NEW MAINNET ARWEAVE GATEWAY
+    improvedTimelock: '0xeAef533E0573De9Bd9582EE01D32bcc92Bb55106', // NEW MAINNET TIMELOCK
+    // Proxy-related addresses are legacy for the old deployment; left undefined here.
+    proxyAdmin: undefined as any,
+    tokenImplementation: undefined as any,
+    treasuryYieldStrategy: '0x1eDa0B2c614890DD974336bBEdE5aB4F4a55666f', // Keep existing strategy unless redeployed
   },
   [BASE_TESTNET.chainId]: {
     reflectiveToken: '0xB49872C1aD8a052f1369ABDfC890264938647EB6', // ✅ PROXY - Deployed Dec 8, 2025 with manual proxy pattern
