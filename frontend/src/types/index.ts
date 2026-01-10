@@ -20,6 +20,9 @@ export interface VestingInfo {
   claimed: string;
   claimable: string;
   vestingEndTime: string;
+  startTime: string;
+  cliffPeriod: number; // in days
+  vestingDuration: number; // in days
 }
 
 export interface TierInfo {

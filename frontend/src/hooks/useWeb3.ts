@@ -249,6 +249,55 @@ export const useWeb3 = () => {
     }
   }, []);
 
+  const switchToLocalhost = useCallback(async () => {
+    if (!window.ethereum) {
+      setError('MetaMask is not installed');
+      return;
+    }
+
+    const targetNetwork = LOCALHOST;
+    
+    try {
+      // Try to switch to localhost network
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${targetNetwork.chainId.toString(16)}` }],
+      });
+    } catch (switchError: any) {
+      // This error code indicates that the chain has not been added to MetaMask
+      if (switchError.code === 4902) {
+        try {
+          // Add localhost network to MetaMask
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: `0x${targetNetwork.chainId.toString(16)}`,
+                chainName: targetNetwork.name,
+                rpcUrls: [targetNetwork.rpcUrl],
+                blockExplorerUrls: targetNetwork.blockExplorer ? [targetNetwork.blockExplorer] : [],
+                nativeCurrency: {
+                  name: 'Ethereum',
+                  symbol: 'ETH',
+                  decimals: 18,
+                },
+              },
+            ],
+          });
+          // After adding, switch to it
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${targetNetwork.chainId.toString(16)}` }],
+          });
+        } catch (addError: any) {
+          setError(`Failed to add localhost network to MetaMask: ${addError.message || addError}`);
+        }
+      } else {
+        setError(`Failed to switch to localhost: ${switchError.message || switchError}`);
+      }
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
     // Mark as manually disconnected to prevent auto-reconnect
     manuallyDisconnectedRef.current = true;
@@ -366,6 +415,7 @@ export const useWeb3 = () => {
     connectWallet,
     connectToLocalhost,
     switchToBaseNetwork,
+    switchToLocalhost,
     disconnect,
   };
 };

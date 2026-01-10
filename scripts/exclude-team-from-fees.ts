@@ -22,17 +22,17 @@ async function main() {
 
   // List of addresses to exclude
   const addressesToExclude = [
-    { name: "Joseph (J)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.JOSEPH },
-    { name: "AJ (A)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.AJ },
-    { name: "Birdy (B)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.BIRDY },
+    { name: "Team Member 1 (J)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.J },
+    { name: "Team Member 2 (A)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.A },
+    { name: "Team Member 5 (B)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.B },
     { name: "Airdrop Wallet", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.AIRDROP },
   ];
 
-  // Skip D-Sign if not set
-  if (DEPLOYMENT_CONFIG.TEAM_WALLETS.DSIGN !== "0x0000000000000000000000000000000000000000") {
+  // Skip Team Member 3 (D) if not set
+  if (DEPLOYMENT_CONFIG.TEAM_WALLETS.D !== "0x0000000000000000000000000000000000000000") {
     addressesToExclude.push({ 
-      name: "DSign (D)", 
-      address: DEPLOYMENT_CONFIG.TEAM_WALLETS.DSIGN 
+      name: "Team Member 3 (D)", 
+      address: DEPLOYMENT_CONFIG.TEAM_WALLETS.D 
     });
   }
 

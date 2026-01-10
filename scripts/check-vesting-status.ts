@@ -59,10 +59,10 @@ async function main() {
   console.log("");
 
   const members = [
-    { name: "Joseph (J)", address: josephWallet },
-    { name: "AJ (A)", address: ajWallet },
-    { name: "Birdy (B)", address: birdyWallet },
-    { name: "Developer (Morris)", address: developerWallet },
+    { name: "Team Member 1 (J)", address: josephWallet },
+    { name: "Team Member 2 (A)", address: ajWallet },
+    { name: "Team Member 5 (B)", address: birdyWallet },
+    { name: "Team Member 4 (Developer)", address: developerWallet },
   ];
 
   for (const member of members) {

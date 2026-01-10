@@ -30,22 +30,22 @@ async function main() {
   const AIRDROP_ALLOCATION = ethers.parseEther("250000"); // 250,000 tokens
 
   const distributions = [
-    { name: "Joseph (J)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.JOSEPH, amount: TEAM_ALLOCATION_STANDARD },
-    { name: "AJ (A)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.AJ, amount: TEAM_ALLOCATION_STANDARD },
-    { name: "Birdy (B)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.BIRDY, amount: TEAM_ALLOCATION_STANDARD },
-    { name: "Developer (Morris)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.DEVELOPER, amount: TEAM_ALLOCATION_DEVELOPER },
+    { name: "Team Member 1 (J)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.J, amount: TEAM_ALLOCATION_STANDARD },
+    { name: "Team Member 2 (A)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.A, amount: TEAM_ALLOCATION_STANDARD },
+    { name: "Team Member 5 (B)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.B, amount: TEAM_ALLOCATION_STANDARD },
+    { name: "Team Member 4 (Developer)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.M, amount: TEAM_ALLOCATION_DEVELOPER },
     { name: "Airdrop Wallet", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.AIRDROP, amount: AIRDROP_ALLOCATION },
   ];
 
-  // Skip DSign for now (address is 0x000...000)
-  if (DEPLOYMENT_CONFIG.TEAM_WALLETS.DSIGN !== "0x0000000000000000000000000000000000000000") {
+  // Skip Team Member 3 (D) if not set
+  if (DEPLOYMENT_CONFIG.TEAM_WALLETS.D !== "0x0000000000000000000000000000000000000000") {
     distributions.push({ 
-      name: "DSign (D)", 
-      address: DEPLOYMENT_CONFIG.TEAM_WALLETS.DSIGN, 
+      name: "Team Member 3 (D)", 
+      address: DEPLOYMENT_CONFIG.TEAM_WALLETS.D, 
       amount: TEAM_ALLOCATION_STANDARD 
     });
   } else {
-    console.log("⚠️  Skipping DSign - address not set yet\n");
+    console.log("⚠️  Skipping Team Member 3 (D) - address not set yet\n");
   }
 
   // Calculate total

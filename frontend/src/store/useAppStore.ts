@@ -172,6 +172,9 @@ const REFLECTIVE_TOKEN_ABI = [
 const TOKEN_DISTRIBUTION_ABI = [
   "function getTeamMembers() view returns (address[])",
   "function getVestingInfo(address member) view returns (uint256, uint256, uint256, uint256)",
+  "function vestingInfo(address) view returns (uint256 totalAmount, uint256 startTime, uint256 duration, uint256 claimed, bool isActive)",
+  "function VESTING_CLIFF() view returns (uint256)",
+  "function VESTING_DURATION() view returns (uint256)",
   "function calculateClaimable(address member) view returns (uint256)",
   "function claimVestedTokens()",
   "function isDistributionComplete() view returns (bool)",
@@ -363,19 +366,46 @@ export const useAppStore = create<AppState>()(
       if (!contracts.tokenDistribution) return;
 
       try {
+        // Get vesting info from getVestingInfo function
         const vestingData = await contracts.tokenDistribution.getVestingInfo(account);
         const [totalAmount, claimed, claimable, vestingEndTime] = vestingData;
 
+        // Get detailed vesting info from public mapping (includes startTime)
+        const vestingStruct = await contracts.tokenDistribution.vestingInfo(account);
+        let startTime: bigint;
+        
+        // Handle both array and object responses from ethers
+        if (Array.isArray(vestingStruct)) {
+          // [totalAmount, startTime, duration, claimed, isActive]
+          startTime = vestingStruct[1];
+        } else {
+          // Object with named properties
+          startTime = vestingStruct.startTime;
+        }
+
+        // Get cliff and duration constants from contract
+        const cliffPeriod = await contracts.tokenDistribution.VESTING_CLIFF();
+        const vestingDuration = await contracts.tokenDistribution.VESTING_DURATION();
+
+        // Convert from seconds to days
+        const cliffDays = Number(cliffPeriod) / (24 * 60 * 60);
+        const durationDays = Number(vestingDuration) / (24 * 60 * 60);
+
+        // Create complete VestingInfo object with all required fields
         const vestingInfo: VestingInfo = {
           totalAmount: ethers.formatEther(totalAmount),
           claimed: ethers.formatEther(claimed),
           claimable: ethers.formatEther(claimable),
           vestingEndTime: new Date(Number(vestingEndTime) * 1000).toISOString(),
+          startTime: new Date(Number(startTime) * 1000).toISOString(),
+          cliffPeriod: cliffDays,
+          vestingDuration: durationDays,
         };
 
         set({ vestingInfo });
       } catch (err: any) {
         // User might not be a team member, which is fine
+        console.log('Vesting info not available:', err.message);
         set({ vestingInfo: null });
       }
     },

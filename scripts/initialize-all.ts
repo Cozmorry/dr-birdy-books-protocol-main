@@ -38,17 +38,17 @@ async function main() {
     if (owner === ethers.ZeroAddress) {
       console.log("Initializing TokenDistribution...");
       
-      const dsignAddress = DEPLOYMENT_CONFIG.TEAM_WALLETS.DSIGN === "0x0000000000000000000000000000000000000000" 
+      const teamMember3Address = DEPLOYMENT_CONFIG.TEAM_WALLETS.D === "0x0000000000000000000000000000000000000000" 
         ? deployer.address 
-        : DEPLOYMENT_CONFIG.TEAM_WALLETS.DSIGN;
+        : DEPLOYMENT_CONFIG.TEAM_WALLETS.D;
 
       const initTx = await distribution.initialize(
         tokenAddress,
-        DEPLOYMENT_CONFIG.TEAM_WALLETS.JOSEPH,
-        DEPLOYMENT_CONFIG.TEAM_WALLETS.AJ,
-        dsignAddress,
-        DEPLOYMENT_CONFIG.TEAM_WALLETS.DEVELOPER,
-        DEPLOYMENT_CONFIG.TEAM_WALLETS.BIRDY,
+        DEPLOYMENT_CONFIG.TEAM_WALLETS.J,
+        DEPLOYMENT_CONFIG.TEAM_WALLETS.A,
+        teamMember3Address,
+        DEPLOYMENT_CONFIG.TEAM_WALLETS.M,
+        DEPLOYMENT_CONFIG.TEAM_WALLETS.B,
         DEPLOYMENT_CONFIG.TEAM_WALLETS.AIRDROP
       );
       await initTx.wait();

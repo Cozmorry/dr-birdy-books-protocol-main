@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
 import { getContractAddresses } from "../frontend/src/config/networks";
+const { DEPLOYMENT_CONFIG } = require("./config");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -49,20 +50,20 @@ async function main() {
     console.log("⚠️  Could not read reflection state:", error.message, "\n");
   }
 
-  // Check Joseph's state
-  const josephAddress = "0x4d8b10e7d6bff54c8c1c1c42240c74e173c5f8ed";
+  // Check Team Member 1's state (example)
+  const teamMember1Address = DEPLOYMENT_CONFIG.TEAM_WALLETS.J;
   try {
-    const josephExcluded = await token.isExcludedFromFee(josephAddress);
-    console.log("🎯 Joseph's State:");
-    console.log("   Excluded from fees:", josephExcluded);
+    const teamMember1Excluded = await token.isExcludedFromFee(teamMember1Address);
+    console.log("🎯 Team Member 1 (J) State:");
+    console.log("   Excluded from fees:", teamMember1Excluded);
     
-    const josephReflection = await token.debugReflection(josephAddress);
-    console.log("   _tOwned:", ethers.formatEther(josephReflection.tOwned));
-    console.log("   _rOwned:", josephReflection.rOwned.toString());
-    console.log("   balanceOf:", ethers.formatEther(await token.balanceOf(josephAddress)));
+    const teamMember1Reflection = await token.debugReflection(teamMember1Address);
+    console.log("   _tOwned:", ethers.formatEther(teamMember1Reflection.tOwned));
+    console.log("   _rOwned:", teamMember1Reflection.rOwned.toString());
+    console.log("   balanceOf:", ethers.formatEther(await token.balanceOf(teamMember1Address)));
     console.log("");
   } catch (error: any) {
-    console.log("⚠️  Could not read Joseph's state:", error.message, "\n");
+    console.log("⚠️  Could not read Team Member 1's state:", error.message, "\n");
   }
 
   // Check total supply and fees

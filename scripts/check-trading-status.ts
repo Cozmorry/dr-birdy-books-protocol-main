@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
 import { getContractAddresses } from "../frontend/src/config/networks";
+const { DEPLOYMENT_CONFIG } = require("./config");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -21,11 +22,11 @@ async function main() {
 
   // Check if addresses are blacklisted
   const addressesToCheck = [
-    { name: "Your Address (Morris)", address: deployer.address },
-    { name: "Joseph (J)", address: "0x4d8b10e7d6bff54c8c1c1c42240c74e173c5f8ed" },
-    { name: "AJ (A)", address: "0xdd82052fbc8edc7091dafa1540f16c63c51cb2fb" },
-    { name: "Birdy (B)", address: "0xad19c12098037b7d35009c7cc794769e1427cc2d" },
-    { name: "Airdrop", address: "0x0EE2C9C1c821c07fB1dD25De3D0f38d9db94Bb1e" },
+    { name: "Deployer Address", address: deployer.address },
+    { name: "Team Member 1 (J)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.J },
+    { name: "Team Member 2 (A)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.A },
+    { name: "Team Member 5 (B)", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.B },
+    { name: "Airdrop", address: DEPLOYMENT_CONFIG.TEAM_WALLETS.AIRDROP },
   ];
 
   console.log("\n🔒 Blacklist Status:");

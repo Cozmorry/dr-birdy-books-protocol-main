@@ -70,11 +70,12 @@ export const CONTRACT_ADDRESSES = {
     tokenImplementation: '0x82d0079cB7D5fE492B673a3d9ad24fFA1c4E5882', // ℹ️ INFO - Implementation contract (users don't interact with this)
   },
   [LOCALHOST.chainId]: {
-    reflectiveToken: '0x4213F020e9430F3549614231A4Dc06226FEEae40',
-    tokenDistribution: '0x7d479974CeF2B37377aA06e9DbaC01b379fd79f4',
-    flexibleTieredStaking: '0xEA654465C976A6f029eFA5e311BC089d6Cf3bd6F',
-    arweaveGateway: '0x763f85d0dCAD625ef737E462B7720b9f5a4Ed399',
-    improvedTimelock: '0xc3dBEd8206C2f17E5d279DB94A430FA9cF10f1c2',
+    // Latest localhost deployment (Jan 10, 2025)
+    reflectiveToken: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
+    tokenDistribution: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+    flexibleTieredStaking: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
+    arweaveGateway: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    improvedTimelock: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
   },
 };
 

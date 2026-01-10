@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Separator } from './ui/separator';
-import { Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare, Menu, X } from 'lucide-react';
+import { Wallet, LogOut, Copy, CheckCircle, RefreshCw, Home, TrendingUp, Download, FileText, Shield, MessageSquare, Menu, X, Gift } from 'lucide-react';
 import { ethers } from 'ethers';
 import { FeedbackModal } from './FeedbackModal';
 import ThemeToggle from './ThemeToggle';
@@ -36,7 +36,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     isLoading: web3Loading,
   } = useWeb3();
 
-  const { protocolStats } = useContractsStore();
   const location = useLocation();
 
   const [ethBalance, setEthBalance] = useState<string>('0');
@@ -88,6 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navigationLinks = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/staking', label: 'Staking', icon: TrendingUp },
+    { to: '/vesting', label: 'Vesting', icon: Gift },
     { to: '/content', label: 'Content', icon: Download },
     { to: '/blog', label: 'Blog', icon: FileText },
     { to: '/tier', label: 'Tier', icon: Shield },
@@ -132,22 +132,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 );
               })}
             </nav>
-          )}
-
-          {/* Desktop Protocol Stats */}
-          {isConnected && isCorrectNetwork && (
-            <div className="hidden lg:flex items-center mr-4">
-              <div className="text-center">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Staked</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {protocolStats.isLoading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
-                  ) : (
-                    `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBBPT`
-                  )}
-                </p>
-              </div>
-            </div>
           )}
 
           {/* Desktop Feedback Button */}
@@ -300,18 +284,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 );
               })}
             </nav>
-
-            {/* Mobile Protocol Stats */}
-            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Staked</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {protocolStats.isLoading ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  `${parseFloat(protocolStats.totalStaked).toLocaleString()} DBBPT`
-                )}
-              </p>
-            </div>
 
             {/* Mobile Feedback Button */}
             <button

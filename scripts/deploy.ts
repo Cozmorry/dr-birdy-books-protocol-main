@@ -1,5 +1,7 @@
 const { DEPLOYMENT_CONFIG } = require("./config");
 import { ethers, network } from "hardhat";
+import * as fs from "fs";
+import * as path from "path";
 
 async function main() {
   console.log(
@@ -324,6 +326,32 @@ async function main() {
 
   console.log("\n🎯 Deployment Summary:");
   console.table(deployed);
+
+  // Save deployment info to file
+  const deploymentsDir = path.join(__dirname, "../deployments");
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+
+  const networkInfo = await ethers.provider.getNetwork();
+  const deploymentInfo = {
+    network: network.name,
+    chainId: networkInfo.chainId.toString(),
+    deployer: deployer.address,
+    timestamp: new Date().toISOString(),
+    gateway: deployed.gateway,
+    distribution: deployed.distribution,
+    timelock: deployed.timelock,
+    token: deployed.token,
+    staking: deployed.staking,
+  };
+
+  const deploymentFile = path.join(
+    deploymentsDir,
+    `deployment-${network.name}-${Date.now()}.json`
+  );
+  fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
+  console.log(`\n💾 Deployment info saved to: ${deploymentFile}`);
 }
 
 main()

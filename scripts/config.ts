@@ -12,11 +12,11 @@ const DEPLOYMENT_CONFIG = {
 
   // Team Wallet Addresses
   TEAM_WALLETS: {
-    JOSEPH: "0x4d8b10e7d6bff54c8c1c1c42240c74e173c5f8ed", // J - 1.625%
-    AJ: "0xdd82052fbc8edc7091dafa1540f16c63c51cb2fb", // A - 1.625%
-    DSIGN: "0x130678ed1594929c02da4c10ab11a848df727eea", // D - 1.625%
-    DEVELOPER: "0xe409c2f794647ac4940d7f1b6506790098bba136", // Morris - 1%
-    BIRDY: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // B - 1.625%
+    J: "0x4d8b10e7d6bff54c8c1c1c42240c74e173c5f8ed", // J - 1.625%
+    A: "0xdd82052fbc8edc7091dafa1540f16c63c51cb2fb", // A - 1.625%
+    D: "0x130678ed1594929c02da4c10ab11a848df727eea", // D - 1.625%
+    M: "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b", // M - 1%
+    B: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // B - 1.625%
     AIRDROP: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // Replace with actual
   },
 
@@ -47,11 +47,11 @@ const DEPLOYMENT_CONFIG = {
   // Total Supply: 10,000,000 tokens
   // Team Allocations:
   //   - J, A, D, B: 1.625% each = 162,500 tokens each
-  //   - Morris (Developer): 1% = 100,000 tokens
+  //   - M (Developer): 1% = 100,000 tokens
   //   - Total Team: 750,000 tokens (7.5%)
   DISTRIBUTION_CONFIG: {
     TEAM_ALLOCATION_STANDARD: "162500", // 162,500 tokens (1.625%) for J, A, D, B
-    TEAM_ALLOCATION_DEVELOPER: "100000", // 100,000 tokens (1%) for Morris
+    TEAM_ALLOCATION_DEVELOPER: "100000", // 100,000 tokens (1%) for M
     AIRDROP_ALLOCATION: "250000", // 250,000 tokens for airdrop
     VESTING_DURATION: 31536000, // 365 days in seconds
     VESTING_CLIFF: 7776000, // 90 days in seconds
@@ -87,7 +87,7 @@ function validateConfig() {
   // Check team wallets
   const teamWallets = Object.values(config.TEAM_WALLETS);
   for (const [key, wallet] of Object.entries(config.TEAM_WALLETS)) {
-    if (wallet === "0x0000000000000000000000000000000000000000" && key !== "DSIGN") {
+    if (wallet === "0x0000000000000000000000000000000000000000" && key !== "D") {
       throw new Error(`Team wallet ${key} not updated`);
     }
   }

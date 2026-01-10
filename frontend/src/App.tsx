@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { WalletConnect } from './components/WalletConnect';
 import HomePage from './pages/HomePage';
 import StakingPage from './pages/StakingPage';
+import VestingPage from './pages/VestingPage';
 import ContentPage from './pages/ContentPage';
 import FolderDetailPage from './pages/FolderDetailPage';
 import BlogPage from './pages/BlogPage';
@@ -157,6 +158,7 @@ function MainApp() {
               }
             />
             <Route path="staking" element={<StakingPage />} />
+            <Route path="vesting" element={<VestingPage />} />
             <Route path="content" element={<ContentPage />} />
             <Route path="content/folders/:id" element={<FolderDetailPageWrapper />} />
             <Route path="blog" element={<BlogPage />} />

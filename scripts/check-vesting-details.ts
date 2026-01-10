@@ -65,7 +65,7 @@ async function main() {
   console.log("\n" + "=".repeat(80));
   console.log("✅ DISTRIBUTION SUMMARY:");
   console.log("=".repeat(80));
-  console.log("  - 750,000 DBBPT: Team vesting (162.5k each for J/A/D/B, 100k for Developer)");
+  console.log("  - 750,000 DBBPT: Team vesting (162.5k each for Team Members 1/2/3/5, 100k for Team Member 4)");
   console.log("  - 250,000 DBBPT: Airdrop (already distributed)");
   console.log("  - Team members can claim after 90-day cliff period");
   console.log("  - Full vesting over 365 days");
