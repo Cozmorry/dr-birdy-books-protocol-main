@@ -59,8 +59,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         const balance = await provider.getBalance(account);
         const formattedBalance = ethers.formatEther(balance);
         setEthBalance(parseFloat(formattedBalance).toFixed(4));
-      } catch (error) {
-        console.error('Error fetching ETH balance:', error);
+      } catch (error: any) {
+        // Suppress RPC errors
+        if (!error.message?.includes('RPC endpoint returned too many errors') && 
+            error.code !== -32002) {
+          console.error('Error fetching ETH balance:', error);
+        }
         setEthBalance('0');
       } finally {
         setIsLoadingBalance(false);

@@ -14,15 +14,8 @@ export const BASE_TESTNET: NetworkConfig = {
   blockExplorer: 'https://sepolia.basescan.org'
 };
 
-export const LOCALHOST: NetworkConfig = {
-  chainId: 31337,
-  name: 'Localhost',
-  rpcUrl: 'http://127.0.0.1:8545',
-  blockExplorer: ''
-};
-
-// Mainnet is the primary network, testnet and localhost are for development
-export const SUPPORTED_NETWORKS = [BASE_MAINNET, BASE_TESTNET, LOCALHOST];
+// Mainnet is the primary network, testnet is for testing
+export const SUPPORTED_NETWORKS = [BASE_MAINNET, BASE_TESTNET];
 
 // Oracle configurations for each network
 export const ORACLE_CONFIGS = {
@@ -37,12 +30,6 @@ export const ORACLE_CONFIGS = {
     backupOracle: '0x6A7A5c3825438cf93dAe5C4C7B0a5c55fDcf1649', // Chainlink BTC/USD on Base Sepolia
     uniswapRouter: '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24', // Uniswap V2 Router on Base Sepolia
     chainlinkETH: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', // Chainlink ETH/USD on Ethereum (fallback)
-  },
-  [LOCALHOST.chainId]: {
-    primaryOracle: '0x398DCFe98a0DEa56Bc6A550db0DC475EbfFD256c', // Mock oracle for localhost
-    backupOracle: '0xa1e11F45558997fc52E1345D618AB3DeA3331a41', // Mock oracle for localhost
-    uniswapRouter: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', // Uniswap V2 Router (Ethereum mainnet)
-    chainlinkETH: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', // Chainlink ETH/USD on Ethereum
   }
 };
 
@@ -69,38 +56,19 @@ export const CONTRACT_ADDRESSES = {
     proxyAdmin: '0x5627785DBcfEdEc7f2ff4c1f2E94928825A3449B', // ✅ NEW - ProxyAdmin for upgradeability
     tokenImplementation: '0x82d0079cB7D5fE492B673a3d9ad24fFA1c4E5882', // ℹ️ INFO - Implementation contract (users don't interact with this)
   },
-  [LOCALHOST.chainId]: {
-    // Latest localhost deployment (Jan 10, 2025)
-    reflectiveToken: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
-    tokenDistribution: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
-    flexibleTieredStaking: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
-    arweaveGateway: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-    improvedTimelock: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
-  },
 };
 
-
-
-/** WORKING ON LOCALHOST
- * [LOCALHOST.chainId]: {
-    reflectiveToken: '0x705f0380F17D8B45CF2D0E4Ef9c2052316f5385f',
-    tokenDistribution: '0x515fbd88DcC7003dB2af933C6a1140cBc9b58dbd',
-    flexibleTieredStaking: '0xa9c456E11403A5B222A11eE0573c8BF54227cDe4',
-    arweaveGateway: '0x7970048249D63cf8324aBA4a458fC05B3CA8D7DD',
-    improvedTimelock: '0x9998919aB0EE6f381EdA461A7bB1bebC5D5C16D6',
-  },
- */
 // Helper function to get oracle config for current network
 export const getOracleConfig = (chainId: number) => {
-  return ORACLE_CONFIGS[chainId] || ORACLE_CONFIGS[LOCALHOST.chainId];
+  return ORACLE_CONFIGS[chainId] || ORACLE_CONFIGS[BASE_MAINNET.chainId];
 };
 
 // Helper function to get network config by chain ID
 export const getNetworkConfig = (chainId: number) => {
-  return SUPPORTED_NETWORKS.find(network => network.chainId === chainId) || LOCALHOST;
+  return SUPPORTED_NETWORKS.find(network => network.chainId === chainId) || BASE_MAINNET;
 };
 
 // Helper function to get contract addresses for current network
 export const getContractAddresses = (chainId: number) => {
-  return CONTRACT_ADDRESSES[chainId] || CONTRACT_ADDRESSES[LOCALHOST.chainId];
+  return CONTRACT_ADDRESSES[chainId] || CONTRACT_ADDRESSES[BASE_MAINNET.chainId];
 };

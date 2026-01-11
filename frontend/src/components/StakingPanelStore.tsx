@@ -224,7 +224,12 @@ export const StakingPanelStore: React.FC = () => {
         setContractStatus(parsedStatus);
       } catch (error: any) {
         console.error('Failed to check contract status:', error);
-        addToast({ type: 'error', title: 'Status Check Failed', message: `Failed to check contract status: ${error.message}` });
+        // Don't show error toast for RPC errors
+        if (!error.message?.includes('RPC endpoint returned too many errors') && 
+            !error.message?.includes('missing revert data') &&
+            error.code !== -32002) {
+          addToast({ type: 'error', title: 'Status Check Failed', message: `Failed to check contract status: ${error.message}` });
+        }
       }
     } else {
       console.log('No staking contract available');

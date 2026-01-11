@@ -125,7 +125,7 @@ function MainApp() {
               index
               element={
                 <>
-                  {chainId && chainId !== 31337 && chainId === 84532 && (
+                  {chainId === 84532 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                       <div className="flex">
                         <div className="flex-shrink-0">

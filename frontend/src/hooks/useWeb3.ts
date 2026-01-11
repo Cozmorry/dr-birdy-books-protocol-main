@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
-import { BASE_MAINNET, BASE_TESTNET, LOCALHOST, getContractAddresses } from '../config/networks';
+import { BASE_MAINNET, BASE_TESTNET, getContractAddresses } from '../config/networks';
 import { trackWalletConnect } from '../utils/analytics';
 
 interface Web3State {
@@ -104,8 +104,7 @@ export const useWeb3 = () => {
 
       const isCorrectNetwork = hasDeployedContracts && (
         chainId === BASE_MAINNET.chainId || 
-        chainId === BASE_TESTNET.chainId || 
-        chainId === LOCALHOST.chainId
+        chainId === BASE_TESTNET.chainId
       );
       
       setWeb3State({
@@ -168,44 +167,6 @@ export const useWeb3 = () => {
     }
   }, []);
 
-  const connectToLocalhost = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Create a JsonRpcProvider for localhost
-      const provider = new ethers.JsonRpcProvider(LOCALHOST.rpcUrl);
-      
-      // Get the first account from the local node
-      const accounts = await provider.listAccounts();
-      
-      if (accounts.length === 0) {
-        throw new Error('No accounts found on local node');
-      }
-
-      // Use the first account as signer
-      const signer = await provider.getSigner(accounts[0].address);
-      const network = await provider.getNetwork();
-      const chainId = Number(network.chainId);
-
-      setWeb3State({
-        provider: provider as any, // Type assertion for compatibility
-        signer,
-        account: accounts[0].address,
-        chainId,
-        isConnected: true,
-        isCorrectNetwork: chainId === LOCALHOST.chainId,
-      });
-      
-      // Reset manual disconnect flag since user is connecting
-      manuallyDisconnectedRef.current = false;
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect to localhost node');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const switchToBaseNetwork = useCallback(async () => {
     if (!window.ethereum) {
       setError('MetaMask is not installed');
@@ -245,55 +206,6 @@ export const useWeb3 = () => {
         }
       } else {
         setError(`Failed to switch to ${targetNetwork.name}`);
-      }
-    }
-  }, []);
-
-  const switchToLocalhost = useCallback(async () => {
-    if (!window.ethereum) {
-      setError('MetaMask is not installed');
-      return;
-    }
-
-    const targetNetwork = LOCALHOST;
-    
-    try {
-      // Try to switch to localhost network
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${targetNetwork.chainId.toString(16)}` }],
-      });
-    } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask
-      if (switchError.code === 4902) {
-        try {
-          // Add localhost network to MetaMask
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: `0x${targetNetwork.chainId.toString(16)}`,
-                chainName: targetNetwork.name,
-                rpcUrls: [targetNetwork.rpcUrl],
-                blockExplorerUrls: targetNetwork.blockExplorer ? [targetNetwork.blockExplorer] : [],
-                nativeCurrency: {
-                  name: 'Ethereum',
-                  symbol: 'ETH',
-                  decimals: 18,
-                },
-              },
-            ],
-          });
-          // After adding, switch to it
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${targetNetwork.chainId.toString(16)}` }],
-          });
-        } catch (addError: any) {
-          setError(`Failed to add localhost network to MetaMask: ${addError.message || addError}`);
-        }
-      } else {
-        setError(`Failed to switch to localhost: ${switchError.message || switchError}`);
       }
     }
   }, []);
@@ -349,8 +261,7 @@ export const useWeb3 = () => {
             // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
             isCorrectNetwork: hasDeployedContracts && (
               chainId === BASE_MAINNET.chainId || 
-              chainId === BASE_TESTNET.chainId || 
-              chainId === LOCALHOST.chainId
+              chainId === BASE_TESTNET.chainId
             ),
           });
         }
@@ -391,8 +302,7 @@ export const useWeb3 = () => {
         // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
         isCorrectNetwork: hasDeployedContracts && (
           newChainId === BASE_MAINNET.chainId || 
-          newChainId === BASE_TESTNET.chainId || 
-          newChainId === LOCALHOST.chainId
+          newChainId === BASE_TESTNET.chainId
         ),
       }));
     };
@@ -413,9 +323,7 @@ export const useWeb3 = () => {
     isLoading,
     error,
     connectWallet,
-    connectToLocalhost,
     switchToBaseNetwork,
-    switchToLocalhost,
     disconnect,
   };
 };

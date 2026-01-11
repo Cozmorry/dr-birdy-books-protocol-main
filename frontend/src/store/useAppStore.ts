@@ -356,6 +356,14 @@ export const useAppStore = create<AppState>()(
         console.log('[loadUserInfo] Setting userInfo:', userInfo);
         set({ userInfo, contractsLoading: false });
       } catch (err: any) {
+        // Suppress RPC errors
+        if (err.message?.includes('RPC endpoint returned too many errors') || 
+            err.message?.includes('missing revert data') ||
+            err.code === -32002) {
+          console.warn('[loadUserInfo] RPC error:', err.message);
+          set({ contractsLoading: false });
+          return;
+        }
         console.error('[loadUserInfo] Error:', err);
         set({ contractsError: 'Failed to load user info: ' + err.message, contractsLoading: false });
       }
@@ -404,6 +412,14 @@ export const useAppStore = create<AppState>()(
 
         set({ vestingInfo });
       } catch (err: any) {
+        // Suppress RPC errors
+        if (err.message?.includes('RPC endpoint returned too many errors') || 
+            err.message?.includes('missing revert data') ||
+            err.code === -32002) {
+          console.warn('[loadVestingInfo] RPC error');
+          set({ vestingInfo: null });
+          return;
+        }
         // User might not be a team member, which is fine
         console.log('Vesting info not available:', err.message);
         set({ vestingInfo: null });
@@ -497,6 +513,22 @@ export const useAppStore = create<AppState>()(
         console.log('Protocol stats updated successfully');
       } catch (err: any) {
         console.error('Failed to load protocol stats:', err);
+        
+        // Check if this is an RPC error
+        if (err.message && (
+          err.message.includes('RPC endpoint returned too many errors') ||
+          err.message.includes('missing revert data') ||
+          err.code === -32002
+        )) {
+          console.warn('RPC endpoint error');
+          // Set stats to zero instead of showing error
+          setProtocolStats({
+            totalStaked: '0',
+            totalStakers: 0,
+            isLoading: false,
+          });
+          return;
+        }
         
         // Check if this is a contract not deployed error or empty data error
         if (err.message && (
@@ -803,7 +835,7 @@ export const useAppStore = create<AppState>()(
         console.log('Current network:', network.name, 'Chain ID:', chainId);
         
         // Check if on correct network (Base Mainnet = 8453, Base Sepolia = 84532)
-        if (chainId !== 8453 && chainId !== 84532 && chainId !== 31337) {
+        if (chainId !== 8453 && chainId !== 84532) {
           throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`);
         }
         
@@ -1072,7 +1104,7 @@ export const initializeContracts = async (provider: ethers.BrowserProvider | nul
 
     if (!hasDeployedContracts) {
       console.warn('Contracts not deployed on chain ID:', chainId);
-      console.warn('Please switch to Base Mainnet (8453), Base Sepolia (84532), or Localhost (31337)');
+      console.warn('Please switch to Base Mainnet (8453) or Base Sepolia (84532)');
       useAppStore.getState().setContractsError(
         `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`
       );
