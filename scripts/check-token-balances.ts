@@ -63,6 +63,13 @@ async function main() {
     const airdropWallet = await distribution.airdropWallet();
     const airdropBalance = await token.balanceOf(airdropWallet);
     console.log(`  Airdrop Wallet: ${ethers.formatEther(airdropBalance)} DBBPT`);
+
+    // Extra diagnostic: check reflection state for airdrop wallet
+    const dbg = await token.debugReflection(airdropWallet);
+    console.log(`  Airdrop debugReflection -> rOwned: ${dbg.rOwned.toString()}, tOwned: ${dbg.tOwned.toString()}, isExcluded: ${dbg.isExcluded}`);
+    if (dbg.isExcluded && dbg.tOwned.toString() === "0" && dbg.rOwned.toString() !== "0") {
+      console.log("\n⚠️  Warning: airdrop wallet is excluded but has reflected rOwned balance and zero tOwned. This indicates tokens may be inaccessible via balanceOf(). Re-include the address with excludeFromFee(airdropWallet, false) as owner to restore visible balance.");
+    }
   }
 
   // What MetaMask might be showing

@@ -36,15 +36,15 @@ export const ORACLE_CONFIGS = {
 // Contract addresses for different networks
 export const CONTRACT_ADDRESSES = {
   [BASE_MAINNET.chainId]: {
-    // 🚨 NEW MAINNET DEPLOYMENT (Jan 2026) - Non-proxy ReflectiveToken
-    reflectiveToken: '0xB8C319AD4ff51476d8D74a038ba277351e52Ed37', // NEW MAINNET TOKEN
-    tokenDistribution: '0x9Dad6e0bE95482B6d3886B6e972c9a897C292cc4', // NEW MAINNET DISTRIBUTION
-    flexibleTieredStaking: '0x8871677b9Aeb46327EbeC4221fCe03E9c1C44dCb', // NEW MAINNET STAKING
-    arweaveGateway: '0xf9Aeb989d3d1Fd187D258305CE1C59F08220E9F8', // NEW MAINNET ARWEAVE GATEWAY
-    improvedTimelock: '0xeAef533E0573De9Bd9582EE01D32bcc92Bb55106', // NEW MAINNET TIMELOCK
-    // Proxy-related addresses are legacy for the old deployment; left undefined here.
-    proxyAdmin: undefined as any,
-    tokenImplementation: undefined as any,
+    // ✅ LATEST MAINNET DEPLOYMENT (Jan 14, 2026) - Proxy Pattern ReflectiveToken
+    // ✅ All contracts properly configured with fee exclusions
+    reflectiveToken: '0x42364e088eFeB481cE811eF9caDd95F36e3F36c0', // ✅ PROXY - Users interact with this
+    tokenDistribution: '0x7E9325C35f9A19185e29a90b07Eafe38B8cC60E3', // ✅ NEW MAINNET DISTRIBUTION (excluded from fees)
+    flexibleTieredStaking: '0x71163f316b1797c4069a01aE104d8efDAEA024E4', // ✅ NEW MAINNET STAKING
+    arweaveGateway: '0xde84a771cbB8A8522E2732d991d162c387e1E2db', // ✅ NEW MAINNET ARWEAVE GATEWAY
+    improvedTimelock: '0x5592113B66a4068F21cbe08Ee1Ca70b12C9E14f8', // ✅ NEW MAINNET TIMELOCK
+    tokenImplementation: '0xF131837df0763bD4F0eB2ee8B1dDD622a2276a4B', // ℹ️ Implementation contract (users don't interact with this)
+    proxyAdmin: undefined as any, // Managed by OpenZeppelin upgrades
     treasuryYieldStrategy: '0x1eDa0B2c614890DD974336bBEdE5aB4F4a55666f', // Keep existing strategy unless redeployed
   },
   [BASE_TESTNET.chainId]: {

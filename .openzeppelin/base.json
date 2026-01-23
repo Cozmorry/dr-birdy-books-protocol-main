@@ -2,20 +2,30 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0xC593475d254737686d6B895F0963688b5DF39e07",
-      "txHash": "0x6cac6cf2a967d997b4d2a0eac052d99b7ab7101876d98c1a7acbe7ecace6fbe2",
+      "address": "0xeD8A54C08Af12663Ee3D01d062CeE32e52F7E4ae",
+      "txHash": "0xe6facc9149d8ba961a21395bbd3b31c1b0676682e2bc26cd2936b087d026aaa9",
       "kind": "transparent"
     },
     {
-      "address": "0x1a2F96664ec09DAAB43D58Be30d10cb2a45B2C2D",
-      "txHash": "0xdfba9f1ab8e7243f951e2f28dd565e610690794971a6e6cb9112f3c9f92a1714",
+      "address": "0xE229F2DD71AD7CDE54254b25a8E794Dc2a12c1A1",
+      "txHash": "0x18658b07fdea28e50a2f17ed789d819e8db8bb7219a04dfc38199c2ac83fd93d",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x456eb896e12677832e89C0d44Ae098eDfFA20323",
+      "txHash": "0xe71d45f65b1096d5d153a0c8cc1d65996cd511ecc3b4ba69231eb80bead17910",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x42364e088eFeB481cE811eF9caDd95F36e3F36c0",
+      "txHash": "0xf7faba51f053998a4bdc2c92a8a7f10bdb058a36830b6610fa6e5441ee9e187c",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "cf804ea47e47a27766ece6bb4e8143042dbc7eb9a7cbca26e079bad508be7ec3": {
-      "address": "0xEAc5217C26d36b16d2920B144e24290D6D38474A",
-      "txHash": "0x44b9494f88c11e2ab5926f4a926211d098b46f9b1d65f1794c94139fc8dc338a",
+    "c9e791798dd75a5180410cca55d83848e9792d10b59be3877c338fefcfb6eb3e": {
+      "address": "0xF131837df0763bD4F0eB2ee8B1dDD622a2276a4B",
+      "txHash": "0x3242a42a310f855b2bece5f2f0aac85574deed6c818a295fc8a350a6129ab8df",
       "layout": {
         "solcVersion": "0.8.28",
         "storage": [
@@ -31,7 +41,7 @@
             "label": "ethUsdFeed",
             "offset": 0,
             "slot": "50",
-            "type": "t_contract(AggregatorV3Interface)7385",
+            "type": "t_contract(AggregatorV3Interface)2413",
             "contract": "ReflectiveToken",
             "src": "contracts\\ReflectiveToken.sol:133"
           },
@@ -159,7 +169,7 @@
             "label": "tokenDistribution",
             "offset": 0,
             "slot": "66",
-            "type": "t_contract(TokenDistribution)12488",
+            "type": "t_contract(TokenDistribution)7366",
             "contract": "ReflectiveToken",
             "src": "contracts\\ReflectiveToken.sol:165"
           },
@@ -268,12 +278,20 @@
             "src": "contracts\\ReflectiveToken.sol:184"
           },
           {
-            "label": "_allowances",
+            "label": "_rOwnedWhenExcluded",
             "offset": 0,
             "slot": "77",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ReflectiveToken",
+            "src": "contracts\\ReflectiveToken.sol:186"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "78",
             "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
             "contract": "ReflectiveToken",
-            "src": "contracts\\ReflectiveToken.sol:185"
+            "src": "contracts\\ReflectiveToken.sol:187"
           }
         ],
         "types": {
@@ -387,11 +405,11 @@
             "label": "uint256[50]",
             "numberOfBytes": "1600"
           },
-          "t_contract(AggregatorV3Interface)7385": {
+          "t_contract(AggregatorV3Interface)2413": {
             "label": "contract AggregatorV3Interface",
             "numberOfBytes": "20"
           },
-          "t_contract(TokenDistribution)12488": {
+          "t_contract(TokenDistribution)7366": {
             "label": "contract TokenDistribution",
             "numberOfBytes": "20"
           },

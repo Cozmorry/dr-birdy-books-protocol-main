@@ -117,6 +117,8 @@ export interface ReflectiveTokenInterface extends Interface {
 
   getEvent(
     nameOrSignatureOrTopic:
+      | "AccountExcludedFromFees"
+      | "AccountIncludedInFees"
       | "AddressBlacklisted"
       | "Approval"
       | "ArweaveGatewaySet"
@@ -752,6 +754,32 @@ export interface ReflectiveTokenInterface extends Interface {
     functionFragment: "yieldStrategyFeeBps",
     data: BytesLike
   ): Result;
+}
+
+export namespace AccountExcludedFromFeesEvent {
+  export type InputTuple = [account: AddressLike, tAmount: BigNumberish];
+  export type OutputTuple = [account: string, tAmount: bigint];
+  export interface OutputObject {
+    account: string;
+    tAmount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace AccountIncludedInFeesEvent {
+  export type InputTuple = [account: AddressLike, rAmount: BigNumberish];
+  export type OutputTuple = [account: string, rAmount: bigint];
+  export interface OutputObject {
+    account: string;
+    rAmount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace AddressBlacklistedEvent {
@@ -1987,6 +2015,20 @@ export interface ReflectiveToken extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
 
   getEvent(
+    key: "AccountExcludedFromFees"
+  ): TypedContractEvent<
+    AccountExcludedFromFeesEvent.InputTuple,
+    AccountExcludedFromFeesEvent.OutputTuple,
+    AccountExcludedFromFeesEvent.OutputObject
+  >;
+  getEvent(
+    key: "AccountIncludedInFees"
+  ): TypedContractEvent<
+    AccountIncludedInFeesEvent.InputTuple,
+    AccountIncludedInFeesEvent.OutputTuple,
+    AccountIncludedInFeesEvent.OutputObject
+  >;
+  getEvent(
     key: "AddressBlacklisted"
   ): TypedContractEvent<
     AddressBlacklistedEvent.InputTuple,
@@ -2170,6 +2212,28 @@ export interface ReflectiveToken extends BaseContract {
   >;
 
   filters: {
+    "AccountExcludedFromFees(address,uint256)": TypedContractEvent<
+      AccountExcludedFromFeesEvent.InputTuple,
+      AccountExcludedFromFeesEvent.OutputTuple,
+      AccountExcludedFromFeesEvent.OutputObject
+    >;
+    AccountExcludedFromFees: TypedContractEvent<
+      AccountExcludedFromFeesEvent.InputTuple,
+      AccountExcludedFromFeesEvent.OutputTuple,
+      AccountExcludedFromFeesEvent.OutputObject
+    >;
+
+    "AccountIncludedInFees(address,uint256)": TypedContractEvent<
+      AccountIncludedInFeesEvent.InputTuple,
+      AccountIncludedInFeesEvent.OutputTuple,
+      AccountIncludedInFeesEvent.OutputObject
+    >;
+    AccountIncludedInFees: TypedContractEvent<
+      AccountIncludedInFeesEvent.InputTuple,
+      AccountIncludedInFeesEvent.OutputTuple,
+      AccountIncludedInFeesEvent.OutputObject
+    >;
+
     "AddressBlacklisted(address,bool)": TypedContractEvent<
       AddressBlacklistedEvent.InputTuple,
       AddressBlacklistedEvent.OutputTuple,

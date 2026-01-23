@@ -182,6 +182,8 @@ contract ReflectiveToken is
     mapping(address => bool) private _isBlacklisted;
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
+    // Store previous rOwned when excluding to allow exact re-inclusion
+    mapping(address => uint256) private _rOwnedWhenExcluded;
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Events (custom + new ones for swapAndLiquify)
@@ -237,6 +239,10 @@ contract ReflectiveToken is
     event SwapThresholdSet(uint256 indexed threshold);
     event DistributionContractSet(address indexed distributionContract);
     event InitialDistributionCompleted(uint256 totalDistributed);
+
+    // Events for fee exclusion/inclusion with balance conversion
+    event AccountExcludedFromFees(address indexed account, uint256 tAmount);
+    event AccountIncludedInFees(address indexed account, uint256 rAmount);
 
     // Modifiers
     modifier onlyTimelock() {
@@ -1295,7 +1301,67 @@ contract ReflectiveToken is
 
     // Exclude accounts from fees (e.g., exchanges)
     function excludeFromFee(address account, bool excluded) external onlyOwner {
-        _isExcludedFromFee[account] = excluded;
+        // No-op if already in desired state
+        if (_isExcludedFromFee[account] == excluded) {
+            return;
+        }
+
+        if (excluded) {
+            // Convert reflection balance (rOwned) -> token balance (tOwned)
+            uint256 rBal = _rOwned[account];
+            if (rBal > 0) {
+                uint256 tAmount = tokenFromReflection(rBal);
+                // Store rOwned so we can perfectly restore on inclusion
+                _rOwnedWhenExcluded[account] = rBal;
+
+                // Move reflected balance out of reflection pool
+                _tOwned[account] += tAmount;
+                _rOwned[account] = 0;
+                unchecked {
+                    _rTotal -= rBal; // reflect removal from reflection pool
+                }
+                emit AccountExcludedFromFees(account, tAmount);
+            } else {
+                // Even if no rOwned, still mark excluded
+                emit AccountExcludedFromFees(account, 0);
+            }
+
+            _isExcludedFromFee[account] = true;
+        } else {
+            // Convert tOwned -> rOwned and add back to reflection pool
+            uint256 tBal = _tOwned[account];
+            if (tBal > 0) {
+                // If we previously stored the original rOwned when excluding, restore it exactly
+                uint256 rPrev = _rOwnedWhenExcluded[account];
+                if (rPrev > 0) {
+                    _rOwned[account] += rPrev;
+                    _rOwnedWhenExcluded[account] = 0;
+                    _tOwned[account] = 0;
+                    unchecked {
+                        _rTotal += rPrev;
+                    }
+                    emit AccountIncludedInFees(account, rPrev);
+                } else {
+                    // Fallback: compute rAmount using current rate
+                    uint256 currentRate = _rTotal / _tTotal();
+                    require(currentRate > 0, "RT: Reflection rate is zero");
+                    uint256 rAmount;
+                    unchecked {
+                        rAmount = tBal * currentRate;
+                    }
+                    _rOwned[account] += rAmount;
+                    _tOwned[account] = 0;
+                    unchecked {
+                        _rTotal += rAmount;
+                    }
+                    emit AccountIncludedInFees(account, rAmount);
+                }
+            } else {
+                emit AccountIncludedInFees(account, 0);
+            }
+
+            _isExcludedFromFee[account] = false;
+        }
     }
 
     // NEW: Blacklist event and functions

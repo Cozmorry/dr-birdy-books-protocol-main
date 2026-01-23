@@ -1,0 +1,11 @@
+{
+  "network": "mainnet",
+  "chainId": "8453",
+  "deployer": "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b",
+  "timestamp": "2026-01-14T20:25:21.332Z",
+  "gateway": "0x4E23d30362225B0e50aC5730ad6E86360c9b2a37",
+  "distribution": "0xdd1552D9d5B210Dec0359E76B02B0C48E7b28018",
+  "timelock": "0x6B8FBB47abCe2b6A7E14d92fC076C9b0544c33C6",
+  "token": "0x92992814da0857F8Fa07511A50159f1b66b92a51",
+  "staking": "0xBDFb0d8277F069fB04C3845f9e79470F8f20bE42"
+}

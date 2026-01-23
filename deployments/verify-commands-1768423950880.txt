@@ -1,0 +1,21 @@
+# BaseScan Verification Commands
+# Generated: 2026-01-14T20:52:30.880Z
+
+# 1. ArweaveGateway
+npx hardhat verify --network mainnet 0xb3a82FA35a14190B2Ef4456C3AEb78c960c2Ba77
+
+# 2. TokenDistribution
+npx hardhat verify --network mainnet 0xc62AcAD9FEc1fdc82b4f4e4E093341aA143c28a1
+
+# 3. ImprovedTimelock
+npx hardhat verify --network mainnet 0x1ED8AE7726eF7F65313839eAaEE5D66f1df9DE38 "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b" "172800"
+
+# 4. ReflectiveToken Implementation
+npx hardhat verify --network mainnet 0xF131837df0763bD4F0eB2ee8B1dDD622a2276a4B
+
+# 5. FlexibleTieredStaking
+npx hardhat verify --network mainnet 0x49fC4631Ce2E92C6D95bAf76ff1E1c44d82D7c98 "0xE229F2DD71AD7CDE54254b25a8E794Dc2a12c1A1" "0x71041dDDaD356F8F9546D0Ba93B54C0b4C458375" "0x72AFAECF99C9d9C8215fF44C77B94B99C28741e8"
+
+# 6. ReflectiveToken Proxy - Use BaseScan UI:
+# https://basescan.org/address/0xE229F2DD71AD7CDE54254b25a8E794Dc2a12c1A1
+# Implementation: 0xF131837df0763bD4F0eB2ee8B1dDD622a2276a4B

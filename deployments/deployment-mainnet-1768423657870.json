@@ -1,0 +1,15 @@
+{
+  "network": "mainnet",
+  "chainId": "8453",
+  "deployer": "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b",
+  "timestamp": "2026-01-14T20:47:37.870Z",
+  "contracts": {
+    "gateway": "0xb3a82FA35a14190B2Ef4456C3AEb78c960c2Ba77",
+    "distribution": "0xc62AcAD9FEc1fdc82b4f4e4E093341aA143c28a1",
+    "timelock": "0x1ED8AE7726eF7F65313839eAaEE5D66f1df9DE38",
+    "token": "0xE229F2DD71AD7CDE54254b25a8E794Dc2a12c1A1",
+    "tokenImplementation": "0xF131837df0763bD4F0eB2ee8B1dDD622a2276a4B",
+    "staking": "0x49fC4631Ce2E92C6D95bAf76ff1E1c44d82D7c98"
+  },
+  "gasUsed": "See transaction receipts"
+}

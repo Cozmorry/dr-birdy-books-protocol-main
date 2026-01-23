@@ -17,8 +17,17 @@ const DEPLOYMENT_CONFIG = {
     D: "0x130678ed1594929c02da4c10ab11a848df727eea", // D - 1.625%
     M: "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b", // M - 1%
     B: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // B - 1.625%
-    AIRDROP: "0xad19c12098037b7d35009c7cc794769e1427cc2d", // Replace with actual
+    AIRDROP: "0x57b45b59e8990a884F1Bb19ca5a082077e7643FC", // Airdrop: new address provided by user
   },
+
+  // Addresses to explicitly exclude from fees (in addition to team wallets)
+  EXCLUDE_FROM_FEES: [
+    "0x27799bb35820Ecb2814Ac2484bA34AD91bbda198",
+    "0xb0F3e57AD0bdE67593326Ca81DcEF557A960F924",
+    "0x57b45b59e8990a884F1Bb19ca5a082077e7643FC",
+    "0xF347Ce7bC1DA78c8DD482816dD4a38Db27700B22",
+    "0xc62AcAD9FEc1fdc82b4f4e4E093341aA143c28a1",
+  ],
 
   // Token Configuration
   TOKEN_CONFIG: {

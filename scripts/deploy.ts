@@ -163,6 +163,89 @@ async function main() {
     }
 
     // ===============================
+    // STEP 3C: Exclude All Addresses From Fees
+    // ===============================
+
+    console.log("\n🔒 Excluding addresses from fees...");
+
+    // Collect all addresses to exclude
+    const addressesToExclude: string[] = [];
+
+    // Add all team wallets
+    const teamWallets = DEPLOYMENT_CONFIG.TEAM_WALLETS || {};
+    for (const [key, wallet] of Object.entries(teamWallets)) {
+      if (typeof wallet === "string" && wallet !== ethers.ZeroAddress) {
+        addressesToExclude.push(wallet);
+      }
+    }
+
+    // Add marketing wallet
+    if (DEPLOYMENT_CONFIG.MARKETING_WALLET && DEPLOYMENT_CONFIG.MARKETING_WALLET !== ethers.ZeroAddress) {
+      addressesToExclude.push(DEPLOYMENT_CONFIG.MARKETING_WALLET);
+    }
+
+    // Add all addresses from EXCLUDE_FROM_FEES array
+    if (DEPLOYMENT_CONFIG.EXCLUDE_FROM_FEES && Array.isArray(DEPLOYMENT_CONFIG.EXCLUDE_FROM_FEES)) {
+      for (const addr of DEPLOYMENT_CONFIG.EXCLUDE_FROM_FEES) {
+        if (typeof addr === "string" && addr !== ethers.ZeroAddress) {
+          addressesToExclude.push(addr);
+        }
+      }
+    }
+
+    // Add deployer address (owner)
+    addressesToExclude.push(deployer.address);
+
+    // Deduplicate addresses (case-insensitive)
+    const uniqueAddresses = Array.from(
+      new Set(addressesToExclude.map((addr) => ethers.getAddress(addr.toLowerCase())))
+    );
+
+    console.log(`\n📋 Found ${uniqueAddresses.length} unique addresses to exclude:`);
+    uniqueAddresses.forEach((addr, index) => {
+      // Try to identify the address
+      let label = "";
+      if (addr.toLowerCase() === deployer.address.toLowerCase()) {
+        label = " (Deployer/Owner)";
+      } else if (addr.toLowerCase() === DEPLOYMENT_CONFIG.MARKETING_WALLET?.toLowerCase()) {
+        label = " (Marketing Wallet)";
+      } else if (addr.toLowerCase() === teamWallets.AIRDROP?.toLowerCase()) {
+        label = " (Airdrop Wallet)";
+      } else if (addr.toLowerCase() === teamWallets.J?.toLowerCase()) {
+        label = " (Team J)";
+      } else if (addr.toLowerCase() === teamWallets.A?.toLowerCase()) {
+        label = " (Team A)";
+      } else if (addr.toLowerCase() === teamWallets.D?.toLowerCase()) {
+        label = " (Team D)";
+      } else if (addr.toLowerCase() === teamWallets.M?.toLowerCase()) {
+        label = " (Team M)";
+      } else if (addr.toLowerCase() === teamWallets.B?.toLowerCase()) {
+        label = " (Team B)";
+      }
+      console.log(`   ${index + 1}. ${addr}${label}`);
+    });
+
+    // Exclude each address
+    let excludedCount = 0;
+    let failedCount = 0;
+
+    for (const addr of uniqueAddresses) {
+      try {
+        const checksummedAddr = ethers.getAddress(addr);
+        console.log(`\n   Excluding ${checksummedAddr}...`);
+        const excludeTx = await token.excludeFromFee(checksummedAddr, true);
+        await excludeTx.wait();
+        excludedCount++;
+        console.log(`   ✅ Excluded successfully (TX: ${excludeTx.hash})`);
+      } catch (err: any) {
+        failedCount++;
+        console.warn(`   ⚠️  Failed to exclude ${addr}: ${err.message}`);
+      }
+    }
+
+    console.log(`\n✅ Fee exclusion complete: ${excludedCount} excluded, ${failedCount} failed`);
+
+    // ===============================
     // STEP 3B: Post-Deployment Setup for Staking
     // ===============================
 
