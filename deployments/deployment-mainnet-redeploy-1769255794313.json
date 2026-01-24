@@ -1,0 +1,20 @@
+{
+  "network": "mainnet",
+  "chainId": "8453",
+  "timestamp": "2026-01-24T11:56:34.313Z",
+  "contracts": {
+    "token": "0x42364e088eFeB481cE811eF9caDd95F36e3F36c0",
+    "distribution": "0xE1bABA07752ce8bD574eEa5aBe494521B3028638",
+    "oldDistribution": "0x7E9325C35f9A19185e29a90b07Eafe38B8cC60E3"
+  },
+  "teamWallets": {
+    "joseph": "0xf40df6189713FEc50AC39960e4874b75dfdeF35B",
+    "aj": "0x4A44D33fb26F67348c4780aE286C736C5f0335C7",
+    "dsign": "0x130678Ed1594929c02DA4c10aB11a848dF727eEA",
+    "developer": "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b",
+    "birdy": "0xaD19c12098037B7d35009c7cC794769E1427Cc2D",
+    "airdrop": "0x57b45b59e8990a884F1Bb19ca5a082077e7643FC"
+  },
+  "vestingStartTime": "1768428401",
+  "vestingStartDate": "2026-01-14T22:06:41.000Z"
+}

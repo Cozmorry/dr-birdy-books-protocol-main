@@ -177,7 +177,18 @@ contract TokenDistribution is
      * @dev Validates that total allocations match TOTAL_DISTRIBUTED
      */
     function initializeVesting() external onlyOwner vestingNotInitialized {
-        uint256 startTime = block.timestamp;
+        initializeVestingWithStartTime(block.timestamp);
+    }
+
+    /**
+     * @notice Initialize vesting schedules for team members with custom start time
+     * @dev Can only be called once by owner. Used for migration to preserve original start time.
+     * @dev Sets different allocations: 1.625% (162,500) for J, A, D, B; 1% (100,000) for Developer
+     * @param _startTime Custom start time for vesting (Unix timestamp)
+     */
+    function initializeVestingWithStartTime(uint256 _startTime) public onlyOwner vestingNotInitialized {
+        require(_startTime > 0, "Invalid start time");
+        require(_startTime <= block.timestamp, "Start time cannot be in the future");
         
         // Verify teamMembers array has exactly 5 members
         require(teamMembers.length == 5, "Team members array must have exactly 5 members");
@@ -185,7 +196,7 @@ contract TokenDistribution is
         // J, A, D, B get 1.625% (162,500 tokens each)
         vestingInfo[josephWallet] = VestingInfo({
             totalAmount: TEAM_ALLOCATION_STANDARD,
-            startTime: startTime,
+            startTime: _startTime,
             duration: VESTING_DURATION,
             claimed: 0,
             isActive: true
@@ -193,7 +204,7 @@ contract TokenDistribution is
 
         vestingInfo[ajWallet] = VestingInfo({
             totalAmount: TEAM_ALLOCATION_STANDARD,
-            startTime: startTime,
+            startTime: _startTime,
             duration: VESTING_DURATION,
             claimed: 0,
             isActive: true
@@ -201,7 +212,7 @@ contract TokenDistribution is
 
         vestingInfo[dsignWallet] = VestingInfo({
             totalAmount: TEAM_ALLOCATION_STANDARD,
-            startTime: startTime,
+            startTime: _startTime,
             duration: VESTING_DURATION,
             claimed: 0,
             isActive: true
@@ -209,7 +220,7 @@ contract TokenDistribution is
 
         vestingInfo[birdyWallet] = VestingInfo({
             totalAmount: TEAM_ALLOCATION_STANDARD,
-            startTime: startTime,
+            startTime: _startTime,
             duration: VESTING_DURATION,
             claimed: 0,
             isActive: true
@@ -218,7 +229,7 @@ contract TokenDistribution is
         // Developer (Morris) gets 1% (100,000 tokens)
         vestingInfo[developerWallet] = VestingInfo({
             totalAmount: TEAM_ALLOCATION_DEVELOPER,
-            startTime: startTime,
+            startTime: _startTime,
             duration: VESTING_DURATION,
             claimed: 0,
             isActive: true
@@ -234,7 +245,7 @@ contract TokenDistribution is
         );
 
         vestingInitialized = true;
-        emit VestingInitialized(startTime);
+        emit VestingInitialized(_startTime);
     }
 
     /**
@@ -503,6 +514,11 @@ contract TokenDistribution is
         address newWallet,
         string memory /* memberName */
     ) internal {
+        // Skip migration if addresses are the same (fixes bug where same address deactivates vesting)
+        if (oldWallet == newWallet) {
+            return;
+        }
+        
         VestingInfo storage oldInfo = vestingInfo[oldWallet];
         
         if (oldInfo.isActive) {
@@ -562,5 +578,33 @@ contract TokenDistribution is
      */
     function isWalletActive(address member) external view returns (bool) {
         return vestingInfo[member].isActive;
+    }
+
+    /**
+     * @notice Mark distribution as complete (for migration scenarios where airdrop was already distributed)
+     * @dev Can only be called by owner. Use when migrating from old contract where airdrop was already sent.
+     * @dev This allows skipping distributeInitialTokens() when airdrop was already distributed.
+     */
+    function markDistributionComplete() external onlyOwner {
+        require(vestingInitialized, "Vesting must be initialized first");
+        require(!initialDistributionComplete, "Distribution already marked as complete");
+        initialDistributionComplete = true;
+    }
+
+    /**
+     * @notice Reactivate developer vesting if it was accidentally deactivated
+     * @dev Can only be called by owner. Only works if vesting data exists but isActive is false.
+     * @param member Team member address to reactivate
+     */
+    function reactivateVesting(address member) external onlyOwner {
+        VestingInfo storage info = vestingInfo[member];
+        require(info.totalAmount > 0, "No vesting data found for this address");
+        require(!info.isActive, "Vesting is already active");
+        require(vestingInitialized, "Vesting not initialized");
+        
+        // Reactivate the vesting
+        info.isActive = true;
+        
+        emit VestingMigrated(address(0), member, info.totalAmount, info.claimed);
     }
 }

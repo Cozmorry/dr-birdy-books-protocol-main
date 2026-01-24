@@ -53,12 +53,15 @@ export interface TokenDistributionInterface extends Interface {
       | "initialDistributionComplete"
       | "initialize"
       | "initializeVesting"
+      | "initializeVestingWithStartTime"
       | "isDistributionComplete"
       | "isVestingComplete"
       | "isWalletActive"
       | "josephWallet"
+      | "markDistributionComplete"
       | "owner"
       | "postDeploymentInit"
+      | "reactivateVesting"
       | "renounceOwnership"
       | "teamMembers"
       | "token"
@@ -194,6 +197,10 @@ export interface TokenDistributionInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "initializeVestingWithStartTime",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "isDistributionComplete",
     values?: undefined
   ): string;
@@ -209,10 +216,18 @@ export interface TokenDistributionInterface extends Interface {
     functionFragment: "josephWallet",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "markDistributionComplete",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "postDeploymentInit",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "reactivateVesting",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -350,6 +365,10 @@ export interface TokenDistributionInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "initializeVestingWithStartTime",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "isDistributionComplete",
     data: BytesLike
   ): Result;
@@ -365,9 +384,17 @@ export interface TokenDistributionInterface extends Interface {
     functionFragment: "josephWallet",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "markDistributionComplete",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "postDeploymentInit",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "reactivateVesting",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -679,6 +706,12 @@ export interface TokenDistribution extends BaseContract {
 
   initializeVesting: TypedContractMethod<[], [void], "nonpayable">;
 
+  initializeVestingWithStartTime: TypedContractMethod<
+    [_startTime: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   isDistributionComplete: TypedContractMethod<[], [boolean], "view">;
 
   isVestingComplete: TypedContractMethod<
@@ -691,9 +724,17 @@ export interface TokenDistribution extends BaseContract {
 
   josephWallet: TypedContractMethod<[], [string], "view">;
 
+  markDistributionComplete: TypedContractMethod<[], [void], "nonpayable">;
+
   owner: TypedContractMethod<[], [string], "view">;
 
   postDeploymentInit: TypedContractMethod<[], [void], "nonpayable">;
+
+  reactivateVesting: TypedContractMethod<
+    [member: AddressLike],
+    [void],
+    "nonpayable"
+  >;
 
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
 
@@ -858,6 +899,9 @@ export interface TokenDistribution extends BaseContract {
     nameOrSignature: "initializeVesting"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "initializeVestingWithStartTime"
+  ): TypedContractMethod<[_startTime: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "isDistributionComplete"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
@@ -870,11 +914,17 @@ export interface TokenDistribution extends BaseContract {
     nameOrSignature: "josephWallet"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "markDistributionComplete"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "postDeploymentInit"
   ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "reactivateVesting"
+  ): TypedContractMethod<[member: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;

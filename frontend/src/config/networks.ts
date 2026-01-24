@@ -36,10 +36,10 @@ export const ORACLE_CONFIGS = {
 // Contract addresses for different networks
 export const CONTRACT_ADDRESSES = {
   [BASE_MAINNET.chainId]: {
-    // ✅ LATEST MAINNET DEPLOYMENT (Jan 14, 2026) - Proxy Pattern ReflectiveToken
-    // ✅ All contracts properly configured with fee exclusions
+    // ✅ LATEST MAINNET DEPLOYMENT (Jan 24, 2026) - Fixed vesting bug & preserved original timeline
+    // ⚠️ New TokenDistribution not yet excluded from fees (missing 37.5k tokens)
     reflectiveToken: '0x42364e088eFeB481cE811eF9caDd95F36e3F36c0', // ✅ PROXY - Users interact with this
-    tokenDistribution: '0x7E9325C35f9A19185e29a90b07Eafe38B8cC60E3', // ✅ NEW MAINNET DISTRIBUTION (excluded from fees)
+    tokenDistribution: '0xE1bABA07752ce8bD574eEa5aBe494521B3028638', // ✅ NEW DISTRIBUTION - Fixed _migrateVestingData bug
     flexibleTieredStaking: '0x71163f316b1797c4069a01aE104d8efDAEA024E4', // ✅ NEW MAINNET STAKING
     arweaveGateway: '0xde84a771cbB8A8522E2732d991d162c387e1E2db', // ✅ NEW MAINNET ARWEAVE GATEWAY
     improvedTimelock: '0x5592113B66a4068F21cbe08Ee1Ca70b12C9E14f8', // ✅ NEW MAINNET TIMELOCK
