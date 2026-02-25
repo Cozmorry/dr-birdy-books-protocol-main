@@ -118,6 +118,7 @@ export interface FlexibleTieredStakingInterface extends Interface {
       | "unstakeBatch"
       | "updateTier"
       | "userStakedTokens"
+      | "userUsdValueAtStake"
       | "verifyStaker"
       | "withdrawETH"
       | "withdrawFromYield"
@@ -406,6 +407,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "userUsdValueAtStake",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "verifyStaker",
     values: [AddressLike, BigNumberish]
   ): string;
@@ -646,6 +651,10 @@ export interface FlexibleTieredStakingInterface extends Interface {
   decodeFunctionResult(functionFragment: "updateTier", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "userStakedTokens",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "userUsdValueAtStake",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -1436,6 +1445,12 @@ export interface FlexibleTieredStaking extends BaseContract {
 
   userStakedTokens: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
 
+  userUsdValueAtStake: TypedContractMethod<
+    [arg0: AddressLike],
+    [bigint],
+    "view"
+  >;
+
   verifyStaker: TypedContractMethod<
     [user: AddressLike, tierIndex: BigNumberish],
     [boolean],
@@ -1805,6 +1820,9 @@ export interface FlexibleTieredStaking extends BaseContract {
   >;
   getFunction(
     nameOrSignature: "userStakedTokens"
+  ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "userUsdValueAtStake"
   ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
   getFunction(
     nameOrSignature: "verifyStaker"

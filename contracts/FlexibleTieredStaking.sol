@@ -104,6 +104,8 @@ contract FlexibleTieredStaking is
 
     // --- State Variables ---
     mapping(address => uint256) public userStakedTokens;
+    /// @dev USD value locked at staking time (8 decimals). Tier access is based on this, not current price.
+    mapping(address => uint256) public userUsdValueAtStake;
     mapping(address => uint256) public lastUnstakeTimestamp;
     mapping(address => uint256) public firstStakeTimestamp;
     mapping(address => uint256) public stakeTimestamp; // Track last stake timestamp for minimum staking duration
@@ -453,6 +455,11 @@ contract FlexibleTieredStaking is
         bool success = stakingToken.transferFrom(msg.sender, address(this), amount);
         require(success, "Token transfer failed");
 
+        uint256 price = _getTokenPriceUsd();
+        require(price > 0, "Token price unavailable");
+        uint256 addedUsdValue = (amount * price) / 1e18;
+        userUsdValueAtStake[msg.sender] += addedUsdValue;
+
         if (firstStakeTimestamp[msg.sender] == 0) {
             firstStakeTimestamp[msg.sender] = block.timestamp;
         }
@@ -488,6 +495,11 @@ contract FlexibleTieredStaking is
         // SafeERC20's balance checks are incompatible with reflection tokens
         bool success = stakingToken.transferFrom(msg.sender, address(this), totalAmount);
         require(success, "Token transfer failed");
+
+        uint256 price = _getTokenPriceUsd();
+        require(price > 0, "Token price unavailable");
+        uint256 addedUsdValue = (totalAmount * price) / 1e18;
+        userUsdValueAtStake[msg.sender] += addedUsdValue;
 
         if (firstStakeTimestamp[msg.sender] == 0) {
             firstStakeTimestamp[msg.sender] = block.timestamp;
@@ -525,6 +537,10 @@ contract FlexibleTieredStaking is
             block.timestamp >= stakeTimestamp[msg.sender] + minDuration,
             "Minimum staking duration not met"
         );
+
+        uint256 stakedBefore = userStakedTokens[msg.sender];
+        uint256 usdValueToRemove = (userUsdValueAtStake[msg.sender] * amount) / stakedBefore;
+        userUsdValueAtStake[msg.sender] -= usdValueToRemove;
 
         userStakedTokens[msg.sender] -= amount;
         lastUnstakeTimestamp[msg.sender] = block.timestamp;
@@ -580,6 +596,10 @@ contract FlexibleTieredStaking is
             "Minimum staking duration not met"
         );
 
+        uint256 stakedBefore = userStakedTokens[msg.sender];
+        uint256 usdValueToRemove = (userUsdValueAtStake[msg.sender] * totalAmount) / stakedBefore;
+        userUsdValueAtStake[msg.sender] -= usdValueToRemove;
+
         for (uint256 i = 0; i < amounts.length; i++) {
             userStakedTokens[msg.sender] -= amounts[i];
         }
@@ -612,7 +632,7 @@ contract FlexibleTieredStaking is
             return;
         }
 
-        uint256 usdValue = _getUserUsdValue(user);
+        uint256 usdValue = _getUserUsdValueForTier(user);
 
         uint256 bestTierIndex = type(uint256).max; // Use max uint as sentinel for no tier
         uint256 highestThreshold = 0;
@@ -642,7 +662,7 @@ contract FlexibleTieredStaking is
      * @return hasAccess Boolean indicating access status
      */
     function hasAccess(address user) public view returns (bool) {
-        uint256 usdValue = _getUserUsdValue(user);
+        uint256 usdValue = _getUserUsdValueForTier(user);
         uint256 bestTierIndex = type(uint256).max;
         uint256 highestThreshold = 0;
 
@@ -676,7 +696,7 @@ contract FlexibleTieredStaking is
     function getUserTier(
         address user
     ) external view returns (int256 tierIndex, string memory tierName) {
-        uint256 usdValue = _getUserUsdValue(user);
+        uint256 usdValue = _getUserUsdValueForTier(user);
 
         int256 bestTierIndex = -1;
         uint256 highestThreshold = 0;
@@ -698,37 +718,46 @@ contract FlexibleTieredStaking is
         }
     }
 
-    // --- Helper: Get USD value of user stake ---
+    // --- Helper: Get token price and USD values ---
 
     /**
-     * @dev Get USD value of user's staked tokens using oracles
-     * @param user User address
-     * @return usdValue USD value with 8 decimals
-     * @notice Oracle returns ETH/USD, so we need to:
-     *         1. Get token/ETH price from Uniswap (if pair exists)
-     *         2. Multiply by ETH/USD from oracle
-     *         3. This gives token/USD price
-     *         If no Uniswap pair exists, assume 1 token = 1 USD for testing
+     * @dev Get current token price in USD with 8 decimals
+     * @return tokenUsdPrice Price per token in USD (8 decimals), or 0 if unavailable
      */
-    function _getUserUsdValue(address user) internal view returns (uint256) {
-        uint256 stakedTokens = userStakedTokens[user];
-        if (stakedTokens == 0) {
-            return 0;
-        }
-
-        // SIMPLIFIED FOR NOW: Assume 1 token = $1 USD
-        // This allows staking to work while we debug the oracle/Uniswap integration
-        // TODO: Re-enable full USD calculation once Uniswap pair is set
+    function _getTokenPriceUsd() internal view returns (uint256 tokenUsdPrice) {
         if (uniswapPair == address(0)) {
-            // Return USD value with 8 decimals (stakedTokens is 18 decimals)
-            // 1 token (1e18) = 1 USD (1e8)
-            return stakedTokens / (10 ** 10); // Convert from 18 to 8 decimals
+            // No pair: use oracle as token/USD directly (e.g. test mocks or future token oracle)
+            try primaryPriceOracle.latestRoundData() returns (
+                uint80,
+                int256 answer,
+                uint256,
+                uint256 updatedAt,
+                uint80
+            ) {
+                if (answer > 0 && (block.timestamp - updatedAt) < 24 hours) {
+                    return uint256(answer);
+                }
+            } catch {}
+            if (address(backupPriceOracle) != address(0)) {
+                try backupPriceOracle.latestRoundData() returns (
+                    uint80,
+                    int256 answer,
+                    uint256,
+                    uint256 updatedAt,
+                    uint80
+                ) {
+                    if (answer > 0 && (block.timestamp - updatedAt) < 24 hours) {
+                        return uint256(answer);
+                    }
+                } catch {}
+            }
+            return 1e8; // fallback: 1 USD per token (8 decimals)
         }
 
         // Get ETH/USD price from oracle
         int256 ethUsdPrice = 0;
         bool hasValidOracle = false;
-        
+
         try primaryPriceOracle.latestRoundData() returns (
             uint80,
             int256 primaryPrice,
@@ -790,63 +819,66 @@ contract FlexibleTieredStaking is
         }
 
         // Try to get token/ETH price from Uniswap pair
-        uint256 tokenUsdPrice = 0;
-        if (uniswapPair != address(0)) {
-            try IUniswapV2Pair(uniswapPair).getReserves() returns (
-                uint112 reserve0,
-                uint112 reserve1,
-                uint32
-            ) {
-                address token0 = IUniswapV2Pair(uniswapPair).token0();
-                address token1 = IUniswapV2Pair(uniswapPair).token1();
-                
-                // Determine which reserve is token and which is WETH
-                uint256 reserveToken;
-                uint256 reserveETH;
-                
-                if (token0 == address(stakingToken)) {
-                    // Token is token0, WETH is token1
-                    reserveToken = uint256(reserve0);
-                    reserveETH = uint256(reserve1);
-                } else if (token1 == address(stakingToken)) {
-                    // Token is token1, WETH is token0
-                    reserveToken = uint256(reserve1);
-                    reserveETH = uint256(reserve0);
-                } else {
-                    // Pair doesn't contain our token
-                    reserveToken = 0;
-                    reserveETH = 0;
-                }
+        uint256 price = 0;
+        try IUniswapV2Pair(uniswapPair).getReserves() returns (
+            uint112 reserve0,
+            uint112 reserve1,
+            uint32
+        ) {
+            address token0 = IUniswapV2Pair(uniswapPair).token0();
+            address token1 = IUniswapV2Pair(uniswapPair).token1();
 
-                // Calculate token/ETH price: (reserveETH * 1e18) / reserveToken
-                // This gives ETH per token (with 18 decimals)
-                if (reserveToken > 0 && reserveETH > 0) {
-                    // token/ETH = reserveETH / reserveToken (both have 18 decimals)
-                    // token/USD = (reserveETH / reserveToken) * (ETH/USD)
-                    // = (reserveETH * ETH/USD) / reserveToken
-                    // Result needs to be in USD per token with 8 decimals
-                    // reserveETH and reserveToken have 18 decimals
-                    // ETH/USD has 8 decimals
-                    // So: (reserveETH * ETH/USD) / reserveToken = (reserveETH * ETH/USD * 1e8) / (reserveToken * 1e8)
-                    // Simplified: (reserveETH * ethUsdPrice * 1e8) / (reserveToken * 1e8)
-                    // = (reserveETH * ethUsdPrice) / reserveToken
-                    tokenUsdPrice = (reserveETH * uint256(ethUsdPrice)) / reserveToken;
-                }
-            } catch {
-                // Uniswap pair call failed, will use fallback
+            uint256 reserveToken;
+            uint256 reserveETH;
+            if (token0 == address(stakingToken)) {
+                reserveToken = uint256(reserve0);
+                reserveETH = uint256(reserve1);
+            } else if (token1 == address(stakingToken)) {
+                reserveToken = uint256(reserve1);
+                reserveETH = uint256(reserve0);
+            } else {
+                reserveToken = 0;
+                reserveETH = 0;
             }
+
+            if (reserveToken > 0 && reserveETH > 0) {
+                price = (reserveETH * uint256(ethUsdPrice)) / reserveToken;
+            }
+        } catch {
+            // Uniswap pair call failed
         }
 
-        // If we couldn't get price from Uniswap, assume 1 token = 1 USD for testing
-        // This is a fallback for when there's no liquidity yet
-        if (tokenUsdPrice == 0) {
-            tokenUsdPrice = 1e8; // 1 USD per token with 8 decimals
+        if (price == 0) {
+            price = 1e8; // 1 USD per token with 8 decimals
         }
+        return price;
+    }
 
-        // Calculate USD value: (stakedTokens * tokenUsdPrice) / 1e18
-        // stakedTokens has 18 decimals, tokenUsdPrice has 8 decimals
-        // Result should have 8 decimals: (1e18 * 1e8) / 1e18 = 1e8
-        return (stakedTokens * tokenUsdPrice) / 1e18;
+    /**
+     * @dev Get USD value of user's staked tokens at current price (for display/legacy)
+     * @param user User address
+     * @return usdValue USD value with 8 decimals
+     */
+    function _getUserUsdValue(address user) internal view returns (uint256) {
+        uint256 stakedTokens = userStakedTokens[user];
+        if (stakedTokens == 0) return 0;
+        return (stakedTokens * _getTokenPriceUsd()) / 1e18;
+    }
+
+    /**
+     * @dev USD value used for tier/access: locked at staking time. Legacy: current value if never set.
+     * @param user User address
+     * @return usdValue USD value with 8 decimals
+     */
+    function _getUserUsdValueForTier(address user) internal view returns (uint256) {
+        if (userUsdValueAtStake[user] > 0) {
+            return userUsdValueAtStake[user];
+        }
+        if (userStakedTokens[user] == 0) {
+            return 0;
+        }
+        // Legacy staker (staked before upgrade): use current price so behavior is unchanged until they unstake
+        return _getUserUsdValue(user);
     }
 
     // --- Emergency Withdrawal ---
@@ -859,6 +891,7 @@ contract FlexibleTieredStaking is
         require(balance > 0, "No staked tokens to withdraw");
 
         userStakedTokens[msg.sender] = 0;
+        userUsdValueAtStake[msg.sender] = 0;
 
         // Transfer tokens back to user (using standard transfer instead of SafeERC20)
         bool success = stakingToken.transfer(msg.sender, balance);
@@ -979,7 +1012,7 @@ contract FlexibleTieredStaking is
         )
     {
         stakedAmount = userStakedTokens[user];
-        usdValue = _getUserUsdValue(user);
+        usdValue = _getUserUsdValueForTier(user);
         userHasAccess = hasAccess(user);
         uint256 minDuration;
         if (minStakingDurationOverrideEnabled) {
@@ -1057,7 +1090,7 @@ contract FlexibleTieredStaking is
     ) external view returns (bool isStaker) {
         if (tierIndex >= tiers.length) return false;
 
-        uint256 usdValue = _getUserUsdValue(user);
+        uint256 usdValue = _getUserUsdValueForTier(user);
         return usdValue >= tiers[tierIndex].threshold;
     }
 
@@ -1073,7 +1106,7 @@ contract FlexibleTieredStaking is
     ) external view returns (bool meetsRequirement) {
         if (tierIndex >= tiers.length) return false;
 
-        uint256 usdValue = _getUserUsdValue(user);
+        uint256 usdValue = _getUserUsdValueForTier(user);
         return usdValue >= tiers[tierIndex].threshold;
     }
 

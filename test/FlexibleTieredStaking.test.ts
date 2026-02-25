@@ -801,4 +801,91 @@ describe("FlexibleTieredStaking", function () {
       expect(user3Tier.tierIndex).to.equal(2); // Tier 3
     });
   });
+
+  describe("Fixed tier (USD locked at stake time)", function () {
+    it("Access retained when token price drops after staking", async function () {
+      await primaryOracle.setPrice(100 * 10 ** 8); // $100/token
+      await staking.connect(user1).stake(ethers.parseEther("0.5")); // 0.5 * 100 = $50 locked → Tier 2
+
+      expect(await staking.hasAccess(user1.address)).to.be.true;
+      const tierBefore = await staking.getUserTier(user1.address);
+      expect(tierBefore.tierIndex).to.equal(1); // Tier 2
+
+      // Price drops to $1/token (current value would be $0.50)
+      await primaryOracle.setPrice(1 * 10 ** 8);
+
+      // Access and tier must still be Tier 2 (locked USD unchanged)
+      expect(await staking.hasAccess(user1.address)).to.be.true;
+      const tierAfter = await staking.getUserTier(user1.address);
+      expect(tierAfter.tierIndex).to.equal(1);
+      expect(tierAfter.tierName).to.equal("Tier 2");
+      expect(await staking.userUsdValueAtStake(user1.address)).to.equal(50 * 10 ** 8);
+    });
+
+    it("No auto-upgrade when token price rises (must stake more to upgrade)", async function () {
+      await primaryOracle.setPrice(96 * 10 ** 8); // $96/token
+      await staking.connect(user1).stake(ethers.parseEther("0.25")); // 0.25 * 96 = $24 → Tier 1
+
+      const tierBefore = await staking.getUserTier(user1.address);
+      expect(tierBefore.tierIndex).to.equal(0); // Tier 1
+
+      // Price rises to $100/token (current value would be $25, but we use locked USD)
+      await primaryOracle.setPrice(100 * 10 ** 8);
+
+      // Still Tier 1 (locked USD was $24, not enough for Tier 2)
+      const tierAfter = await staking.getUserTier(user1.address);
+      expect(tierAfter.tierIndex).to.equal(0);
+      expect(tierAfter.tierName).to.equal("Tier 1");
+    });
+
+    it("Staking more tokens increases locked USD and can upgrade tier", async function () {
+      await primaryOracle.setPrice(96 * 10 ** 8); // $96/token
+      await staking.connect(user1).stake(ethers.parseEther("0.25")); // $24 → Tier 1
+
+      expect((await staking.getUserTier(user1.address)).tierIndex).to.equal(0);
+
+      // Stake more at same price: +0.25 * 96 = +$24 → total $48, still Tier 1
+      await staking.connect(user1).stake(ethers.parseEther("0.25"));
+      expect((await staking.getUserTier(user1.address)).tierIndex).to.equal(0);
+
+      // Stake a bit more to cross $50: need ~0.021 more at 96 → 0.02 * 96 ≈ 1.92, 48+1.92 < 50. Try 0.03: 0.03*96=2.88, 48+2.88=50.88 ≥ 50
+      await staking.connect(user1).stake(ethers.parseEther("0.03"));
+      expect((await staking.getUserTier(user1.address)).tierIndex).to.equal(1); // Tier 2
+    });
+
+    it("Unstake reduces locked USD proportionally and can downgrade tier", async function () {
+      await primaryOracle.setPrice(100 * 10 ** 8); // $100/token
+      await staking.connect(user1).stake(ethers.parseEther("0.5")); // $50 → Tier 2
+
+      expect((await staking.getUserTier(user1.address)).tierIndex).to.equal(1);
+      expect(await staking.userUsdValueAtStake(user1.address)).to.equal(50 * 10 ** 8);
+
+      await ethers.provider.send("evm_increaseTime", [MIN_STAKING_DURATION + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      // Unstake half: 0.25 tokens → locked USD drops by half to $25 → Tier 1
+      await staking.connect(user1).unstake(ethers.parseEther("0.25"));
+
+      expect(await staking.userUsdValueAtStake(user1.address)).to.equal(25 * 10 ** 8);
+      const tier = await staking.getUserTier(user1.address);
+      expect(tier.tierIndex).to.equal(0); // Tier 1
+      expect(await staking.hasAccess(user1.address)).to.be.true;
+    });
+
+    it("userUsdValueAtStake is set on stake and zero after full unstake", async function () {
+      expect(await staking.userUsdValueAtStake(user2.address)).to.equal(0);
+
+      await primaryOracle.setPrice(100 * 10 ** 8);
+      await staking.connect(user2).stake(ethers.parseEther("1")); // $100 locked
+
+      expect(await staking.userUsdValueAtStake(user2.address)).to.equal(100 * 10 ** 8);
+
+      await ethers.provider.send("evm_increaseTime", [MIN_STAKING_DURATION + 1]);
+      await ethers.provider.send("evm_mine", []);
+      await staking.connect(user2).unstake(ethers.parseEther("1"));
+
+      expect(await staking.userStakedTokens(user2.address)).to.equal(0);
+      expect(await staking.userUsdValueAtStake(user2.address)).to.equal(0);
+    });
+  });
 });
