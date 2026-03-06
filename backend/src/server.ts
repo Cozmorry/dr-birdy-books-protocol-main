@@ -54,10 +54,12 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Security middleware - configure helmet to work with CORS
+// Security middleware - configure helmet to work with CORS and file preview iframes
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false,
+  // Allow API responses (e.g. file download for preview) to be embedded in iframes; default CSP sets frame-ancestors 'self' which blocks preview
+  contentSecurityPolicy: false,
 }));
 
 // Rate limiting - General API routes
