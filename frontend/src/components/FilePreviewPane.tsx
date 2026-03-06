@@ -24,6 +24,12 @@ const isPreviewablePdf = (fileType: string) => {
   return fileType.toLowerCase() === 'pdf';
 };
 
+/** Append PDF viewer params to hide toolbar (copy/edit etc.) so users can't bypass staking by saving content. */
+const pdfPreviewUrl = (url: string) => {
+  const hash = '#toolbar=0&navpanes=0';
+  return url.includes('#') ? `${url.split('#')[0]}${hash}` : `${url}${hash}`;
+};
+
 interface FilePreviewPaneProps {
   selectedFile: FilePreviewFile | null;
   previewUrl: string | null;
@@ -93,14 +99,14 @@ function PreviewPaneInner({
         {!previewLoading && previewUrl && isPreviewablePdf(selectedFile.fileType) && (
           <iframe
             title={selectedFile.fileName}
-            src={previewUrl}
+            src={pdfPreviewUrl(previewUrl)}
             className="w-full h-full min-h-[300px] rounded border-0"
           />
         )}
         {!previewLoading && previewUrl && !isPreviewableImage(selectedFile.fileType) && !isPreviewablePdf(selectedFile.fileType) && (
           <iframe
             title={selectedFile.fileName}
-            src={previewUrl}
+            src={pdfPreviewUrl(previewUrl)}
             className="w-full h-full min-h-[300px] rounded border-0"
           />
         )}
