@@ -479,7 +479,7 @@ export default function FilesPage() {
       </div>
 
       {/* Files List + Preview */}
-      <div className={`flex gap-6 flex-col ${previewFile ? 'lg:flex-row' : ''}`}>
+      <div className={`flex gap-6 flex-col ${previewFile ? 'lg:flex-row lg:items-start' : ''}`}>
       <div className="flex-1 min-w-0 bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
           <div>

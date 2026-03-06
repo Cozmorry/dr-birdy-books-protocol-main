@@ -864,7 +864,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   }
 
   return (
-    <div className={`flex gap-6 flex-col ${selectedFile ? 'lg:flex-row' : ''}`}>
+    <div className={`flex gap-6 flex-col ${selectedFile ? 'lg:flex-row lg:items-start' : ''}`}>
       <div className="flex-1 min-w-0 bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900 flex items-center">

@@ -426,7 +426,7 @@ export default function FolderDetailPage() {
   };
 
   return (
-    <div className={previewFile ? 'flex gap-6 flex-col lg:flex-row' : ''}>
+    <div className={previewFile ? 'flex gap-6 flex-col lg:flex-row lg:items-start' : ''}>
       <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">

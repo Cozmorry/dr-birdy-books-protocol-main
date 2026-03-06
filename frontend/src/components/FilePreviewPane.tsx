@@ -31,21 +31,26 @@ interface FilePreviewPaneProps {
   onClose: () => void;
 }
 
-/**
- * Reusable preview pane: header (title, format, size, close) + content (image / PDF / iframe).
- * Used in main app ContentDownloads and admin Files/FolderDetail.
- */
-export default function FilePreviewPane({
+/** Props for inner pane when we know selectedFile is non-null. */
+interface PreviewPaneInnerProps {
+  selectedFile: FilePreviewFile;
+  previewUrl: string | null;
+  previewLoading: boolean;
+  onClose: () => void;
+  contentClassName?: string;
+}
+
+/** Inner pane content (header + body), shared by sidebar and modal. */
+function PreviewPaneInner({
   selectedFile,
   previewUrl,
   previewLoading,
   onClose,
-}: FilePreviewPaneProps) {
-  if (!selectedFile) return null;
-
+  contentClassName,
+}: PreviewPaneInnerProps) {
   return (
-    <div className="w-full lg:w-[420px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
+    <>
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between flex-shrink-0">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Preview</h3>
           <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate mt-0.5" title={selectedFile.fileName}>
@@ -68,7 +73,7 @@ export default function FilePreviewPane({
           <span className="text-lg leading-none">×</span>
         </button>
       </div>
-      <div className="flex-1 min-h-[320px] flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 overflow-auto">
+      <div className={`flex-1 min-h-0 flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 overflow-auto ${contentClassName ?? ''}`}>
         {previewLoading && (
           <div className="flex flex-col items-center gap-2">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
@@ -82,24 +87,74 @@ export default function FilePreviewPane({
           <img
             src={previewUrl}
             alt={selectedFile.fileName}
-            className="max-w-full max-h-[70vh] object-contain rounded"
+            className="max-w-full max-h-full object-contain rounded"
           />
         )}
         {!previewLoading && previewUrl && isPreviewablePdf(selectedFile.fileType) && (
           <iframe
             title={selectedFile.fileName}
             src={previewUrl}
-            className="w-full h-[70vh] min-h-[400px] rounded border-0"
+            className="w-full h-full min-h-[300px] rounded border-0"
           />
         )}
         {!previewLoading && previewUrl && !isPreviewableImage(selectedFile.fileType) && !isPreviewablePdf(selectedFile.fileType) && (
           <iframe
             title={selectedFile.fileName}
             src={previewUrl}
-            className="w-full h-[70vh] min-h-[400px] rounded border-0"
+            className="w-full h-full min-h-[300px] rounded border-0"
           />
         )}
       </div>
-    </div>
+    </>
+  );
+}
+
+/**
+ * Reusable preview pane: header (title, format, size, close) + content (image / PDF / iframe).
+ * Desktop: sticky sidebar (does not scroll with content, like Windows Explorer).
+ * Mobile: modal popup.
+ */
+export default function FilePreviewPane({
+  selectedFile,
+  previewUrl,
+  previewLoading,
+  onClose,
+}: FilePreviewPaneProps) {
+  if (!selectedFile) return null;
+
+  return (
+    <>
+      {/* Desktop: sticky sidebar filling viewport height (reaches bottom) */}
+      <div className="hidden lg:flex sticky top-4 self-start flex-col w-[420px] flex-shrink-0 h-[calc(100vh-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <PreviewPaneInner
+          selectedFile={selectedFile}
+          previewUrl={previewUrl}
+          previewLoading={previewLoading}
+          onClose={onClose}
+        />
+      </div>
+
+      {/* Mobile: modal popup overlay */}
+      <div
+        className="lg:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="File preview"
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh] w-full max-w-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <PreviewPaneInner
+            selectedFile={selectedFile}
+            previewUrl={previewUrl}
+            previewLoading={previewLoading}
+            onClose={onClose}
+            contentClassName="min-h-[240px]"
+          />
+        </div>
+      </div>
+    </>
   );
 }
