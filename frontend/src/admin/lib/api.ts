@@ -174,6 +174,15 @@ class ApiClient {
     return `${API_BASE_URL}/files/${id}/download`;
   }
 
+  /** Get a short-lived preview URL for admin (inline disposition, no download record). */
+  async getFileAdminPreviewUrl(id: string): Promise<string | null> {
+    const response = await this.client.get(`/files/${id}/admin-presigned`);
+    const data = response.data;
+    if (!data?.success || !data?.downloadUrl) return null;
+    const base = data.downloadUrl.startsWith('http') ? '' : API_BASE_URL;
+    return `${base}${data.downloadUrl}`;
+  }
+
   // Analytics endpoints
   async getDashboardAnalytics(params?: any) {
     const response = await this.client.get('/analytics/dashboard', { params });

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Upload, Download, Trash2, Edit, AlertCircle, CheckCircle, X, Folder, AlertTriangle } from 'lucide-react';
+import { Upload, Download, Trash2, Edit, AlertCircle, CheckCircle, X, Folder, AlertTriangle, Eye } from 'lucide-react';
 import FolderSelector from '../components/FolderSelector';
+import FilePreviewPane from '../../components/FilePreviewPane';
 
 export default function FilesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,6 +33,23 @@ export default function FilesPage() {
     show: false,
     fileId: null,
   });
+  const [previewFile, setPreviewFile] = useState<any | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const handlePreviewClick = useCallback(async (file: any) => {
+    setPreviewFile(file);
+    setPreviewUrl(null);
+    setPreviewLoading(true);
+    try {
+      const url = await api.getFileAdminPreviewUrl(file._id);
+      setPreviewUrl(url || null);
+    } catch {
+      setPreviewUrl(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Read folder from URL params on mount
@@ -460,8 +478,9 @@ export default function FilesPage() {
         </form>
       </div>
 
-      {/* Files List */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Files List + Preview */}
+      <div className={`flex gap-6 flex-col ${previewFile ? 'lg:flex-row' : ''}`}>
+      <div className="flex-1 min-w-0 bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
@@ -533,7 +552,11 @@ export default function FilesPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getDisplayedFiles().map((file) => (
-                  <tr key={file._id}>
+                  <tr
+                    key={file._id}
+                    onClick={() => handlePreviewClick(file)}
+                    className="cursor-pointer hover:bg-gray-50"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {file.originalName}
@@ -561,8 +584,15 @@ export default function FilesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {file.downloads}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handlePreviewClick(file)}
+                          className="text-gray-600 hover:text-gray-900"
+                          title="Preview file"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => handleEdit(file)}
                           className="text-blue-600 hover:text-blue-900"
@@ -638,6 +668,14 @@ export default function FilesPage() {
             )}
           </>
         )}
+      </div>
+
+      <FilePreviewPane
+        selectedFile={previewFile ? { fileName: previewFile.originalName, fileType: previewFile.fileType || '', fileSize: previewFile.fileSize } : null}
+        previewUrl={previewUrl}
+        previewLoading={previewLoading}
+        onClose={() => { setPreviewFile(null); setPreviewUrl(null); }}
+      />
       </div>
 
       {/* Edit File Modal */}

@@ -169,10 +169,38 @@ export const generatePreSignedUrlToken = (fileId: string, walletAddress: string)
 export const verifyPreSignedUrlToken = (token: string): { fileId: string; walletAddress: string } | null => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.adminId) return null; // admin token, handle elsewhere
     return {
       fileId: decoded.fileId,
       walletAddress: decoded.walletAddress,
     };
+  } catch (error) {
+    return null;
+  }
+};
+
+const ADMIN_PRESIGNED_EXPIRY = 15 * 60; // 15 minutes
+
+/**
+ * Generate a pre-signed URL token for admin preview/download (no wallet/tier checks)
+ */
+export const generateAdminPreSignedUrlToken = (fileId: string, adminId: string): string => {
+  const payload = {
+    fileId,
+    adminId,
+    exp: Math.floor(Date.now() / 1000) + ADMIN_PRESIGNED_EXPIRY,
+  };
+  return jwt.sign(payload, JWT_SECRET);
+};
+
+/**
+ * Verify admin pre-signed URL token
+ */
+export const verifyAdminPreSignedUrlToken = (token: string): { fileId: string } | null => {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (!decoded.adminId || !decoded.fileId) return null;
+    return { fileId: decoded.fileId };
   } catch (error) {
     return null;
   }

@@ -674,9 +674,9 @@ export const StakingPanelStore: React.FC = () => {
                   In the field above where you enter the number of tokens to stake, please keep in mind that to access Dr. Birdy Books tiered content, you must stake a minimum amount of DBBPT tokens equal to the USD value listed below, based on the current token price:
                 </p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>Tier 1: $24 worth of DBBPT tokens</li>
-                  <li>Tier 2: $50 worth of DBBPT tokens</li>
-                  <li>Tier 3: $1,000 worth of DBBPT tokens</li>
+                  <li>Tier 1: $24 worth of DBBPT tokens — Access to: Worksheets</li>
+                  <li>Tier 2: $50 worth of DBBPT tokens — Access to: Worksheets, eBooks, and Flashcards</li>
+                  <li>Tier 3: $1,000 worth of DBBPT tokens — Access to: Worksheets, eBooks, Flashcards, and The Tier 3 Folder</li>
                 </ul>
                 <p>
                   Please enter the number of tokens you want to stake. Make sure your stake meets or exceeds the required amount for the content tier you wish to unlock.

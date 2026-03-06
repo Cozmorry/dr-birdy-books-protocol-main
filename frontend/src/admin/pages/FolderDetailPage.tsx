@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
@@ -19,6 +19,7 @@ import {
   Eye,
 } from 'lucide-react';
 import FolderSelector from '../components/FolderSelector';
+import FilePreviewPane from '../../components/FilePreviewPane';
 import { getIconFromName, SUGGESTED_ICONS } from '../utils/iconUtils';
 
 interface FileData {
@@ -86,6 +87,23 @@ export default function FolderDetailPage() {
     order: 0,
   });
   const [isUpdatingFolder, setIsUpdatingFolder] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileData | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const handlePreviewClick = useCallback(async (file: FileData) => {
+    setPreviewFile(file);
+    setPreviewUrl(null);
+    setPreviewLoading(true);
+    try {
+      const url = await api.getFileAdminPreviewUrl(file._id);
+      setPreviewUrl(url || null);
+    } catch {
+      setPreviewUrl(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -408,7 +426,8 @@ export default function FolderDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={previewFile ? 'flex gap-6 flex-col lg:flex-row' : ''}>
+      <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -665,7 +684,8 @@ export default function FolderDetailPage() {
           {filteredFiles.map((file) => (
             <div
               key={file._id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 flex flex-col h-full"
+              onClick={() => handlePreviewClick(file)}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 flex flex-col h-full cursor-pointer"
             >
               <div className="flex-1 flex flex-col">
                 <div className="flex items-start justify-between mb-3">
@@ -693,13 +713,20 @@ export default function FolderDetailPage() {
                   <div>Added: {formatDate(file.createdAt)}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 pt-3 border-t border-gray-100 dark:border-gray-700 mt-auto">
+              <div className="flex items-center gap-1 pt-3 border-t border-gray-100 dark:border-gray-700 mt-auto" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => handleDownloadFile(file._id)}
                   className="flex-1 p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors text-xs font-medium"
                   title="Download"
                 >
                   <Download className="h-4 w-4 mx-auto" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handlePreviewClick(file); }}
+                  className="flex-1 p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900/30 rounded transition-colors text-xs font-medium"
+                  title="Preview"
+                >
+                  <Eye className="h-4 w-4 mx-auto" />
                 </button>
                 <button
                   onClick={() => handleEditFile(file)}
@@ -831,7 +858,11 @@ export default function FolderDetailPage() {
                 ))}
                 {/* Files */}
                 {filteredFiles.map((file) => (
-                  <tr key={file._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr
+                    key={file._id}
+                    onClick={() => handlePreviewClick(file)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <File className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
@@ -862,7 +893,7 @@ export default function FolderDetailPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(file.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleDownloadFile(file._id)}
@@ -870,6 +901,13 @@ export default function FolderDetailPage() {
                           title="Download"
                         >
                           <Download className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handlePreviewClick(file)}
+                          className="text-gray-600 hover:text-gray-900"
+                          title="Preview"
+                        >
+                          <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleEditFile(file)}
@@ -896,6 +934,15 @@ export default function FolderDetailPage() {
       )}
         </>
       )}
+
+      </div>
+
+      <FilePreviewPane
+        selectedFile={previewFile ? { fileName: previewFile.originalName, fileType: previewFile.fileType || '', fileSize: previewFile.fileSize } : null}
+        previewUrl={previewUrl}
+        previewLoading={previewLoading}
+        onClose={() => { setPreviewFile(null); setPreviewUrl(null); }}
+      />
 
       {/* Edit File Modal */}
       {editingFile && (

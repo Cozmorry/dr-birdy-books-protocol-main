@@ -5,6 +5,7 @@ import {
   getFile,
   downloadFile,
   generatePreSignedUrl,
+  generateAdminPreSignedUrl,
   getDownloadStats,
   updateFile,
   deleteFile,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get('/', getFiles);
 router.get('/stats/download', getDownloadStats); // Must come before /:id
 router.get('/:id/presigned', generatePreSignedUrl);
+router.get('/:id/admin-presigned', authenticate, generateAdminPreSignedUrl);
 router.get('/:id/download', downloadFile);
 router.get('/:id', getFile);
 

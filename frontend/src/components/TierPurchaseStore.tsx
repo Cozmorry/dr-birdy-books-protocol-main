@@ -217,6 +217,13 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
                     }`}>
                       Required: {formatTokenAmount(tier.threshold)} DBBPT
                     </p>
+                    <p className={`text-xs mt-0.5 ${
+                      isSelected ? 'text-purple-600 dark:text-purple-400' : 
+                      status === 'current' ? 'text-blue-600 dark:text-blue-400' : 
+                      status === 'unlocked' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      Access to: {index === 0 ? 'Worksheets' : index === 1 ? 'Worksheets, eBooks, and Flashcards' : 'Worksheets, eBooks, Flashcards, and The Tier 3 Folder'}
+                    </p>
                   </div>
                 </div>
                 

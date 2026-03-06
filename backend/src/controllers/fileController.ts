@@ -13,6 +13,8 @@ import {
   markQuotaWarningSent,
   generatePreSignedUrlToken,
   verifyPreSignedUrlToken,
+  generateAdminPreSignedUrlToken,
+  verifyAdminPreSignedUrlToken,
   getUserDownloadStats,
 } from '../services/downloadControlService';
 
@@ -480,27 +482,65 @@ export const generatePreSignedUrl = async (req: AuthRequest, res: Response): Pro
   }
 };
 
+// @desc    Generate pre-signed URL for admin preview (no wallet/tier checks)
+// @route   GET /api/files/:id/admin-presigned
+// @access  Private (Admin)
+export const generateAdminPreSignedUrl = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!req.admin?.id) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
+    const file = await File.findById(id);
+    if (!file || !file.isActive) {
+      res.status(404).json({ success: false, message: 'File not found', code: 'FILE_NOT_FOUND' });
+      return;
+    }
+    const token = generateAdminPreSignedUrlToken(id, req.admin.id);
+    const downloadUrl = `/files/${id}/download?token=${encodeURIComponent(token)}&disposition=inline`;
+    res.status(200).json({
+      success: true,
+      downloadUrl,
+      expiresIn: 900,
+    });
+  } catch (error: any) {
+    console.error('Generate admin pre-signed URL error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate preview URL',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Download file (with pre-signed token or direct access)
 // @route   GET /api/files/:id/download
 // @access  Public (with wallet verification)
 export const downloadFile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { walletAddress, token } = req.query;
+    const { walletAddress, token, disposition } = req.query;
+    const isPreview = disposition === 'inline';
     
     let verifiedWalletAddress: string | null = null;
-    
-    // If token is provided, verify it
+    let isAdminPreview = false;
+
+    // If token is provided, verify it (wallet token or admin token)
     if (token && typeof token === 'string') {
       const decoded = verifyPreSignedUrlToken(token);
-      if (!decoded || decoded.fileId !== id) {
+      const adminDecoded = verifyAdminPreSignedUrlToken(token);
+      if (decoded && decoded.fileId === id) {
+        verifiedWalletAddress = decoded.walletAddress;
+      } else if (adminDecoded && adminDecoded.fileId === id) {
+        isAdminPreview = true;
+      } else {
         res.status(401).json({
           success: false,
           message: 'Invalid or expired download token',
         });
         return;
       }
-      verifiedWalletAddress = decoded.walletAddress;
     } else if (walletAddress && typeof walletAddress === 'string') {
       verifiedWalletAddress = walletAddress.toLowerCase();
       
@@ -528,8 +568,8 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
     
-    // Verify access if tier-restricted
-    if (file.tier >= 0 && verifiedWalletAddress) {
+    // Verify access if tier-restricted (skip for admin preview)
+    if (file.tier >= 0 && verifiedWalletAddress && !isAdminPreview) {
       try {
         const userTier = await getUserTier(verifiedWalletAddress);
         // User must have unlocked the required tier or higher
@@ -556,8 +596,8 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       }
     }
     
-    // Check monthly quota if wallet address is available
-    if (verifiedWalletAddress) {
+    // Check monthly quota if wallet address is available (skip for admin preview)
+    if (verifiedWalletAddress && !isAdminPreview) {
       const quotaCheck = await checkMonthlyQuota(verifiedWalletAddress, file.fileSize);
       if (!quotaCheck.allowed) {
         res.status(429).json({
@@ -579,8 +619,8 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       storageType: file.storageType,
     });
     
-    // Record download stats BEFORE streaming starts (to prevent multiple recordings)
-    if (verifiedWalletAddress) {
+    // Record download stats BEFORE streaming starts (skip for preview/inline or admin preview)
+    if (verifiedWalletAddress && !isPreview && !isAdminPreview) {
       const downloadKey = token 
         ? `token:${token}` 
         : `file:${id}:wallet:${verifiedWalletAddress}`;
@@ -636,9 +676,11 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
         console.log('📤 Downloading file from S3...');
         const fileBuffer = await downloadFromS3(file.storagePath);
         
-        // Set headers
+        // Set headers (inline for preview so browser can display in iframe/img)
         res.setHeader('Content-Type', file.mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+        res.setHeader('Content-Disposition', isPreview
+          ? `inline; filename="${encodeURIComponent(file.originalName)}"`
+          : `attachment; filename="${encodeURIComponent(file.originalName)}"`);
         res.setHeader('Content-Length', file.fileSize);
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Cache-Control', 'no-cache');
@@ -662,7 +704,9 @@ export const downloadFile = async (req: AuthRequest, res: Response): Promise<voi
       // Handle MongoDB GridFS downloads using streaming
       // Set headers immediately (before any async operations)
       res.setHeader('Content-Type', file.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+      res.setHeader('Content-Disposition', isPreview
+        ? `inline; filename="${encodeURIComponent(file.originalName)}"`
+        : `attachment; filename="${encodeURIComponent(file.originalName)}"`);
       res.setHeader('Content-Length', file.fileSize);
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'no-cache');

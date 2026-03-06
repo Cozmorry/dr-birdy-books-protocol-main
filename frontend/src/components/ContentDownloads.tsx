@@ -4,6 +4,7 @@ import { Download, File, Image, FileText, Video, Music, AlertCircle, Lock, Folde
 import { useToast } from '../contexts/ToastContext';
 import { trackFileDownload } from '../utils/analytics';
 import { getIconFromName } from '../utils/iconUtils';
+import FilePreviewPane from './FilePreviewPane';
 
 // Hierarchical Folder Selector Component
 interface HierarchicalFolderSelectorProps {
@@ -251,6 +252,10 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   const [foldersPerPage] = useState(12);
   const [folderSortBy, setFolderSortBy] = useState<'name' | 'tier' | 'fileCount' | 'createdAt'>('name');
   const [folderSortOrder, setFolderSortOrder] = useState<'asc' | 'desc'>('asc');
+  // Preview pane: selected file and its inline URL
+  const [selectedFile, setSelectedFile] = useState<ContentFile | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const navigate = useNavigate();
 
   // Define functions before useEffect hooks
@@ -747,6 +752,71 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     }
   };
 
+  const handlePreviewClick = useCallback(async (file: ContentFile) => {
+    setSelectedFile(file);
+    setPreviewUrl(null);
+    if (!userInfo?.address) {
+      return;
+    }
+    if (!canAccessFile(file)) {
+      return;
+    }
+    if (file.fileData) {
+      setPreviewUrl(file.fileData);
+      return;
+    }
+    if (file.txId && !file.downloadUrl) {
+      setPreviewUrl(`https://arweave.net/${file.txId}`);
+      return;
+    }
+    setPreviewLoading(true);
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      const presignedResponse = await fetch(
+        `${API_BASE_URL}/files/${file.id}/presigned?walletAddress=${userInfo.address}`
+      );
+      if (!presignedResponse.ok) {
+        setPreviewUrl(null);
+        setPreviewLoading(false);
+        return;
+      }
+      const presignedData = await presignedResponse.json();
+      if (!presignedData.success || !presignedData.downloadUrl) {
+        setPreviewLoading(false);
+        return;
+      }
+      const base = presignedData.downloadUrl.startsWith('http') ? '' : API_BASE_URL;
+      const separator = presignedData.downloadUrl.includes('?') ? '&' : '?';
+      const url = `${base}${presignedData.downloadUrl}${separator}disposition=inline`;
+      setPreviewUrl(url);
+    } catch {
+      setPreviewUrl(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [userInfo?.address, userTier]);
+
+  const isPreviewableImage = (fileType: string) => {
+    const t = fileType.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(t);
+  };
+
+  const isPreviewablePdf = (fileType: string) => {
+    return fileType.toLowerCase() === 'pdf';
+  };
+
+  const previewPaneFile = selectedFile
+    ? {
+        fileName: selectedFile.fileName,
+        fileType: selectedFile.fileType,
+        fileSize: selectedFile.fileSize,
+      }
+    : null;
+  const effectivePreviewUrl =
+    previewUrl ||
+    (selectedFile?.fileData ? selectedFile.fileData : null) ||
+    (selectedFile?.txId && !selectedFile?.downloadUrl ? `https://arweave.net/${selectedFile.txId}` : null);
+
   const getFileIcon = (fileType: string) => {
     const type = fileType.toLowerCase();
     if (['pdf'].includes(type)) return <FileText className="h-6 w-6 text-red-600" />;
@@ -794,7 +864,8 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className={`flex gap-6 flex-col ${selectedFile ? 'lg:flex-row' : ''}`}>
+      <div className="flex-1 min-w-0 bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900 flex items-center">
           <Download className="h-6 w-6 text-blue-600 mr-2" />
@@ -1136,7 +1207,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                             {folderFiles.map((file) => (
                               <div
                                 key={file.id}
-                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handlePreviewClick(file)}
+                                onKeyDown={(e) => e.key === 'Enter' && handlePreviewClick(file)}
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                               >
                         <div className="flex items-start space-x-3 mb-3">
                           {getFileIcon(file.fileType)}
@@ -1183,7 +1258,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                           </span>
                           {canAccessFile(file) ? (
                             <button
-                              onClick={() => handleDownload(file)}
+                              onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
                               disabled={downloadingFileId === file.id}
                               className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
                                 downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
@@ -1434,7 +1509,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                             {folderFiles.map((file) => (
                               <div
                                 key={file.id}
-                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handlePreviewClick(file)}
+                                onKeyDown={(e) => e.key === 'Enter' && handlePreviewClick(file)}
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                               >
                                 <div className="flex items-start space-x-3 mb-3">
                                   {getFileIcon(file.fileType)}
@@ -1481,7 +1560,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                                   </span>
                                   {canAccessFile(file) ? (
                                     <button
-                                      onClick={() => handleDownload(file)}
+                                      onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
                                       disabled={downloadingFileId === file.id}
                                       className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
                                         downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
@@ -1620,7 +1699,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                   .map((file) => (
                     <div
                       key={file.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handlePreviewClick(file)}
+                      onKeyDown={(e) => e.key === 'Enter' && handlePreviewClick(file)}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                     >
                       <div className="flex items-start space-x-3 mb-3">
                         {getFileIcon(file.fileType)}
@@ -1667,7 +1750,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                         </span>
                         {canAccessFile(file) ? (
                           <button
-                            onClick={() => handleDownload(file)}
+                            onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
                             disabled={downloadingFileId === file.id}
                             className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
                               downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
@@ -1715,7 +1798,11 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           {filteredFiles.map((file) => (
             <div
               key={file.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              role="button"
+              tabIndex={0}
+              onClick={() => handlePreviewClick(file)}
+              onKeyDown={(e) => e.key === 'Enter' && handlePreviewClick(file)}
+              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div className="flex items-start space-x-3 mb-3">
                 {getFileIcon(file.fileType)}
@@ -1766,7 +1853,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
                 </span>
                 {canAccessFile(file) ? (
                   <button
-                    onClick={() => handleDownload(file)}
+                    onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
                     disabled={downloadingFileId === file.id}
                     className={`px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors flex items-center text-sm ${
                       downloadingFileId === file.id ? 'opacity-50 cursor-not-allowed' : ''
@@ -1851,6 +1938,16 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
           </div>
         </div>
       )}
+
+    </div>
+
+    {/* Preview pane - right side, only when a file is selected */}
+    <FilePreviewPane
+      selectedFile={previewPaneFile}
+      previewUrl={effectivePreviewUrl}
+      previewLoading={previewLoading}
+      onClose={() => { setSelectedFile(null); setPreviewUrl(null); }}
+    />
     </div>
   );
 };

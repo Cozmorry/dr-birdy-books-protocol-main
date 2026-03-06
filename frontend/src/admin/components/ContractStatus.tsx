@@ -1,11 +1,37 @@
 import { useEffect, useState } from 'react';
-import { Shield, CheckCircle, XCircle, AlertCircle, Settings, Wrench } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, AlertCircle, Wallet } from 'lucide-react';
 import { useWeb3Store } from '../../hooks/useWeb3Store';
 import { useContractsStore } from '../../hooks/useContractsStore';
+import { useWeb3 } from '../../hooks/useWeb3';
 
 export default function ContractStatus() {
-  const { provider, signer } = useWeb3Store();
+  const { provider, signer, setWeb3State } = useWeb3Store();
   const { contracts } = useContractsStore();
+  const {
+    provider: web3Provider,
+    signer: web3Signer,
+    account: web3Account,
+    isConnected: web3Connected,
+    isCorrectNetwork: web3CorrectNetwork,
+    isLoading: web3Loading,
+    error: web3Error,
+    connectWallet,
+  } = useWeb3();
+
+  // When on admin, MainApp is not mounted, so sync this component's useWeb3 state into the store
+  // so that connectWallet() here updates the store and triggers initializeContracts(provider).
+  useEffect(() => {
+    setWeb3State({
+      provider: web3Provider,
+      signer: web3Signer,
+      account: web3Account,
+      isConnected: web3Connected,
+      isCorrectNetwork: web3CorrectNetwork,
+      web3Loading,
+      web3Error,
+    });
+  }, [web3Provider, web3Signer, web3Account, web3Connected, web3CorrectNetwork, web3Loading, web3Error, setWeb3State]);
+
   const [contractStatus, setContractStatus] = useState<{
     isPaused: boolean;
     stakingTokenSet: boolean;
@@ -57,8 +83,26 @@ export default function ContractStatus() {
           <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">Contract not available</p>
           <p className="text-sm text-gray-500 mt-2">
-            Please connect your wallet to view contract status
+            Connect your wallet to view contract status
           </p>
+          <button
+            type="button"
+            onClick={() => connectWallet()}
+            disabled={web3Loading}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {web3Loading ? (
+              <>
+                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                Connecting…
+              </>
+            ) : (
+              <>
+                <Wallet className="h-4 w-4" />
+                Connect wallet
+              </>
+            )}
+          </button>
         </div>
       </div>
     );
