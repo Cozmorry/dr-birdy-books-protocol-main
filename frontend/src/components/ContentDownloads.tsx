@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { trackFileDownload } from '../utils/analytics';
 import { getIconFromName } from '../utils/iconUtils';
 import FilePreviewPane from './FilePreviewPane';
+import PreviewHintModal from './PreviewHintModal';
 
 // Hierarchical Folder Selector Component
 interface HierarchicalFolderSelectorProps {
@@ -864,6 +865,8 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
   }
 
   return (
+    <>
+      <PreviewHintModal showCondition={hasAccess && availableFiles.length > 0} />
     <div className={`flex gap-6 flex-col ${selectedFile ? 'lg:flex-row lg:items-start' : ''}`}>
       <div className="flex-1 min-w-0 bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-6">
@@ -1949,6 +1952,7 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
       onClose={() => { setSelectedFile(null); setPreviewUrl(null); }}
     />
     </div>
+    </>
   );
 };
 

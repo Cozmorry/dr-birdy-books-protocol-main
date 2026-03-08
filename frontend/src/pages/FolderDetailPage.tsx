@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { getIconFromName } from '../utils/iconUtils';
 import { useToast } from '../contexts/ToastContext';
+import FilePreviewPane from '../components/FilePreviewPane';
+import PreviewHintModal from '../components/PreviewHintModal';
 
 interface ContentFile {
   id: string;
@@ -87,6 +89,9 @@ export default function FolderDetailPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [breadcrumbPath, setBreadcrumbPath] = useState<FolderData[]>([]);
+  const [previewFile, setPreviewFile] = useState<ContentFile | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const loadFolders = useCallback(async (): Promise<FolderData[]> => {
     try {
@@ -430,6 +435,52 @@ export default function FolderDetailPage({
     }
   };
 
+  const handlePreviewClick = useCallback(async (file: ContentFile) => {
+    setPreviewFile(file);
+    setPreviewUrl(null);
+    if (!userInfo?.address) {
+      setPreviewLoading(false);
+      return;
+    }
+    if (!canAccessFile(file)) {
+      setPreviewLoading(false);
+      return;
+    }
+    if (file.fileData) {
+      setPreviewUrl(file.fileData);
+      return;
+    }
+    if (file.txId && !file.downloadUrl) {
+      setPreviewUrl(`https://arweave.net/${file.txId}`);
+      return;
+    }
+    setPreviewLoading(true);
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      const presignedResponse = await fetch(
+        `${API_BASE_URL}/files/${file.id}/presigned?walletAddress=${userInfo.address}`
+      );
+      if (!presignedResponse.ok) {
+        setPreviewUrl(null);
+        setPreviewLoading(false);
+        return;
+      }
+      const presignedData = await presignedResponse.json();
+      if (!presignedData.success || !presignedData.downloadUrl) {
+        setPreviewLoading(false);
+        return;
+      }
+      const base = presignedData.downloadUrl.startsWith('http') ? '' : API_BASE_URL;
+      const separator = presignedData.downloadUrl.includes('?') ? '&' : '?';
+      const url = `${base}${presignedData.downloadUrl}${separator}disposition=inline`;
+      setPreviewUrl(url);
+    } catch {
+      setPreviewUrl(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [userInfo?.address, userTier]);
+
   const getFileIcon = (fileType: string) => {
     const type = fileType.toLowerCase();
     if (type.includes('image') || type.includes('jpg') || type.includes('png') || type.includes('gif')) {
@@ -486,7 +537,10 @@ export default function FolderDetailPage({
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <PreviewHintModal showCondition={filteredFiles.length > 0} />
+    <div className={previewFile ? 'flex gap-6 flex-col lg:flex-row lg:items-start' : ''}>
+      <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -682,7 +736,8 @@ export default function FolderDetailPage({
           {filteredFiles.map((file) => (
             <div
               key={file.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
+              onClick={() => handlePreviewClick(file)}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 cursor-pointer"
             >
               <div className="flex items-start gap-3 mb-3">
                 {getFileIcon(file.fileType)}
@@ -721,7 +776,7 @@ export default function FolderDetailPage({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {formatDate(file.uploadDate)}
                 </span>
@@ -827,7 +882,11 @@ export default function FolderDetailPage({
               
               {/* Files */}
               {filteredFiles.map((file) => (
-                <tr key={file.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr
+                  key={file.id}
+                  onClick={() => handlePreviewClick(file)}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {getFileIcon(file.fileType)}
@@ -864,7 +923,7 @@ export default function FolderDetailPage({
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(file.uploadDate)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                     {canAccessFile(file) ? (
                       <button
                         onClick={() => handleDownload(file)}
@@ -910,7 +969,16 @@ export default function FolderDetailPage({
           <p className="text-gray-600 dark:text-gray-400">This folder is empty</p>
         </div>
       )}
+      </div>
+
+      <FilePreviewPane
+        selectedFile={previewFile ? { fileName: previewFile.fileName, fileType: previewFile.fileType || '', fileSize: previewFile.fileSize } : null}
+        previewUrl={previewUrl}
+        previewLoading={previewLoading}
+        onClose={() => { setPreviewFile(null); setPreviewUrl(null); }}
+      />
     </div>
+    </>
   );
 }
 

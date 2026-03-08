@@ -79,7 +79,11 @@ function PreviewPaneInner({
           <span className="text-lg leading-none">×</span>
         </button>
       </div>
-      <div className={`flex-1 min-h-0 flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 overflow-auto ${contentClassName ?? ''}`}>
+      <div
+        className={`flex-1 min-h-0 flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 overflow-auto select-none ${contentClassName ?? ''}`}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
+      >
         {previewLoading && (
           <div className="flex flex-col items-center gap-2">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
@@ -93,22 +97,29 @@ function PreviewPaneInner({
           <img
             src={previewUrl}
             alt={selectedFile.fileName}
-            className="max-w-full max-h-full object-contain rounded"
+            className="max-w-full max-h-full object-contain rounded pointer-events-none"
+            onContextMenu={(e) => e.preventDefault()}
+            draggable={false}
+            style={{ pointerEvents: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
           />
         )}
         {!previewLoading && previewUrl && isPreviewablePdf(selectedFile.fileType) && (
-          <iframe
-            title={selectedFile.fileName}
-            src={pdfPreviewUrl(previewUrl)}
-            className="w-full h-full min-h-[300px] rounded border-0"
-          />
+          <div className="w-full h-full min-h-[300px] select-none" onContextMenu={(e) => e.preventDefault()} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+            <iframe
+              title={selectedFile.fileName}
+              src={pdfPreviewUrl(previewUrl)}
+              className="w-full h-full min-h-[300px] rounded border-0 pointer-events-auto"
+            />
+          </div>
         )}
         {!previewLoading && previewUrl && !isPreviewableImage(selectedFile.fileType) && !isPreviewablePdf(selectedFile.fileType) && (
-          <iframe
-            title={selectedFile.fileName}
-            src={pdfPreviewUrl(previewUrl)}
-            className="w-full h-full min-h-[300px] rounded border-0"
-          />
+          <div className="w-full h-full min-h-[300px] select-none" onContextMenu={(e) => e.preventDefault()} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+            <iframe
+              title={selectedFile.fileName}
+              src={pdfPreviewUrl(previewUrl)}
+              className="w-full h-full min-h-[300px] rounded border-0 pointer-events-auto"
+            />
+          </div>
         )}
       </div>
     </>
@@ -131,7 +142,11 @@ export default function FilePreviewPane({
   return (
     <>
       {/* Desktop: sticky sidebar filling viewport height (reaches bottom) */}
-      <div className="hidden lg:flex sticky top-4 self-start flex-col w-[420px] flex-shrink-0 h-[calc(100vh-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div
+        className="hidden lg:flex sticky top-4 self-start flex-col w-[420px] flex-shrink-0 h-[calc(100vh-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden select-none"
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
+      >
         <PreviewPaneInner
           selectedFile={selectedFile}
           previewUrl={previewUrl}
@@ -149,8 +164,10 @@ export default function FilePreviewPane({
         aria-label="File preview"
       >
         <div
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh] w-full max-w-lg"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh] w-full max-w-lg select-none"
           onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ WebkitUserSelect: 'none', userSelect: 'none' }}
         >
           <PreviewPaneInner
             selectedFile={selectedFile}
