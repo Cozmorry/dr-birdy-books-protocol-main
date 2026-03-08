@@ -12,7 +12,11 @@ export default function PreviewHintModal({ showCondition }: PreviewHintModalProp
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   useEffect(() => {
-    if (showCondition && !localStorage.getItem(STORAGE_KEY)) {
+    if (!showCondition) {
+      setVisible(false);
+      return;
+    }
+    if (!localStorage.getItem(STORAGE_KEY)) {
       setVisible(true);
     }
   }, [showCondition]);
