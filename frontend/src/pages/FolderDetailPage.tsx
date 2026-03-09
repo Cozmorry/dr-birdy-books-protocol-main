@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -92,6 +92,11 @@ export default function FolderDetailPage({
   const [previewFile, setPreviewFile] = useState<ContentFile | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Refs so the load effect only depends on id (avoids reload on store/context updates)
+  const loadFoldersRef = useRef<() => Promise<FolderData[]>>(() => Promise.resolve([]));
+  const loadFolderRef = useRef<(foldersList?: FolderData[]) => Promise<void>>(() => Promise.resolve());
+  const loadFilesRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const loadFolders = useCallback(async (): Promise<FolderData[]> => {
     try {
@@ -243,18 +248,24 @@ export default function FolderDetailPage({
     }
   }, [id, userInfo?.address]);
 
+  // Keep refs updated so effect can call latest without depending on them
+  loadFoldersRef.current = loadFolders;
+  loadFolderRef.current = loadFolder;
+  loadFilesRef.current = loadFiles;
+
   useEffect(() => {
-    if (id) {
-      setIsLoading(true);
-      loadFolders().then((folders) => {
-        // Pass folders directly to avoid dependency on allFolders state
-        if (folders && folders.length > 0) {
-          loadFolder(folders);
-        }
-        loadFiles();
-      });
-    }
-  }, [id, loadFolders, loadFolder, loadFiles]);
+    if (!id) return;
+    setIsLoading(true);
+    const load = loadFoldersRef.current;
+    const loadF = loadFolderRef.current;
+    const loadFilesFn = loadFilesRef.current;
+    load().then((folders) => {
+      if (folders && folders.length > 0) {
+        loadF(folders);
+      }
+      loadFilesFn();
+    });
+  }, [id]);
 
   const filterAndSortFiles = useCallback(() => {
     let filtered = [...files];

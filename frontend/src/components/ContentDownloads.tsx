@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, File, Image, FileText, Video, Music, AlertCircle, Lock, Folder, ChevronRight, ChevronDown, Grid3x3, List } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
@@ -517,12 +517,20 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
     }
   }, [userInfo?.address]);
 
-  // useEffect hooks after function definitions
+  // Refs so we only re-run when meaningful values change, not when callbacks are recreated by parent re-renders
+  const loadFoldersRef = useRef(loadFolders);
+  const loadAvailableFilesRef = useRef(loadAvailableFiles);
+  const loadDownloadStatsRef = useRef(loadDownloadStats);
+  loadFoldersRef.current = loadFolders;
+  loadAvailableFilesRef.current = loadAvailableFiles;
+  loadDownloadStatsRef.current = loadDownloadStats;
+
+  // useEffect: load folders/files only when these change (not on every store/context update)
   useEffect(() => {
-    loadFolders();
-    loadAvailableFiles();
-    loadDownloadStats();
-  }, [loadFolders, loadAvailableFiles, loadDownloadStats, userTier, hasAccess, userInfo?.address, currentPage, filesPerPage, sortBy, sortOrder, selectedFolder]);
+    loadFoldersRef.current();
+    loadAvailableFilesRef.current();
+    loadDownloadStatsRef.current();
+  }, [userInfo?.address, userTier, currentPage, filesPerPage, sortBy, sortOrder, selectedFolder]);
 
   useEffect(() => {
     filterFiles();

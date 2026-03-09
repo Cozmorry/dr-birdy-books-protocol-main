@@ -1,9 +1,12 @@
 import React from 'react';
+import PdfCanvasViewer from './PdfCanvasViewer';
 
 export interface FilePreviewFile {
   fileName: string;
   fileType: string;
   fileSize?: number;
+  /** Optional stable id for cache (same file = same id across reloads) */
+  id?: string;
 }
 
 const formatFileSize = (bytes?: number) => {
@@ -104,13 +107,12 @@ function PreviewPaneInner({
           />
         )}
         {!previewLoading && previewUrl && isPreviewablePdf(selectedFile.fileType) && (
-          <div className="w-full h-full min-h-[300px] select-none" onContextMenu={(e) => e.preventDefault()} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
-            <iframe
-              title={selectedFile.fileName}
-              src={pdfPreviewUrl(previewUrl)}
-              className="w-full h-full min-h-[300px] rounded border-0 pointer-events-auto"
-            />
-          </div>
+          <PdfCanvasViewer
+            url={previewUrl}
+            fileName={selectedFile.fileName}
+            cacheKey={selectedFile.id}
+            className="w-full h-full min-h-[300px]"
+          />
         )}
         {!previewLoading && previewUrl && !isPreviewableImage(selectedFile.fileType) && !isPreviewablePdf(selectedFile.fileType) && (
           <div className="w-full h-full min-h-[300px] select-none" onContextMenu={(e) => e.preventDefault()} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
