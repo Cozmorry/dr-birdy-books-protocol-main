@@ -104,7 +104,9 @@ contract FlexibleTieredStaking is
 
     // --- State Variables ---
     mapping(address => uint256) public userStakedTokens;
-    /// @dev USD value locked at staking time (8 decimals). Tier access is based on this, not current price.
+    /// @dev USD value locked at staking time (8 decimals). Tier is based ONLY on this, never on current token price.
+    ///      - Price rises: your stake may be "worth" more today but you do NOT unlock a higher tier until you stake more.
+    ///      - Price falls: you do NOT lose access to content you unlocked; tier only drops when you unstake.
     mapping(address => uint256) public userUsdValueAtStake;
     mapping(address => uint256) public lastUnstakeTimestamp;
     mapping(address => uint256) public firstStakeTimestamp;
@@ -866,7 +868,9 @@ contract FlexibleTieredStaking is
     }
 
     /**
-     * @dev USD value used for tier/access: locked at staking time. Legacy: current value if never set.
+     * @dev USD value used for tier/access: locked at staking time only. Price fluctuations do not change tier.
+     *      Tier increases only when user stakes more (new amount * price at that time). Tier decreases only when user unstakes.
+     *      Legacy: if userUsdValueAtStake was never set (pre-upgrade staker), falls back to current value until they unstake.
      * @param user User address
      * @return usdValue USD value with 8 decimals
      */
