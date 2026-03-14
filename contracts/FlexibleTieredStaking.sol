@@ -753,7 +753,8 @@ contract FlexibleTieredStaking is
                     }
                 } catch {}
             }
-            return 1e8; // fallback: 1 USD per token (8 decimals)
+            // If no usable oracle price, report 0 so staking reverts with "Token price unavailable"
+            return 0;
         }
 
         // Get ETH/USD price from oracle

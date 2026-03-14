@@ -169,7 +169,7 @@
             "label": "tokenDistribution",
             "offset": 0,
             "slot": "66",
-            "type": "t_contract(TokenDistribution)7366",
+            "type": "t_contract(TokenDistribution)7474",
             "contract": "ReflectiveToken",
             "src": "contracts\\ReflectiveToken.sol:165"
           },
@@ -409,7 +409,7 @@
             "label": "contract AggregatorV3Interface",
             "numberOfBytes": "20"
           },
-          "t_contract(TokenDistribution)7366": {
+          "t_contract(TokenDistribution)7474": {
             "label": "contract TokenDistribution",
             "numberOfBytes": "20"
           },
