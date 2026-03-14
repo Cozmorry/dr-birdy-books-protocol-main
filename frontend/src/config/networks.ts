@@ -40,7 +40,7 @@ export const CONTRACT_ADDRESSES = {
     // ⚠️ New TokenDistribution not yet excluded from fees (missing 37.5k tokens)
     reflectiveToken: '0x42364e088eFeB481cE811eF9caDd95F36e3F36c0', // ✅ PROXY - Users interact with this
     tokenDistribution: '0xE1bABA07752ce8bD574eEa5aBe494521B3028638', // ✅ NEW DISTRIBUTION - Fixed _migrateVestingData bug
-    flexibleTieredStaking: '0x71163f316b1797c4069a01aE104d8efDAEA024E4', // ✅ NEW MAINNET STAKING
+    flexibleTieredStaking: '0x0106CbC32f3C10f68c4b58009D7054b31B99c264', // ✅ Cutover: new FlexibleTieredStaking (token owner updated)
     arweaveGateway: '0xde84a771cbB8A8522E2732d991d162c387e1E2db', // ✅ NEW MAINNET ARWEAVE GATEWAY
     improvedTimelock: '0x5592113B66a4068F21cbe08Ee1Ca70b12C9E14f8', // ✅ NEW MAINNET TIMELOCK
     tokenImplementation: '0xF131837df0763bD4F0eB2ee8B1dDD622a2276a4B', // ℹ️ Implementation contract (users don't interact with this)
