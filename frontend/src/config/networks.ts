@@ -20,7 +20,7 @@ export const SUPPORTED_NETWORKS = [BASE_MAINNET, BASE_TESTNET];
 // Oracle configurations for each network
 export const ORACLE_CONFIGS = {
   [BASE_MAINNET.chainId]: {
-    primaryOracle: '0x71041dDDaD356F8F9546D0Ba93B54C0b4C458375', // Chainlink ETH/USD on Base
+    primaryOracle: '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70', // Chainlink ETH/USD on Base (data.chain.link)
     backupOracle: '0x72AFAECF99C9d9C8215fF44C77B94B99C28741e8', // Chainlink BTC/USD on Base
     uniswapRouter: '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24', // Uniswap V2 Router on Base
     chainlinkETH: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', // Chainlink ETH/USD on Ethereum (fallback)

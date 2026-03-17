@@ -215,7 +215,7 @@ export const FileManagementStore: React.FC<FileManagementStoreProps> = ({
         </h2>
         <div className="flex items-center space-x-2">
           <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-            Tier {userTier >= 0 ? userTier : 'None'}
+            Tier {userTier >= 0 ? userTier + 1 : 'None'}
           </span>
           {hasAccess && (
             <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">

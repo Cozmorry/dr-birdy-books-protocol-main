@@ -561,7 +561,7 @@ export const StakingPanelStore: React.FC = () => {
         {userInfo.tier >= 0 && (
           <div className="flex items-center text-sm text-gray-600">
             <Shield className="h-4 w-4 mr-1" />
-            Tier {userInfo.tier}
+            Tier {userInfo.tier + 1}
           </div>
         )}
       </div>

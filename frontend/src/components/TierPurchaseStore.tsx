@@ -2,8 +2,16 @@ import React, { useState } from 'react';
 import { ShoppingCart, CreditCard, CheckCircle, Star, Lock, Unlock } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useContractsStore } from '../hooks/useContractsStore';
-import { formatTokenAmount } from '../utils/formatNumbers';
 import { trackTierPurchase } from '../utils/analytics';
+import { formatTokenAmount } from '../utils/formatNumbers';
+
+// Tier threshold: from contract is 8 decimals (24e8); from app store is already scaled ("24", "50", "1000")
+function formatTierThresholdUsd(value: any) {
+  const n = typeof value === 'bigint' ? Number(value) : Number(value);
+  if (!Number.isFinite(n)) return 'N/A';
+  const dollars = n >= 1e6 ? n / 1e8 : n; // already scaled from store
+  return `$${dollars.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
 
 interface TierPurchaseStoreProps {
   userInfo: any;
@@ -136,7 +144,7 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
         </h2>
         <div className="flex items-center space-x-2">
           <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-            Current: Tier {userTier >= 0 ? userTier : 'None'}
+            Current: Tier {userTier >= 0 ? userTier + 1 : 'None'}
           </span>
           {hasAccess && (
             <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
@@ -215,7 +223,7 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
                       status === 'current' ? 'text-blue-700 dark:text-blue-300' : 
                       status === 'unlocked' ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'
                     }`}>
-                      Required: {formatTokenAmount(tier.threshold)} DBBPT
+                      Required: {formatTierThresholdUsd(tier.threshold)}
                     </p>
                     <p className={`text-xs mt-0.5 ${
                       isSelected ? 'text-purple-600 dark:text-purple-400' : 
@@ -271,21 +279,21 @@ export const TierPurchaseStore: React.FC<TierPurchaseStoreProps> = ({
                 type="number"
                 value={purchaseAmount}
                 onChange={(e) => setPurchaseAmount(e.target.value)}
-                placeholder={`Minimum: ${formatTokenAmount(tiers[selectedTier]?.threshold)}`}
+                placeholder={`Minimum USD value: ${formatTierThresholdUsd(tiers[selectedTier]?.threshold)}`}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={isProcessing || isLoading}
                 min={tiers[selectedTier]?.threshold}
                 max={userInfo.balance}
               />
               <p className="text-xs text-gray-500 mt-1">
-                You need at least {formatTokenAmount(tiers[selectedTier]?.threshold)} tokens to unlock this tier
+                You need to stake at least {formatTierThresholdUsd(tiers[selectedTier]?.threshold)} worth of tokens to unlock this tier
               </p>
             </div>
 
             <div className="bg-white rounded-md p-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Required Amount:</span>
-                <span className="font-medium">{formatTokenAmount(tiers[selectedTier]?.threshold)} DBBPT</span>
+                <span className="font-medium">{formatTierThresholdUsd(tiers[selectedTier]?.threshold)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Your Balance:</span>

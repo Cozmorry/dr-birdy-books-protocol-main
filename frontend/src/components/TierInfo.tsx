@@ -1,7 +1,14 @@
 import React from 'react';
 import { Star, Lock, Unlock } from 'lucide-react';
 import { TierInfo as TierInfoType } from '../types';
-import { formatTokenAmount } from '../utils/formatNumbers';
+
+// Tier threshold: from app store is already scaled ("24", "50", "1000")
+function formatTierThresholdUsd(value: any) {
+  const n = typeof value === 'bigint' ? Number(value) : Number(value);
+  if (!Number.isFinite(n)) return 'N/A';
+  const dollars = n >= 1e6 ? n / 1e8 : n;
+  return `$${dollars.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
 
 interface TierInfoProps {
   tiers: TierInfoType[];
@@ -21,7 +28,7 @@ export const TierInfo: React.FC<TierInfoProps> = ({
       <div className="space-y-4">
         {tiers.map((tier, index) => {
           const isUserTier = userTier === index;
-          const isUnlocked = userTier >= index;
+          const isUnlocked = userTier >= 0 && userTier >= index;
           
           return (
             <div
@@ -60,7 +67,7 @@ export const TierInfo: React.FC<TierInfoProps> = ({
                     <p className={`text-sm ${
                       isUserTier ? 'text-blue-700' : isUnlocked ? 'text-green-700' : 'text-gray-500'
                     }`}>
-                      Minimum: {formatTokenAmount(tier.threshold)} DBBPT
+                      Minimum: {formatTierThresholdUsd(tier.threshold)}
                     </p>
                   </div>
                 </div>

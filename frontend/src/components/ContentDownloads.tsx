@@ -785,6 +785,22 @@ export const ContentDownloads: React.FC<ContentDownloadsProps> = ({
         `${API_BASE_URL}/files/${file.id}/presigned?walletAddress=${userInfo.address}`
       );
       if (!presignedResponse.ok) {
+        if (presignedResponse.status === 403) {
+          try {
+            const errorData = await presignedResponse.json();
+            addToast({
+              type: 'error',
+              title: 'Access Denied',
+              message: errorData?.message || 'Access denied: insufficient tier for this file.',
+            });
+          } catch {
+            addToast({
+              type: 'error',
+              title: 'Access Denied',
+              message: 'Access denied: insufficient tier for this file.',
+            });
+          }
+        }
         setPreviewUrl(null);
         setPreviewLoading(false);
         return;

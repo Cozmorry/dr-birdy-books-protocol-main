@@ -9,15 +9,15 @@ export const BLOCKCHAIN_CONFIG = {
   // Base Mainnet (chainId 8453) - default for production
   rpcUrl: process.env.BLOCKCHAIN_RPC_URL || 'https://mainnet.base.org',
   // Base Mainnet (chainId 8453) - must match frontend CONTRACT_ADDRESSES[8453].flexibleTieredStaking
-  // Base Mainnet: 0x8871677b9Aeb46327EbeC4221fCe03E9c1C44dCb (NEW)
+  // Base Mainnet: 0x0106CbC32f3C10f68c4b58009D7054b31B99c264 (FlexibleTieredStaking)
   // Base Sepolia Testnet: 0x23A94f5C6FCb46EbB5888E02CF66eB80E13CE822
-  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS || '0x8871677b9Aeb46327EbeC4221fCe03E9c1C44dCb',
+  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS || '0x0106CbC32f3C10f68c4b58009D7054b31B99c264',
   // Base Mainnet (chainId 8453) - must match frontend CONTRACT_ADDRESSES[8453].reflectiveToken
-  // Base Mainnet: 0xB8C319AD4ff51476d8D74a038ba277351e52Ed37 (NEW)
-  tokenContractAddress: process.env.TOKEN_CONTRACT_ADDRESS || '0xB8C319AD4ff51476d8D74a038ba277351e52Ed37',
+  // Base Mainnet: 0x42364e088eFeB481cE811eF9caDd95F36e3F36c0 (ReflectiveToken proxy)
+  tokenContractAddress: process.env.TOKEN_CONTRACT_ADDRESS || '0x42364e088eFeB481cE811eF9caDd95F36e3F36c0',
   // Base Mainnet (chainId 8453) - must match frontend CONTRACT_ADDRESSES[8453].tokenDistribution
-  // Base Mainnet: 0x9Dad6e0bE95482B6d3886B6e972c9a897C292cc4 (NEW)
-  distributionContractAddress: process.env.DISTRIBUTION_CONTRACT_ADDRESS || '0x9Dad6e0bE95482B6d3886B6e972c9a897C292cc4',
+  // Base Mainnet: 0xE1bABA07752ce8bD574eEa5aBe494521B3028638 (TokenDistribution)
+  distributionContractAddress: process.env.DISTRIBUTION_CONTRACT_ADDRESS || '0xE1bABA07752ce8bD574eEa5aBe494521B3028638',
 };
 
 // Staking Contract ABI (minimal interface for verification)

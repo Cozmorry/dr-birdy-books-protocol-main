@@ -58,7 +58,7 @@ export const TokenInfoStore: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-purple-600">Tier Level</p>
               <p className="text-2xl font-bold text-purple-900">
-                {userInfo.tier >= 0 ? `Tier ${userInfo.tier}` : 'No Tier'}
+                {userInfo.tier >= 0 ? `Tier ${userInfo.tier + 1}` : 'No Tier'}
               </p>
               <p className="text-xs text-purple-500">
                 {userInfo.tier >= 0 ? 'Active Tier' : 'Not Staked'}

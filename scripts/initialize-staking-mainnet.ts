@@ -1,6 +1,6 @@
 /**
  * Ensure the new FlexibleTieredStaking on mainnet is live (unpaused, ready for use).
- * Must be run by the staking contract owner.
+ * Does NOT transfer ownership. Must be run by the staking contract owner.
  * Run: npx hardhat run scripts/initialize-staking-mainnet.ts --network mainnet
  */
 import { ethers } from "hardhat";
