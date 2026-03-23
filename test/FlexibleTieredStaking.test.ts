@@ -301,7 +301,7 @@ describe("FlexibleTieredStaking", function () {
         expect.fail("Transaction should have reverted");
       } catch (error: any) {
         if (
-          error.message.includes("Contract is paused") ||
+          error.message.includes("EnforcedPause()") ||
           error.message.includes("Internal error")
         ) {
           expect(true).to.be.true;
@@ -414,7 +414,7 @@ describe("FlexibleTieredStaking", function () {
         expect.fail("Transaction should have reverted");
       } catch (error: any) {
         if (
-          error.message.includes("Contract is paused") ||
+          error.message.includes("EnforcedPause()") ||
           error.message.includes("Internal error")
         ) {
           expect(true).to.be.true;
@@ -581,9 +581,9 @@ describe("FlexibleTieredStaking", function () {
       await primaryOracle.setPrice(0);
       await backupOracle.setPrice(0);
 
-      await staking.connect(user1).stake(ethers.parseEther("0.5"));
-
-      expect(await staking.hasAccess(user1.address)).to.be.false;
+      await expect(
+        staking.connect(user1).stake(ethers.parseEther("0.5"))
+      ).to.be.revertedWith("Token price unavailable");
     });
   });
 
@@ -596,7 +596,7 @@ describe("FlexibleTieredStaking", function () {
         expect.fail("Transaction should have reverted");
       } catch (error: any) {
         if (
-          error.message.includes("Contract is paused") ||
+          error.message.includes("EnforcedPause()") ||
           error.message.includes("Internal error")
         ) {
           expect(true).to.be.true;

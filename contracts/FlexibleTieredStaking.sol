@@ -609,12 +609,20 @@ contract FlexibleTieredStaking is
 
         _updateUserTier(msg.sender);
 
-        // Transfer tokens back to user using custom unstaking function
-        // This properly handles reflection token transfers from excluded staking contract
-        // Cast to ReflectiveToken to access transferForUnstaking
-        (bool success, ) = address(stakingToken).call(
-            abi.encodeWithSignature("transferForUnstaking(address,uint256)", msg.sender, totalAmount)
-        );
+        // Withdraw from yield if needed to cover unstaking
+        // Do this BEFORE checking balance to ensure tokens are available
+        if (yieldEnabled && address(yieldStrategy) != address(0) && yieldDeployedShares > 0) {
+            _withdrawFromYieldIfNeeded(totalAmount);
+        }
+
+        // Verify we have enough balance after withdrawal
+        uint256 contractBalance = stakingToken.balanceOf(address(this));
+        require(contractBalance >= totalAmount, "Insufficient contract balance after yield withdrawal");
+
+        // Transfer tokens directly using standard transfer
+        // Since staking contract is excluded from fees, this should work
+        // and avoids the balance check issue in transferForUnstaking
+        bool success = stakingToken.transfer(msg.sender, totalAmount);
         require(success, "Token transfer failed");
 
         emit Unstaked(msg.sender, totalAmount);
