@@ -230,18 +230,24 @@ const initializeDefaultAdmin = async () => {
 // Start server
 const startServer = async () => {
   try {
+    console.log('[startup] Step 1/4: connecting to MongoDB...');
     // Connect to database
     await connectDatabase();
-    
+    console.log('[startup] Step 2/4: MongoDB OK');
+
+    console.log('[startup] Step 3/4: initializing blockchain...');
     // Initialize blockchain provider
     initializeBlockchain();
-    
+    console.log('[startup] Step 3/4: blockchain OK');
+
     // Initialize default admin
     await initializeDefaultAdmin();
-    
+    console.log('[startup] Step 4/4: default admin check OK');
+
     // Start listening
     // On Render, bind to 0.0.0.0 to accept connections from outside
     const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    console.log(`[startup] binding to ${host}:${PORT}...`);
     app.listen(PORT, host, () => {
       console.log('');
       console.log('🚀 ═══════════════════════════════════════════════════════');

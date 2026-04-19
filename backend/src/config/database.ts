@@ -44,7 +44,11 @@ export const connectDatabase = async (): Promise<void> => {
     if (!process.env.MONGODB_URI) {
       console.warn('⚠️  WARNING: MONGODB_URI not found in environment variables, using default localhost');
     }
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, {
+      // Fail fast with a clear error instead of hanging until Render kills the deploy
+      serverSelectionTimeoutMS: 20_000,
+      connectTimeoutMS: 20_000,
+    });
     console.log('✅ MongoDB connected successfully');
     console.log(`📊 Database: ${mongoose.connection.name}`);
     console.log(`🌐 Host: ${mongoose.connection.host}:${mongoose.connection.port}`);

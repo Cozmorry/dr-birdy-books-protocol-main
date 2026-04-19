@@ -53,8 +53,7 @@ const DownloadLimitSchema = new Schema<IDownloadLimit>(
   }
 );
 
-// Index for efficient queries
-DownloadLimitSchema.index({ walletAddress: 1 });
+// walletAddress already indexed via unique: true above — do not duplicate
 DownloadLimitSchema.index({ lastDownloadDate: 1 });
 
 export default mongoose.model<IDownloadLimit>('DownloadLimit', DownloadLimitSchema);
