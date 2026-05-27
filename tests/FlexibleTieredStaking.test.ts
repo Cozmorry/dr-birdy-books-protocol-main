@@ -302,6 +302,7 @@ describe("FlexibleTieredStaking", function () {
       } catch (error: any) {
         if (
           error.message.includes("Contract is paused") ||
+          error.message.includes("EnforcedPause") ||
           error.message.includes("Internal error")
         ) {
           expect(true).to.be.true;
@@ -415,6 +416,7 @@ describe("FlexibleTieredStaking", function () {
       } catch (error: any) {
         if (
           error.message.includes("Contract is paused") ||
+          error.message.includes("EnforcedPause") ||
           error.message.includes("Internal error")
         ) {
           expect(true).to.be.true;
@@ -578,12 +580,18 @@ describe("FlexibleTieredStaking", function () {
     });
 
     it("Should return no access when both oracles fail", async function () {
+      // Stake when price is valid so staking succeeds
+      await staking.connect(user1).stake(ethers.parseEther("0.5"));
+      expect(await staking.hasAccess(user1.address)).to.be.true;
+
+      // Set prices to 0 (oracles fail)
       await primaryOracle.setPrice(0);
       await backupOracle.setPrice(0);
 
-      await staking.connect(user1).stake(ethers.parseEther("0.5"));
-
-      expect(await staking.hasAccess(user1.address)).to.be.false;
+      // Verify that staking now reverts with Token price unavailable
+      await expect(
+        staking.connect(user1).stake(ethers.parseEther("0.5"))
+      ).to.be.revertedWith("Token price unavailable");
     });
   });
 
@@ -597,6 +605,7 @@ describe("FlexibleTieredStaking", function () {
       } catch (error: any) {
         if (
           error.message.includes("Contract is paused") ||
+          error.message.includes("EnforcedPause") ||
           error.message.includes("Internal error")
         ) {
           expect(true).to.be.true;

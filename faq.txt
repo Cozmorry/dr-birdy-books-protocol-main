@@ -1,0 +1,851 @@
+ Project Silver — FAQ & ReferenceRead this before posting in the help thread. 95% of questions are answered here. Any information here supercedes the instructions on the AQ website. 
+
+When you hit an issue on the AQ server, you must debug locally by replicating the error message on the AQ server.
+
+You are sharing a resource among 4700 people. Please be considerate and respectful of others re: finite resources on the AQ server. 
+
+:female-technologist::skin-tone-2:|:male-technologist::skin-tone-2: - Note: If you are on Slack, use the search bar for in: project-silver from: betty [keyword] , you will find a treasure trove of information. If you are writing a question or hanging out on :slack: (excl. this FAQ) or DM-ing either me, Caleb, or Fidencio, it means you are not making tasks and therefore, not earning your full potential. 
+
+:bangbang: Time on Slack (excl. reading FAQ) is your unpaid time or in other words, you are being inefficient with your time. 
+
+:calendar: Updates as of 26 May 
+
+:exclamation:Ensure that your test_coverage of your task is >=80% - otherwise, it will be sent back for revision. Payment processing is manually done on Wednesday's EOD PST. 
+
+:exclamation: Limit your Opus runs to max 5 per task. 
+
+:exclamation:@Caleb Kawano is the POC.
+
+:exclamation:Debug locally extensively before running on the production system (ie AQ Server). 
+
+The project admins/financial analysts are regularly auditing the number of jobs you are running and receive cost reports regularly in their emails. Assume each job is like >$5 when you use the DIFFICULTY_CHECK. 
+
+:skull: Excessive reruns will lead to task creation skill being disabled on this project which means the project admins will remove you from the project silver. See project admin post.
+
+Daily Help Threads
+
+The point of the help threads is help you practice the skill of leadership and mentoring which is a required skill to advance the ladder of SWE as well as free up my time to review faster and analyze the past historical submissions to guide the direction. Check any job posting of any senior positions to see what I mean. 
+
+See https://recruiter.daily.dev/roles/distinguished-engineer/ what you are rated as IC9 and the expectations as you further your (future) career wrt. mentorship, architectural vision, org impact, etc and aspire to become a recognized Fellow. 
+
+For me it is triage your issue and direct you to the right POC. 
+https://afterqueryexperts.slack.com/archives/C0B0CEY1YP3/p1779077530444769
+https://afterqueryexperts.slack.com/archives/C0B0CEY1YP3/p1779077535501129
+https://afterqueryexperts.slack.com/archives/C0B0CEY1YP3/p1779077539921319
+https://afterqueryexperts.slack.com/archives/C0B0CEY1YP3/p1779077552725969
+
+🤝 POC (Points of Contact)
+
+Issue type
+	First contact
+	Escalation (after 3 US business days* no response)
+
+Repo upload / repo review status / questions
+	Daily Help Threads
+	@Caleb Kawano 
+
+
+Task review / task validation / routing issues / technical questions / platform issues
+	Daily Help Threads
+
+	@Betty C Tai (戴) (商朝) 
+
+Becoming a reviewer / part-time role / LinkedIn questions / referrals / etc not covered / unrelated to Project Silver 
+	Daily Help Threads
+	@Caleb Kawano 
+
+AQ careers / longer-term roles
+	afterquery.com/careers 
+(HQ is in SF)
+	—
+
+
+^[1] US business day is Monday to Friday in PST. 
+
+🧭 Quick navigation
+
+Topic
+	Jump to
+
+👋 how can I be added to the project on the after query platform
+	👋 New here? Read this first
+
+📦 Repo submission
+	📦 Repos
+
+🗂 ".git directory has no reachable commits"
+	🗂 .git history not found re: tasks — deep dive
+
+✅ Task validation problems
+	✅ Tasks
+
+:robot_face: AI check issues
+	:robot_face: AI check
+
+🧪 "test_patch only adds 0 tests"
+	🧪 test_patch deep dive
+
+🚢 Harbor / verifier errors
+	🚢 Harbor & Verifier errors
+
+💰 RewardFileNotFoundError
+	RewardFileNotFoundError — the canonical fix
+
+:small_red_triangle_down: Rejections - Key
+	:small_red_triangle_down:Send back for Revision
+
+⏱ Review & payment timing 
+	💰 Payments
+
+🤝 Who do I DM?
+	🤝 POC (Points of Contact)
+
+
+
+👋 New here? Read this first
+
+Question
+	Answer
+
+Is there a sample repo and task I can see?
+	example-repo+task.zip
+
+I just joined — where do I begin?
+	Read the Instructions. Realize that the instructions may not have been updated so this FAQ is the current source of truth. 
+
+Then finish the training. Most "I can't figure this out" questions are answered in the instructions or this FAQ.
+
+Where's the assessment / practice repo?
+	There isn't one anymore. Finish the training and start submitting a repo to unlock the tasks portion. 
+
+How do I become a reviewer?
+	The bar is high — typical reviewer has graduate-level training and significant industry experience. 
+
+If you want to grow into AQ work long-term, check careers: afterquery.com/careers (intern roles included).
+
+Can I add the "expert" role to LinkedIn as part-time work or have administrative/platform specific questions?
+	🤝 POC (Points of Contact)
+
+What's the difference between getting selected as an expert vs. not?
+	Project access works the same; "expert" role gates other AQ project routing.
+
+I have a question about project artifacts, image, claw, etc unrelated to project silver? 
+	Do not post anything not related to the project in the channels. 
+
+
+🧭 Quick navigation
+
+Language-specific Code Coverage Tools to be used 
+
+Ensure that your test_coverage of your task is >=80% - otherwise, it will be sent back for revision. 
+
+Language-Specific
+	Tool
+
+Java JavaScript (Istanbul, Blanket), Python (Coverage.py, pytest-cov), Go (built-in reports), Swift (Xcode 12), Kotlin (Cobertura), C/C++ (Gcov, BullseyeCoverage), C# (Coverlet, NCover), Perl (Devel::Cover), Lua (LuaCov), Rust (Tarpaulin), Dart (test-coverage), Scala (scoverage), and Clojure (Cloverage)
+	JaCoCo, OpenClover
+
+JavaScript
+	Istanbul, Blanket
+
+Python
+	Coverage.py
+
+Go
+	built-in reports
+
+Swift
+	Xcode 12
+
+Kotlin
+	Cobertura
+
+C/C++
+	Gcov, BullseyeCoverage
+
+C#
+	Coverlet, NCover
+
+Perl
+	Devel::Cover
+
+Lua
+	LuaCov
+
+Rust
+	Tarpaulin
+
+Dart
+	test-coverage
+
+Scala
+	scoverage
+
+Clojure
+	Cloverage
+
+
+
+
+📦 Repos
+
+General overview
+
+
+:one: You must hold full IP of the repo. No friends' repos, no briefly-public repos, no contributing to someone else's repo (for now).
+
+:two: Reviews are holistic and the actual error codes are hidden from you to prevent gaming so the error message to you is generic. There's like over 100 error codes. 
+
+:three: The point of the repo-check is to ensure you are able to accomplish making 20 tasks with a certain high confidence level. Do not game the repo check -- you are setting yourself up for failure. 
+
+Basic Requirement
+	Detail
+
+Hosting
+	Private GitHub or fully off-GitHub. We actively probe public hosts (GitHub, GitLab, Bitbucket, Gitea) and reject any match — including forks, mirrors, and renames.
+
+.git/ directory
+	Must include real, sustained commit history (not a snapshot or fresh init).
+
+tests/ directory
+	Must exist, contain sufficient tests, and be recoverable by the harness. Note: folder must be named tests/ (plural), not test/.
+
+Codebase
+	Substantive. Scaffolds, starter templates, toy projects, and AI/LLM-generated repos all fail the quality bar.
+
+Mirroring
+	None. No duplicates.
+
+Language tag
+	Must match the codebase.
+
+.dockerignore
+	.git must NOT be in .dockerignore — this is the #1 cause of downstream failures.
+
+
+Repo Q&A
+
+Question
+	Answer
+
+Can you give me specific thresholds (history length, source size)?
+	No — we keep these unpublished to preserve diversity. Repo review is qualitative and holistic. 
+
+Goodhart's Law applies: a known metric becomes a gamed metric, then stops being useful.
+
+My repo's been uploading >2 hours — is it stuck?
+	You can delete on your end and reupload! Otherwise, your file may be too large - please downsize where possible and see limits on Dockerfile sizes in the Instructions!
+
+My repo was rejected. Can I fix and resubmit?
+	No — rejections are final. Please double-check quality, test coverage, and instructions before submitting.
+
+The whole point is a fail fast holistic review to ensure you can 95% at least to make 20 tasks. 
+
+Deleted my rejected repo, but re-upload says "Repository is too similar to an existing one."
+	Because the rejection is final. 
+
+What happens after a repository is rejected? Do you delete it from your system or still go ahead and use it? 
+Thread
+	It gets purged from the system as it's not useful unless accompanied with tasks that demonstrate meaningful uses of the repo. 
+
+However, what gets retained is the general outline that is just enough to determine if you are re-uploading the same one like a hash string. 
+
+My folder was named test/ not tests/ — is that why I got "insufficient test coverage"?
+
+	It's a general return message that maps out to like 100 diagnostic codes that are hidden from you to prevent gaming and a fail-fast measure to ensure you are using a repo that can have 20 tasks made out of it.  
+
+
+I don't understand the error message re: why my repo was rejected. 
+	It's because the error messages that prints out to you covers like a lot of diagnostic codes in the backend that you cannot see for obvious reasons. However, the error message is an umbrella message. 
+
+My repo's been "Needs Review" for >24 hours — what's up?
+	Repo reviews run, daily at 12AM EST +/- 2 hrs. 
+
+Error response from daemon: error from registry: Unauthenticated request. Unauthenticated requests do not have permission "artifactregistry.repositories.downloadArtifacts" on resource "projects/afterqueryai/locations/us/repositories/silver-repo-images" (or it may not exist)	Because you cannot authenticate on AQ's GCP account. You must run the task locally. 
+
+
+Error: Repository's .git directory has no reachable commits (no HEAD), so commit history can't be mined.
+
+🗂 .git history not found re: tasks — deep dive
+
+This is the most-reported error right now. Local checks pass (git status, git log, git rev-parse HEAD all return real data) but the platform still rejects. Eng is aware. Causes ranked by frequency:
+
+	Cause
+	Fix
+
+1
+	.dockerignore excludes .git/
+	Remove the line. Rezip. Resubmit. Also check .gitignore and any other ignore file the pipeline reads. #1 cause by a wide margin.
+
+2
+	ZIP layout wrong
+	See expected structure below. Double-wrapped zips or flat zips break the skeleton generator.
+
+3
+	Default branch is master
+	Rename: git branch -m master main. Rezip.
+
+4
+	History is "thin" / atypical
+	All commits in one short burst, fresh git init, squashed-to-one, or recent rebase that orphaned reachable history. Platform wants real sustained dev activity.
+
+5
+	Hidden or stripped .git
+	Some OS zip utilities strip dotfiles by default. Extract your own zip into a clean folder; confirm .git/HEAD exists before uploading.
+
+
+Expected ZIP structure:
+
+repo-name.zip
+  └── repo-name/
+      ├── .git/
+      ├── app/
+      ├── tests/
+      └── ...
+
+Debug trick: 
+
+Add a debug command in your Dockerfile (e.g., RUN ls -la /app/<repo-name>) and submit. The build will fail but the kaniko logs will show the actual file structure inside the image — adjust paths accordingly.
+If all five are clean and it still fails, post in the help thread with the repo name and a screenshot of ls -la of the extracted zip showing .git/ at the top level.
+🧭 Quick navigation
+
+✅ Tasks
+
+Validation gates (in order)
+
+	Gate
+	What it checks
+	Most common failure
+
+1
+	AI text check
+	instruction.md  reads like human writing
+	Over-polished / "AI-assistant register" prose
+
+2
+	Quality review
+	Substantive, follows spec
+	Trivial / off-spec instructions
+
+3
+	Image build
+	Dockerfile  builds
+	.git in .dockerignore; missing git in base image
+
+4
+	Nop check
+	Tests fail as expected without fix
+	test_patch adds 0 tests
+
+5
+	Oracle check
+	Your solve.sh passes the tests
+	RewardFileNotFoundError, ModuleNotFoundError, VOLUME wiping the repo
+
+6
+	Difficulty assessment
+	Pass rate 1/10 to 4/10
+	Too hard (0/10) or too easy (5+/10)
+
+
+Common task questions
+
+Question
+	Answer
+
+Can I really make 20 tasks per repo?
+	Yes, max 20. But no more than 5 should be similar in nature ("Repo saturated"). 
+
+:exclamation:DIVERSIFY: bug fixes (UPDATE), features (CREATE/ADD), refactors (UPDATE/DELETE), perf upgrades (UPDATE/ADD/DELETE)
+
+Hit "Repo saturated" on task #6 — why?
+	Your last 5 are too similar. Change repo CRUD operation.
+
+:exclamation:DIVERSIFY: bug fixes (UPDATE), features (CREATE/ADD), refactors (UPDATE/DELETE), perf upgrades (UPDATE/ADD/DELETE)
+
+Similarity check (Cosine ≥ 0.75 or Levenshtein ≥ 0.70) — how do I pass?
+	Rewrite from scratch. Paraphrasing rarely moves the embedding far enough. Pick a different bug or feature. Note: checked across all repos, not just your own.
+
+Hit the 20-task cap. How do I free a slot?
+	Delete a non-approved draft. Only Approved drafts are protected. Anything else (Needs Review, Rejected, Validation Failed, never submitted) is deletable from the Create tasks page and frees a slot immediately.
+
+
+🧭 Quick navigation
+
+Easiness probe
+
+
+Trivial fixes (one-line changes, find-replace, obvious bugfixes) get filtered. The model should need to read multiple files, reason about existing structure, and make a non-obvious change.
+
+Difficulty unverifiable (0/10 runs solved)
+
+
+
+Task is unverifiable: 0/10 runs solved (threshold: >=1/10). Either the task is unsolvable as specified, or the test harness has a bug preventing any agent from passing.
+
+Acceptable range is 1–4 out of 10.
+Common fixes:
+
+* Add one hint at a time to instruction.md until pass rate enters range
+* Confirm solve.sh reads the tests correctly
+* Confirm the patch is actually readable by the model
+
+Difficulty too easy (5+/10)
+
+
+Make the task harder — usually by removing scaffolding hints from instruction.md, or by requiring the agent to touch more files / reason across modules.
+
+"No trajectory in job archive" / grey chiplets
+
+
+Platform-side trajectory logging glitch.
+
+* Re-run the task
+* If 5 reruns still produce no trajectories, screenshot all 5 and flag in the help thread
+* Tasks with grey chiplets get rerun for delayed approval, not rejected
+
+Why it matters: the client's pipeline (MDPT — Markov Decision Process Tuple — or POSG — Partial Observation Stochastic Game) needs clean trajectories. Until trajectories are clean, the task can't be approved.
+
+Criterion 12 — Dockerfile Transparency
+
+
+The && echo '<base64>' | base64 -d | git apply --verbose - fragment in reviewer feedback is appended by the build pipeline, not authored by you. The base64 decodes to your test_patch from config.json. If you hit criterion 12 with a populated test_patch, eng is aware — flag in the help thread with the task name.
+
+:robot_face:  AI check
+
+Symptom
+	Fix
+
+Failing AI check while writing it yourself
+	Drop heavy bullet hierarchies. Write the instruction the way you'd explain it to a teammate in 2–3 sentences. Natural register passes; "AI-assistant register" doesn't.
+
+Pre-checking before submission
+	Run through GPTZero — if it passes there, usually passes on the platform to ensure at least 80% human. 
+
+Need to soften AI-detected prose
+	HumanizeAI. 
+humanizedtext.pro (@Kashif's - not an official endorsement). 
+
+"AI checker unavailable, auto passing"
+	Fine. Task will still be reviewed normally.
+
+
+🧭 Quick navigation
+
+🧪 test_patch deep dive
+
+Error: tests/config.json: test_patch only adds 0 test(s); at least N required.
+
+The harness reads the diff between your base commit and your task's test_patch, not your repo's existing test suite. The error means it can't see new test functions in your patch.
+
+	Cause
+	Fix
+
+1
+	Test files / functions don't start with test_
+	Pytest discovery requires it. Rename.
+
+2
+	Missing __init__.py in tests/
+	Add it. Some pytest configs skip directories without it.
+
+3
+	Templated from another task → empty diff vs. base
+	Run git diff <base_commit> -- tests/ locally. If empty, your test_patch is empty.
+
+4
+	Used the in-website editor
+	Use the import function instead. The in-website editor sometimes flattens or strips the patch.
+
+5
+	Wrong working directory in test command
+	Pytest runs from a path that doesn't contain the tests.
+
+6
+	Syntax error in the test file
+	File fails to load; harness reads it as zero tests.
+
+7
+	Non-Python language (Rust, Go, C, etc.)
+	Confirm Dockerfile installs the language toolchain (rustc/cargo, go, etc.). Confirm test files match that ecosystem's discovery rules (#[test] in Rust, Test* in Go, _test.cc in C++). Confirm language is selected correctly on upload.
+
+
+Quickest debug: apply your test_patch locally and run:
+
+git diff <base_commit> -- tests/
+
+What that diff shows is exactly what the platform sees.
+🧭 Quick navigation
+
+
+🚢 Harbor & Verifier errors
+
+Quick triage table
+
+Error in trial output
+	Most likely root cause
+	Section
+
+RewardFileNotFoundError (with Trials: 0, Errors: 1)
+	Reward file plumbing — Dockerfile didn't pre-create it, OR .git is in .dockerignore so before_repo_set_cmd silently fails
+	Below
+
+RuntimeError: 1 / Trials: 0 (no other detail)
+	Base image has VOLUME on repo path; healthcheck timeout; missing git in base
+	RuntimeError cluster
+
+NonZeroAgentExitCodeError
+	Container crashed before the verifier ran (same family as above)
+	RuntimeError cluster
+
+ModuleNotFoundError: No module named 'app'
+	Pytest can't resolve the package
+	Below
+
+fatal: not a git repository after base layers
+	.git in .dockerignore
+	Below
+
+Unexpected token 'A'
+	Known issue, refresh and retry
+	n/a
+
+
+
+RewardFileNotFoundError — the canonical fix
+
+Trials: 0 + RewardFileNotFoundError = Harbor never found the reward file at all. This is harness/image plumbing, not oracle correctness.
+
+What it looks like in trial output (jagannath, 05-12-2026):
+
+                                         === Harbor output ===
+                                            oracle on adhoc
+                                ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+                                ┃ Metric                    ┃ Value  ┃
+                                ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━┩
+                                │ Agent                     │ oracle │
+                                │ Dataset                   │ adhoc  │
+                                │ Trials                    │ 0      │
+                                │ Errors                    │ 1      │
+                                │ Mean                      │ 0.000  │
+                                │ Exception Distribution    │        │
+                                │   RewardFileNotFoundError │ 1      │
+                                └───────────────────────────┴────────┘
+
+
+The mechanism (credit: @Sandu Corobcenco ): the test harness expects /logs/verifier/reward.txt to exist by the time the verifier reads it. Two common causes:
+Cause A: Dockerfile didn't initialize the reward file at build time
+Add to environment/Dockerfile:
+
+ENTRYPOINT []
+USER root
+RUN mkdir -p /logs/verifier \
+  && echo 0 > /logs/verifier/reward.txt \
+  && chmod -R 0777 /logs
+
+
+Then in tests/test.sh, write reward 0 immediately at the top — before set -e, mktemp, patching, Node/Python, npm, etc.:sh
+
+LOG_ROOT=/logs/verifier
+mkdir -p "$LOG_ROOT" 2>/dev/null || true
+(printf '%s\n' 0 > "$LOG_ROOT/reward.txt") 2>/dev/null || true
+
+set -eu
+
+write_reward() {
+  (printf '%s\n' "$1" > "$LOG_ROOT/reward.txt") 2>/dev/null || true
+}
+
+cleanup_and_reward() {
+  exit_code=$?
+  mkdir -p "$LOG_ROOT" 2>/dev/null || true
+  if [ "$exit_code" -eq 0 ]; then
+    write_reward 1
+  else
+    write_reward 0
+  fi
+  exit "$exit_code"
+}
+trap cleanup_and_reward EXIT
+
+Cause B: base image has .git history stripped
+For Harbor specifically, the base image build process needs the real .git directory. If .git ended up in .dockerignore:
+
+1. before_repo_set_cmd git operations fail silently
+2. The test never runs
+3. No reward file ever gets written
+4. Verifier crashes with RewardFileNotFoundError
+
+Also check that before_repo_set_cmd actually succeeds — if the patch command fails (common triggers: malformed test_patch, missing trailing newline, missing files to unlink), the rest of the pipeline silently doesn't run.
+Quickest diagnostic
+
+* Pull the Harbor base image locally
+*  docker run it
+*  Check /logs/verifier/reward.txt exists
+* Check cd /app && git log -1 works
+
+If either of the last two checks fails, you've found the cause.
+
+🧭 Quick navigation
+
+
+Agent Crashed: NonZeroAgentExitCodeError
+
+
+
+your task has an issue that is causing the agent to crash, i just made it so that when this occurs it is surfaced so that you can fix it and increase the chances of your task being approved. i'd recommend trying to run your task locally with harbor to debug.
+- (engineering) @Parth Patel 
+
+
+You must use harbor and debug locally before running on the website. 
+
+
+Question: Why did my task get rerun or show “10/10 trials crashed mid-run”?
+A: This usually means the verifier harness crashed during the run and did not write the expected reward.txt or reward.json, so it is treated as a task-side issue rather than a platform issue. The right next step is to run the task locally with Harbor and debug the verifier setup, especially test.sh, run_script.sh, parser.py, Docker dependencies, and reward-file writing.
+
+
+Important details
+
+Detail
+	Note
+
+Path
+	Must be exactly /logs/verifier/reward.txt
+
+User
+	Dockerfile must use USER root; earlier /logs creation failed under the node user
+
+Timing
+	test.sh must create the reward file before any command that can crash
+
+Diagnosis
+	Trials: 0 + RewardFileNotFoundError always = plumbing, not correctness
+
+
+🧭 Quick navigation
+
+RuntimeError: 1 / Trials: 0 / NonZeroAgentExitCodeError
+
+No
+	Cause
+	Fix
+
+1
+	Base image declares VOLUME on the repo path — VOLUME /app/<repo> wipes everything written to that path in subsequent RUN layers. Kaniko log shows a git reset --hard succeed, then the next cp -a reports "Stashed 0 files." At container start, repo dir is empty (no .git, no source). Pytest fails with ModuleNotFoundError before verifier ever runs.
+	Base-image side: declare the repo at a non-VOLUME path, or remove the VOLUME directive. Workaround: cp -a the repo to a non-VOLUME location in your Dockerfile.
+
+2
+	Healthcheck inherited from base image — streamlit and similar ship a healthcheck that fails in the test container. Per-trial runtime jumps from ~70s to ~140s; Harbor times out.
+	Add HEALTHCHECK NONE to your Dockerfile.
+
+3
+	git not installed in base image — kaniko fails with /bin/sh: 1: git: not found on any RUN git ....
+	Add apt-get update && apt-get install -y git early in your Dockerfile.
+
+4
+	solve.sh doesn't write the reward file.
+	See RewardFileNotFoundError.
+
+5
+	before_repo_set_cmd raises on a non-fatal warning. Wrappers treat warnings (e.g., git clean -fd "Refusing to remove current working directory") as fatal RuntimeError.
+	Avoid commands that warn-but-succeed in setup hooks.
+
+6
+	Auto-injected test_patch layer collides with your test.sh. Silver appends a git apply --verbose - layer for test_patch during build; if test.sh also applies the same patch at runtime, the second apply fails.
+	Don't re-apply test_patch in test.sh.
+
+
+
+ModuleNotFoundError: No module named 'app' (or similar)
+
+Pytest can't resolve your package. Three options:
+
+* Add conftest.py at repo root
+* Install the package in your Dockerfile: pip install -e .
+* Set PYTHONPATH in the test command
+
+🧭 Quick navigation
+
+"fatal: not a git repository" during task build
+
+Almost always: your zip's .dockerignore is excluding .git/. Remove the line, rezip, resubmit.
+
+Single most frequent cause of post-approval task-build failures.
+
+
+🧭 Quick navigation
+
+Other platform "glitches" 
+
+Symptom
+	Action
+
+Runner goes on for  >10 min with no progress
+	Cancel and refresh/rerun
+
+
+
+⏱ Reviews & timing
+
+Item
+	When
+	Who manages
+
+Repos
+	~12 AM EST ± 2 hours, daily
+	@Betty C Tai (戴) (商朝) 
+
+Tasks
+	Within 2–3 hours of submission; sharp 9 PM EST cutoff most days
+	@Betty C Tai (戴) (商朝) 
+
+Tasks on Wednesdays
+	Earlier cutoff — payments are processed manually by admin EOD PST. Get submissions in early by Wednesday 12AM EST. 
+	@Betty C Tai (戴) (商朝) 
+
+DMs
+	Within 24 hours; ping again if no response
+	Do not ping anyone unless directed. 
+
+Tasks with grey chiplets / trajectory anomalies
+	Rerun for delayed approval, not rejected
+	@Betty C Tai (戴) (商朝) 
+
+Task revalidation (already validated tasks)
+	Put task name in 
+	@Betty C Tai (戴) (商朝) 
+
+
+🧭 Quick navigation
+
+:small_red_triangle_down:Send back for Revision
+
+Rejections by class — feedback + explanation
+
+Issue
+	feedback_given
+	explanation
+
+Q1 solution-inject 
+	"Heads up - the grader is basically doing the agent's work for it here. The verifier applies your gold solution itself (something like bash /solution/solve.sh or an apply_reference_patch call) before it scores anything, so a "pass" doesn't actually mean the agent solved the task. Could you pull that solution-applying step out of the verifier and have it grade only the agent's own changes against your FAIL_TO_PASS / PASS_TO_PASS tests? Worth double-checking too that /solution and the reference patch aren't reachable while the agent is running."
+	The test harness quietly pastes in the correct answer before it grades. So every run "passes" no matter what the agent did — the score measures the answer key, not the agent. The fix is to delete that paste-in step and grade only what the agent actually wrote, and to lock the answer file away so the agent can't peek at it either.
+
+Q1 oracle-gate (7 tasks)
+	"The reward here keys off an oracle/marker (something like is_oracle_trial writing reward.txt) instead of the actual test results, so the pass/fail isn't really tied to the agent's code. Mind dropping that marker branch so the verdict comes straight from the tests? And make sure the oracle markers can't be reached or faked during the graded run."
+	Instead of deciding pass/fail from the tests, the grader looks at a little flag file and trusts it. That means the verdict can be set by something other than the agent's work — it can even be faked. The fix is to throw away the flag-file shortcut, let the test results decide directly, and make sure nothing can flip that flag during a real graded run.
+
+F2P/P2P FAIL (4 tasks)
+	"When we run your base repo + gold tests, then layer on your gold solution, the FAIL_TO_PASS tests don't actually flip from failing to passing - so the solution and the tests aren't quite lining up. Could you get the gold solution to make those tests pass (or fix the test/config), then give it another run to confirm?"
+	The task promises certain tests should start failing and then pass once the right fix is applied. But when we apply the official fix, those tests still don't pass — so the answer and the tests don't match up. The fix is to get the official solution to actually make those tests pass (or correct the tests/config), then re-run to confirm it lines up.
+
+
+💰 Payments
+
+Per-task / per-repo
+
+Item
+	Amount
+	Notes
+
+Approved task
+	$75
+	Regardless of when bonus period ends
+
+Repo with 5+ approved tasks
+	+$300
+	Regardless of when bonus period ends
+
+Cap per repo
+	20 approved tasks
+	After 20, that repo is closed for you
+
+Repos with 0–4 approved tasks
+	$0
+	Including any bonuses. You need 5 to unlock the repo's payouts.
+
+
+Submission timestamp determines bonus eligibility, not approval timestamp. Get submissions in; approvals can come after.
+
+Volume bonuses (cumulative — no cap on repetition)
+
+Approved tasks (cumulative)
+	Bonus
+
+25
+	Tier 1 bonus
+
+50
+	Tier 2 bonus (in addition to Tier 1)
+
+75
+	Tier 3 (additive)
+
+100
+	Tier 4 (additive)
+
+...
+	Repeats indefinitely
+
+
+If you hit 25 then 50 in the same period, you get both tiers.
+
+Referrals
+
+* $100 per approved referral
+* Each referral must complete 10 approved tasks to trigger your bonus
+
+Payment timing
+
+Detail
+	Note
+
+Cadence
+	Wednesdays, EOD PST
+
+Sometimes past midnight
+	Yes — to capture full Wednesday's work
+
+Processing
+	Manual by project admin
+
+Late payments
+	Sometimes happen — payment systems can run late
+
+Why not automatic?
+	AQ recently closed Series A; not yet at the late-B / early-C stage where enterprise payment licensing makes financial sense where human labor is cheaper than the 
+
+
+
+🐛 Debug habits before posting
+
+Before posting in the help thread, please:
+
+* Read your error logs — most errors say exactly what's wrong
+* Look through your own code — typos, paths, naming conventions
+* Test locally — reproduce the failure before flagging
+* Send concrete context — screenshots, error logs, what you've already tried
+* Check this FAQ and the pinned threads first
+* Check that your question isn't already answered in the active help thread
+
+Debugging is part of software engineering. We can only help with platform-side issues — work-side issues are yours to chase down. Reasoning through your error logs solves the majority of what gets posted.
+
+🧭 Quick navigation
+
+🔗 Useful links
+
+Resource
+	URL
+
+AQ careers
+	https://www.afterquery.com/careers
+
+GPTZero (AI pre-check)
+	https://gptzero.me/
+
+HumanizeAI (Rewrite tool)
+	https://www.humanizeai.pro/
+
+StackOverflow
+	https://stackoverflow.com/questions
+
+
