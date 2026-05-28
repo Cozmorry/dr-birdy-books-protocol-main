@@ -142,6 +142,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IArweaveGateway__factory>;
     getContractFactory(
+      name: "ContinuousClearingAuction",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ContinuousClearingAuction__factory>;
+    getContractFactory(
       name: "FlexibleTieredStaking",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.FlexibleTieredStaking__factory>;
@@ -399,6 +403,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IArweaveGateway>;
     getContractAt(
+      name: "ContinuousClearingAuction",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ContinuousClearingAuction>;
+    getContractAt(
       name: "FlexibleTieredStaking",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -648,6 +657,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IArweaveGateway>;
     deployContract(
+      name: "ContinuousClearingAuction",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ContinuousClearingAuction>;
+    deployContract(
       name: "FlexibleTieredStaking",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.FlexibleTieredStaking>;
@@ -904,6 +917,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IArweaveGateway>;
+    deployContract(
+      name: "ContinuousClearingAuction",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ContinuousClearingAuction>;
     deployContract(
       name: "FlexibleTieredStaking",
       args: any[],

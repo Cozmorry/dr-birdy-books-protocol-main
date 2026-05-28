@@ -6,6 +6,7 @@ export * as flexibleTieredStakingSol from "./FlexibleTieredStaking.sol";
 export * as reflectiveTokenSol from "./ReflectiveToken.sol";
 export * as treasuryYieldStrategySol from "./TreasuryYieldStrategy.sol";
 export * as mocks from "./mocks";
+export { ContinuousClearingAuction__factory } from "./ContinuousClearingAuction__factory";
 export { IYieldStrategy__factory } from "./IYieldStrategy__factory";
 export { ImprovedTimelock__factory } from "./ImprovedTimelock__factory";
 export { SimpleStaking__factory } from "./SimpleStaking__factory";

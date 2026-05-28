@@ -11,6 +11,7 @@ import type * as treasuryYieldStrategySol from "./TreasuryYieldStrategy.sol";
 export type { treasuryYieldStrategySol };
 import type * as mocks from "./mocks";
 export type { mocks };
+export type { ContinuousClearingAuction } from "./ContinuousClearingAuction";
 export type { IYieldStrategy } from "./IYieldStrategy";
 export type { ImprovedTimelock } from "./ImprovedTimelock";
 export type { SimpleStaking } from "./SimpleStaking";

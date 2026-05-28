@@ -70,6 +70,8 @@ export type { ArweaveGateway } from "./contracts/ArweaveGateway.sol/ArweaveGatew
 export { ArweaveGateway__factory } from "./factories/contracts/ArweaveGateway.sol/ArweaveGateway__factory";
 export type { IArweaveGateway } from "./contracts/ArweaveGateway.sol/IArweaveGateway";
 export { IArweaveGateway__factory } from "./factories/contracts/ArweaveGateway.sol/IArweaveGateway__factory";
+export type { ContinuousClearingAuction } from "./contracts/ContinuousClearingAuction";
+export { ContinuousClearingAuction__factory } from "./factories/contracts/ContinuousClearingAuction__factory";
 export type { FlexibleTieredStaking } from "./contracts/FlexibleTieredStaking.sol/FlexibleTieredStaking";
 export { FlexibleTieredStaking__factory } from "./factories/contracts/FlexibleTieredStaking.sol/FlexibleTieredStaking__factory";
 export type { IFlexibleTieredStaking } from "./contracts/FlexibleTieredStaking.sol/IFlexibleTieredStaking";
