@@ -178,6 +178,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockPriceOracle__factory>;
     getContractFactory(
+      name: "ITreasuryYieldStrategy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ITreasuryYieldStrategy__factory>;
+    getContractFactory(
+      name: "MockStakingContract",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockStakingContract__factory>;
+    getContractFactory(
       name: "MockUniswapRouter",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockUniswapRouter__factory>;
@@ -444,6 +452,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.MockPriceOracle>;
     getContractAt(
+      name: "ITreasuryYieldStrategy",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ITreasuryYieldStrategy>;
+    getContractAt(
+      name: "MockStakingContract",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockStakingContract>;
+    getContractAt(
       name: "MockUniswapRouter",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -684,6 +702,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockPriceOracle>;
     deployContract(
+      name: "ITreasuryYieldStrategy",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ITreasuryYieldStrategy>;
+    deployContract(
+      name: "MockStakingContract",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockStakingContract>;
+    deployContract(
       name: "MockUniswapRouter",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockUniswapRouter>;
@@ -949,6 +975,16 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockPriceOracle>;
+    deployContract(
+      name: "ITreasuryYieldStrategy",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ITreasuryYieldStrategy>;
+    deployContract(
+      name: "MockStakingContract",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockStakingContract>;
     deployContract(
       name: "MockUniswapRouter",
       args: any[],

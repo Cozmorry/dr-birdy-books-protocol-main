@@ -35,6 +35,7 @@ export interface MockERC20Interface extends Interface {
       | "symbol"
       | "totalSupply"
       | "transfer"
+      | "transferForUnstaking"
       | "transferFrom"
   ): FunctionFragment;
 
@@ -68,6 +69,10 @@ export interface MockERC20Interface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "transferForUnstaking",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "transferFrom",
     values: [AddressLike, AddressLike, BigNumberish]
   ): string;
@@ -84,6 +89,10 @@ export interface MockERC20Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferForUnstaking",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "transferFrom",
     data: BytesLike
@@ -203,6 +212,12 @@ export interface MockERC20 extends BaseContract {
     "nonpayable"
   >;
 
+  transferForUnstaking: TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
+
   transferFrom: TypedContractMethod<
     [from: AddressLike, to: AddressLike, value: BigNumberish],
     [boolean],
@@ -253,6 +268,13 @@ export interface MockERC20 extends BaseContract {
     nameOrSignature: "transfer"
   ): TypedContractMethod<
     [to: AddressLike, value: BigNumberish],
+    [boolean],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "transferForUnstaking"
+  ): TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish],
     [boolean],
     "nonpayable"
   >;

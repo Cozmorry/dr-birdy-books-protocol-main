@@ -2,7 +2,6 @@
 
 > **A Revolutionary DeFi Ecosystem Bridging Education, Media, and Cryptocurrency**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.19-blue.svg)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Hardhat-3.0.0-orange.svg)](https://hardhat.org/)
 [![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-^4.9.0-green.svg)](https://openzeppelin.com/)
@@ -139,10 +138,6 @@ graph TB
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/domambia/dr-birdy-books-protocol.git
-cd dr-birdy-books-protocol
-
 # Install dependencies
 npm install
 
@@ -337,43 +332,11 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Workflow
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
 ## 🔗 Links
 
 - **Documentation**: [Full PRD](docs/DR_BIRDY_BOOKS_PROTOCOL_PRD.md)
-- **Implementation Status**: [Implementation Complete](IMPLEMENTATION_COMPLETE.md)
 - **Smart Contracts**: [Contracts Directory](contracts/)
-- **Tests**: [Test Directory](test/)
-
----
-
-## 🆘 Support
-
-For support and questions:
-
-- **Issues**: [GitHub Issues](https://github.com/domambia/dr-birdy-books-protocol/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/domambia/dr-birdy-books-protocol/discussions)
-- **Documentation**: [Full Documentation](docs/)
+- **Tests**: [Test Directory](tests/)
 
 ---
 
