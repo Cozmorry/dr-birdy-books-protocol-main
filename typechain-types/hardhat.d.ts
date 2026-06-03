@@ -218,6 +218,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReflectiveToken__factory>;
     getContractFactory(
+      name: "SimpleMockUSDC",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SimpleMockUSDC__factory>;
+    getContractFactory(
       name: "SimpleStaking",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.SimpleStaking__factory>;
@@ -498,6 +502,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ReflectiveToken>;
     getContractAt(
+      name: "SimpleMockUSDC",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SimpleMockUSDC>;
+    getContractAt(
       name: "SimpleStaking",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -733,6 +742,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReflectiveToken>;
     deployContract(
+      name: "SimpleMockUSDC",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleMockUSDC>;
+    deployContract(
       name: "SimpleStaking",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.SimpleStaking>;
@@ -1012,6 +1025,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReflectiveToken>;
+    deployContract(
+      name: "SimpleMockUSDC",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleMockUSDC>;
     deployContract(
       name: "SimpleStaking",
       args: any[],

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useWeb3 } from '../hooks/useWeb3';
+import { useWeb3Store } from '../hooks/useWeb3Store';
 import { useContractsStore } from '../hooks/useContractsStore';
 import { Button } from './ui/button';
 import {
@@ -21,20 +21,23 @@ interface NavbarProps {
   onConnect: () => void;
   onSwitchNetwork: () => void;
   onDisconnect: () => void;
+  onSwitchAccount: (address: string) => Promise<void>;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onConnect,
   onSwitchNetwork,
   onDisconnect,
+  onSwitchAccount,
 }) => {
   const {
     provider,
     account,
+    authorizedAccounts,
     isConnected,
     isCorrectNetwork,
-    isLoading: web3Loading,
-  } = useWeb3();
+    web3Loading,
+  } = useWeb3Store();
 
   const location = useLocation();
 
@@ -233,12 +236,53 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </DropdownMenuItem>
 
+                  {/* Authorized Accounts Switcher */}
+                  {authorizedAccounts && authorizedAccounts.length > 1 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          Switch Authorized Account
+                        </p>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto space-y-0.5">
+                        {authorizedAccounts.map((addr) => {
+                          const isCurrent = addr.toLowerCase() === account?.toLowerCase();
+                          return (
+                            <DropdownMenuItem
+                              key={addr}
+                              onClick={() => !isCurrent && onSwitchAccount(addr)}
+                              className={`flex items-center justify-between text-xs cursor-pointer px-3 py-1.5 rounded-sm ${
+                                isCurrent 
+                                  ? 'bg-blue-50 dark:bg-blue-950 font-medium text-blue-600 dark:text-blue-400' 
+                                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              <span className="truncate max-w-[200px]" title={addr}>
+                                {addr.slice(0, 6)}...{addr.slice(-4)}
+                              </span>
+                              {isCurrent ? (
+                                <span className="text-[9px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-semibold">
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-gray-400 opacity-0 hover:opacity-100 transition-opacity">
+                                  Select
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
                   <DropdownMenuSeparator />
                   
                   {/* Disconnect */}
                   <DropdownMenuItem
                     onClick={onDisconnect}
-                    className="flex items-center space-x-2 text-red-600 focus:text-red-600"
+                    className="flex items-center space-x-2 text-red-600 focus:text-red-600 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4" />
                     <span className="text-sm">Disconnect</span>

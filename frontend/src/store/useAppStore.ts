@@ -15,6 +15,7 @@ interface AppState {
   provider: ethers.BrowserProvider | null;
   signer: ethers.JsonRpcSigner | null;
   account: string | null;
+  authorizedAccounts: string[];
   isConnected: boolean;
   isCorrectNetwork: boolean;
   web3Loading: boolean;
@@ -49,7 +50,7 @@ interface AppState {
   isRefreshing: boolean;
 
   // Actions
-  setWeb3State: (state: Partial<Pick<AppState, 'provider' | 'signer' | 'account' | 'isConnected' | 'isCorrectNetwork' | 'web3Loading' | 'web3Error'>>) => void;
+  setWeb3State: (state: Partial<Pick<AppState, 'provider' | 'signer' | 'account' | 'authorizedAccounts' | 'isConnected' | 'isCorrectNetwork' | 'web3Loading' | 'web3Error'>>) => void;
   setContracts: (contracts: AppState['contracts']) => void;
   setUserInfo: (userInfo: UserInfo | null) => void;
   setVestingInfo: (vestingInfo: VestingInfo | null) => void;
@@ -91,6 +92,7 @@ const initialState = {
   provider: null,
   signer: null,
   account: null,
+  authorizedAccounts: [],
   isConnected: false,
   isCorrectNetwork: false,
   web3Loading: false,
@@ -834,9 +836,9 @@ export const useAppStore = create<AppState>()(
         const chainId = Number(network.chainId);
         console.log('Current network:', network.name, 'Chain ID:', chainId);
         
-        // Check if on correct network (Base Mainnet = 8453, Base Sepolia = 84532)
-        if (chainId !== 8453 && chainId !== 84532) {
-          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`);
+        // Check if on correct network (Base Mainnet = 8453, Base Sepolia = 84532, Localhost = 31337)
+        if (chainId !== 8453 && chainId !== 84532 && chainId !== 31337) {
+          throw new Error(`Wrong network! You're on ${network.name} (Chain ID: ${chainId}). Please switch to Base Mainnet (8453), Base Sepolia (84532), or Localhost/Hardhat (31337).`);
         }
         
         // Check ETH balance for gas
@@ -1047,6 +1049,7 @@ export const useAppStore = create<AppState>()(
 
 // Track initialization to prevent excessive re-initialization
 let isInitializing = false;
+let lastProvider: ethers.BrowserProvider | null = null;
 let lastProviderChainId: number | null = null;
 
 // Initialize contracts when provider changes
@@ -1068,13 +1071,14 @@ export const initializeContracts = async (provider: ethers.BrowserProvider | nul
     const network = await provider.getNetwork();
     chainId = Number(network.chainId);
     
-    // Check if contracts are already initialized for this chain
+    // Check if contracts are already initialized for this provider and chain
     const currentContracts = useAppStore.getState().contracts;
-    if (currentContracts.reflectiveToken && lastProviderChainId === chainId) {
-      console.log('Contracts already initialized for chain ID:', chainId);
+    if (currentContracts.reflectiveToken && lastProvider === provider && lastProviderChainId === chainId) {
+      console.log('Contracts already initialized for this provider and chain ID:', chainId);
       return;
     }
     
+    lastProvider = provider;
     lastProviderChainId = chainId;
   } catch (err) {
     console.warn('Failed to get network info:', err);
@@ -1104,9 +1108,9 @@ export const initializeContracts = async (provider: ethers.BrowserProvider | nul
 
     if (!hasDeployedContracts) {
       console.warn('Contracts not deployed on chain ID:', chainId);
-      console.warn('Please switch to Base Mainnet (8453) or Base Sepolia (84532)');
+      console.warn('Please switch to Base Mainnet (8453), Base Sepolia (84532), or Localhost/Hardhat (31337)');
       useAppStore.getState().setContractsError(
-        `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Mainnet (Chain ID: 8453) or Base Sepolia Testnet (Chain ID: 84532).`
+        `Contracts not deployed on this network (Chain ID: ${chainId}). Please switch to Base Mainnet (8453), Base Sepolia (84532), or Localhost/Hardhat (31337).`
       );
       // Don't set contracts if they don't exist
       useAppStore.getState().setContracts({

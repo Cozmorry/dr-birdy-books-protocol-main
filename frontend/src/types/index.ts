@@ -4,6 +4,7 @@ export interface ContractAddresses {
   flexibleTieredStaking: string;
   arweaveGateway: string;
   improvedTimelock: string;
+  continuousClearingAuction?: string;
 }
 
 export interface UserInfo {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Send, Star, MessageSquare, AlertCircle } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
-import { useWeb3 } from '../hooks/useWeb3';
+import { useWeb3Store } from '../hooks/useWeb3Store';
 import { trackFeedback } from '../utils/analytics';
 
 interface FeedbackModalProps {
@@ -13,7 +13,7 @@ type FeedbackType = 'general' | 'bug' | 'feature' | 'suggestion';
 
 export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const { addToast } = useToast();
-  const { account } = useWeb3();
+  const { account } = useWeb3Store();
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('general');
   const [rating, setRating] = useState<number>(0);
   const [message, setMessage] = useState('');

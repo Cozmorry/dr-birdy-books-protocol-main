@@ -9,6 +9,7 @@ export * as mocks from "./mocks";
 export { ContinuousClearingAuction__factory } from "./ContinuousClearingAuction__factory";
 export { IYieldStrategy__factory } from "./IYieldStrategy__factory";
 export { ImprovedTimelock__factory } from "./ImprovedTimelock__factory";
+export { SimpleMockUSDC__factory } from "./SimpleMockUSDC__factory";
 export { SimpleStaking__factory } from "./SimpleStaking__factory";
 export { SimpleStakingV2__factory } from "./SimpleStakingV2__factory";
 export { TokenDistribution__factory } from "./TokenDistribution__factory";

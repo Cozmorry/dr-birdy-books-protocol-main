@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useWeb3 } from './hooks/useWeb3';
 import { useWeb3Store } from './hooks/useWeb3Store';
 import { useContractsStore } from './hooks/useContractsStore';
+import { initializeContracts } from './store/useAppStore';
 import { MainLayout } from './components/MainLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { WalletConnect } from './components/WalletConnect';
@@ -43,6 +44,7 @@ function MainApp() {
     provider,
     signer,
     account,
+    authorizedAccounts,
     chainId,
     isConnected,
     isCorrectNetwork,
@@ -51,6 +53,7 @@ function MainApp() {
     connectWallet,
     switchToBaseNetwork,
     disconnect,
+    switchAccount,
   } = useWeb3();
 
   // Use Zustand store for contract state
@@ -66,6 +69,9 @@ function MainApp() {
   // Use Web3 store for additional functionality
   const {
     setWeb3State,
+    loadProtocolStats,
+    refreshAllData,
+    stopAutoRefresh,
   } = useWeb3Store();
 
   // Update Web3 state in store when it changes
@@ -74,12 +80,44 @@ function MainApp() {
       provider,
       signer,
       account,
+      authorizedAccounts,
       isConnected,
       isCorrectNetwork,
       web3Loading,
       web3Error,
     });
-  }, [provider, signer, account, isConnected, isCorrectNetwork, web3Loading, web3Error, setWeb3State]);
+  }, [provider, signer, account, authorizedAccounts, isConnected, isCorrectNetwork, web3Loading, web3Error, setWeb3State]);
+
+  // Initialize contracts when provider changes
+  useEffect(() => {
+    if (provider) {
+      console.log('[App] Provider changed, initializing contracts...');
+      initializeContracts(provider);
+    }
+  }, [provider]);
+
+  // Load protocol stats when contracts are available
+  useEffect(() => {
+    if (contracts.flexibleTieredStaking) {
+      console.log('[App] Staking contract available, loading protocol stats...');
+      loadProtocolStats();
+    }
+  }, [contracts.flexibleTieredStaking, loadProtocolStats]);
+
+  // Load data when connected
+  useEffect(() => {
+    if (isConnected && account && contracts.reflectiveToken && contracts.flexibleTieredStaking) {
+      console.log('[App] Connected, refreshing all data...');
+      refreshAllData(account);
+    }
+  }, [isConnected, account, contracts.reflectiveToken, contracts.flexibleTieredStaking, refreshAllData]);
+
+  // Cleanup auto refresh on unmount
+  useEffect(() => {
+    return () => {
+      stopAutoRefresh();
+    };
+  }, [stopAutoRefresh]);
 
 
 
@@ -103,6 +141,7 @@ function MainApp() {
               onConnect={connectWallet}
               onSwitchNetwork={switchToBaseNetwork}
               onDisconnect={disconnect}
+              onSwitchAccount={switchAccount}
             />
           }
         >

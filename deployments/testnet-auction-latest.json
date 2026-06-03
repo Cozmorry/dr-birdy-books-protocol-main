@@ -1,0 +1,16 @@
+{
+  "network": "Base Sepolia Testnet",
+  "chainId": 84532,
+  "auctionAddress": "0xD78444e0E752676fF5673eC5422eB72CB65e0338",
+  "tokenAddress": "0xB49872C1aD8a052f1369ABDfC890264938647EB6",
+  "currencyAddress": "0x8841b3404ceD77ddb4Be25616BA24ffBA500bd8B",
+  "tokenAmount": "1500000000000000000000000",
+  "floorPrice": "100000",
+  "startBlock": 42368749,
+  "endBlock": 42378749,
+  "fundsRecipient": "0xE409c2F794647AC4940d7f1B6506790098bbA136",
+  "liquidityRecipient": "0xE409c2F794647AC4940d7f1B6506790098bbA136",
+  "owner": "0xE409c2F794647AC4940d7f1B6506790098bbA136",
+  "deployedAt": "2026-06-03T16:54:48.764Z",
+  "deploymentTx": "0x3e91869b3977fd7b2574ce01a72dabcad45ee6f0ee1efd9bd7f67caa56cb048b"
+}

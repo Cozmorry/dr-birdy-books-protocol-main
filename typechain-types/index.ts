@@ -100,6 +100,8 @@ export type { IUniswapV2Router } from "./contracts/ReflectiveToken.sol/IUniswapV
 export { IUniswapV2Router__factory } from "./factories/contracts/ReflectiveToken.sol/IUniswapV2Router__factory";
 export type { ReflectiveToken } from "./contracts/ReflectiveToken.sol/ReflectiveToken";
 export { ReflectiveToken__factory } from "./factories/contracts/ReflectiveToken.sol/ReflectiveToken__factory";
+export type { SimpleMockUSDC } from "./contracts/SimpleMockUSDC";
+export { SimpleMockUSDC__factory } from "./factories/contracts/SimpleMockUSDC__factory";
 export type { SimpleStaking } from "./contracts/SimpleStaking";
 export { SimpleStaking__factory } from "./factories/contracts/SimpleStaking__factory";
 export type { SimpleStakingV2 } from "./contracts/SimpleStakingV2";

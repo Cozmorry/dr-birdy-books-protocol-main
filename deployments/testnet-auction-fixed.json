@@ -1,0 +1,12 @@
+{
+  "network": "Base Sepolia Testnet",
+  "chainId": 84532,
+  "tokenAddress": "0xB49872C1aD8a052f1369ABDfC890264938647EB6",
+  "mockUSDCAddress": "0x96A2fC890dA01fb5524a135c8a7C394a6bac7028",
+  "auctionAddress": "0xE456627ebBb66159a6D1E7C27Da943c661288700",
+  "tokenAmount": "1500000000000000000000000",
+  "floorPrice": "100000",
+  "startBlock": 42375642,
+  "endBlock": 42385642,
+  "deployedAt": "2026-06-03T20:44:39.252Z"
+}

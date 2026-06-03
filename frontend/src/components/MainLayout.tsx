@@ -1,18 +1,19 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
-import { useWeb3 } from '../hooks/useWeb3';
 
 interface MainLayoutProps {
   onConnect: () => void;
   onSwitchNetwork: () => void;
   onDisconnect: () => void;
+  onSwitchAccount: (address: string) => Promise<void>;
 }
 
 export function MainLayout({
   onConnect,
   onSwitchNetwork,
   onDisconnect,
+  onSwitchAccount,
 }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -20,6 +21,7 @@ export function MainLayout({
         onConnect={onConnect}
         onSwitchNetwork={onSwitchNetwork}
         onDisconnect={onDisconnect}
+        onSwitchAccount={onSwitchAccount}
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />

@@ -4,6 +4,7 @@ import { useAuthStore } from './admin/store/useAuthStore';
 import LoginPage from './admin/pages/LoginPage';
 import DashboardLayout from './admin/components/DashboardLayout';
 import DashboardPage from './admin/pages/DashboardPage';
+import AuctionPage from './admin/pages/AuctionPage';
 import FilesPage from './admin/pages/FilesPage';
 import FoldersPage from './admin/pages/FoldersPage';
 import FolderDetailPage from './admin/pages/FolderDetailPage';
@@ -43,6 +44,7 @@ export default function AdminApp() {
         element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/admin/login" replace />}
       >
         <Route index element={<DashboardPage />} />
+        <Route path="auction" element={<AuctionPage />} />
         <Route path="files" element={<FilesPage />} />
         <Route path="folders" element={<FoldersPage />} />
         <Route path="folders/:id" element={<FolderDetailPage />} />

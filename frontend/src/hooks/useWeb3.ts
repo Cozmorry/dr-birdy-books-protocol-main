@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
-import { BASE_MAINNET, BASE_TESTNET, getContractAddresses } from '../config/networks';
+import { BASE_MAINNET, BASE_TESTNET, LOCALHOST, getContractAddresses, getNetworkConfig } from '../config/networks';
 import { trackWalletConnect } from '../utils/analytics';
 
 interface Web3State {
   provider: ethers.BrowserProvider | null;
   signer: ethers.JsonRpcSigner | null;
   account: string | null;
+  authorizedAccounts: string[];
   chainId: number | null;
   isConnected: boolean;
   isCorrectNetwork: boolean;
@@ -17,6 +18,7 @@ export const useWeb3 = () => {
     provider: null,
     signer: null,
     account: null,
+    authorizedAccounts: [],
     chainId: null,
     isConnected: false,
     isCorrectNetwork: false,
@@ -25,6 +27,18 @@ export const useWeb3 = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const manuallyDisconnectedRef = useRef(false);
+  const latestAccountRef = useRef<string | null>(null);
+  const latestChainIdRef = useRef<number | null>(null);
+
+  // Keep latestAccountRef updated with the active account
+  useEffect(() => {
+    latestAccountRef.current = web3State.account;
+  }, [web3State.account]);
+
+  // Keep latestChainIdRef updated with the active chain ID
+  useEffect(() => {
+    latestChainIdRef.current = web3State.chainId;
+  }, [web3State.chainId]);
 
   const connectWallet = useCallback(async () => {
     if (typeof window.ethereum === 'undefined') {
@@ -92,7 +106,7 @@ export const useWeb3 = () => {
 
       // Create provider and get signer
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await provider.getSigner(accounts[0]);
       const network = await provider.getNetwork();
       const chainId = Number(network.chainId);
 
@@ -104,13 +118,15 @@ export const useWeb3 = () => {
 
       const isCorrectNetwork = hasDeployedContracts && (
         chainId === BASE_MAINNET.chainId || 
-        chainId === BASE_TESTNET.chainId
+        chainId === BASE_TESTNET.chainId ||
+        chainId === LOCALHOST.chainId
       );
       
       setWeb3State({
         provider,
         signer,
         account: accounts[0],
+        authorizedAccounts: accounts,
         chainId,
         isConnected: true,
         // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
@@ -173,8 +189,13 @@ export const useWeb3 = () => {
       return;
     }
 
-    // Default to Base Mainnet (contracts deployed)
-    const targetNetwork = BASE_MAINNET;
+    // Default to LOCALHOST in development and BASE_MAINNET in production, unless configured via env
+    const defaultChainId = process.env.REACT_APP_DEFAULT_NETWORK_ID
+      ? parseInt(process.env.REACT_APP_DEFAULT_NETWORK_ID)
+      : (process.env.NODE_ENV === 'development' ? LOCALHOST.chainId : BASE_MAINNET.chainId);
+
+    const targetNetwork = getNetworkConfig(defaultChainId);
+    console.log('[useWeb3] Requesting switch network to:', targetNetwork.name, 'Chain ID:', targetNetwork.chainId);
     
     try {
       await window.ethereum.request({
@@ -192,7 +213,7 @@ export const useWeb3 = () => {
                 chainId: `0x${targetNetwork.chainId.toString(16)}`,
                 chainName: targetNetwork.name,
                 rpcUrls: [targetNetwork.rpcUrl],
-                blockExplorerUrls: [targetNetwork.blockExplorer],
+                blockExplorerUrls: targetNetwork.blockExplorer ? [targetNetwork.blockExplorer] : undefined,
                 nativeCurrency: {
                   name: 'Ethereum',
                   symbol: 'ETH',
@@ -218,12 +239,29 @@ export const useWeb3 = () => {
       provider: null,
       signer: null,
       account: null,
+      authorizedAccounts: [],
       chainId: null,
       isConnected: false,
       isCorrectNetwork: false,
     });
     setError(null);
   }, []);
+
+  const switchAccount = useCallback(async (address: string) => {
+    if (!web3State.provider) return;
+    try {
+      console.log('[useWeb3] Switching active account in dApp to:', address);
+      const signer = await web3State.provider.getSigner(address);
+      setWeb3State(prev => ({
+        ...prev,
+        signer,
+        account: address,
+      }));
+    } catch (err) {
+      console.error('[useWeb3] Failed to switch active account:', err);
+      setError('Failed to switch account: ' + (err as any).message);
+    }
+  }, [web3State.provider]);
 
   // Auto-reconnect on page load if wallet was previously connected
   useEffect(() => {
@@ -242,7 +280,7 @@ export const useWeb3 = () => {
         if (accounts && accounts.length > 0) {
           // Wallet was previously connected, restore connection
           const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
+          const signer = await provider.getSigner(accounts[0]);
           const network = await provider.getNetwork();
           const chainId = Number(network.chainId);
           
@@ -252,16 +290,19 @@ export const useWeb3 = () => {
             contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
             contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
 
+          console.log('[useWeb3] Auto-reconnect restoring wallet connection for account:', accounts[0]);
           setWeb3State({
             provider,
             signer,
             account: accounts[0],
+            authorizedAccounts: accounts,
             chainId,
             isConnected: true,
             // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
             isCorrectNetwork: hasDeployedContracts && (
               chainId === BASE_MAINNET.chainId || 
-              chainId === BASE_TESTNET.chainId
+              chainId === BASE_TESTNET.chainId ||
+              chainId === LOCALHOST.chainId
             ),
           });
         }
@@ -276,41 +317,148 @@ export const useWeb3 = () => {
 
   // Listen for account and chain changes
   useEffect(() => {
-    if (typeof window.ethereum === 'undefined') return;
+    if (typeof window.ethereum === 'undefined') {
+      console.log('[useWeb3] event listener setup skipped: window.ethereum is undefined');
+      return;
+    }
 
-    const handleAccountsChanged = (accounts: string[]) => {
+    console.log('[useWeb3] window.ethereum check:', {
+      exists: typeof window.ethereum !== 'undefined',
+      isMetaMask: window.ethereum?.isMetaMask,
+      isCoinbaseWallet: window.ethereum?.isCoinbaseWallet,
+      providers: (window.ethereum as any)?.providers?.map((p: any) => ({
+        isMetaMask: p.isMetaMask,
+        isCoinbase: p.isCoinbaseWallet || p.isCoinbaseWallet === true
+      }))
+    });
+
+    const handleAccountsChanged = async (accounts: string[]) => {
+      console.log('[useWeb3] accountsChanged event received in listener, accounts:', accounts);
       if (accounts.length === 0) {
+        console.log('[useWeb3] accounts.length is 0, calling disconnect');
         disconnect();
       } else {
-        // Reset manual disconnect flag since user has accounts (switched account)
+        if (!window.ethereum) return;
         manuallyDisconnectedRef.current = false;
-        setWeb3State(prev => ({ ...prev, account: accounts[0] }));
+        console.log('[useWeb3] accountsChanged event received, switching to account:', accounts[0]);
+        // Re-fetch provider + signer so the new account is used for all tx
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner(accounts[0]);
+          const network = await provider.getNetwork();
+          const chainId = Number(network.chainId);
+          const contractAddresses = getContractAddresses(chainId);
+          const hasDeployedContracts =
+            contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
+            contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
+            
+          console.log('[useWeb3] Successfully obtained new provider and signer on account switch');
+          setWeb3State({
+            provider,
+            signer,
+            account: accounts[0],
+            authorizedAccounts: accounts,
+            chainId,
+            isConnected: true,
+            isCorrectNetwork: hasDeployedContracts && (
+              chainId === BASE_MAINNET.chainId ||
+              chainId === BASE_TESTNET.chainId ||
+              chainId === LOCALHOST.chainId
+            ),
+          });
+        } catch (error) {
+          console.error('[useWeb3] Failed to retrieve new provider/signer on accountsChanged, using fallback:', error);
+          // Fallback: at minimum update the displayed account
+          setWeb3State(prev => ({
+            ...prev,
+            account: accounts[0],
+            authorizedAccounts: accounts,
+            isConnected: true
+          }));
+        }
       }
     };
 
-    const handleChainChanged = (chainId: string) => {
-      const newChainId = parseInt(chainId, 16);
-      // Check if contracts are deployed on this network
-      const contractAddresses = getContractAddresses(newChainId);
-      const hasDeployedContracts = 
-        contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
-        contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
+    const handleChainChanged = async (chainIdHex: string) => {
+      const newChainId = parseInt(chainIdHex, 16);
+      console.log('[useWeb3] chainChanged event received. New Chain ID:', newChainId);
 
-      setWeb3State(prev => ({
-        ...prev,
-        chainId: newChainId,
-        // Contracts deployed on Base Mainnet (8453) and Base Sepolia Testnet (84532)
-        isCorrectNetwork: hasDeployedContracts && (
-          newChainId === BASE_MAINNET.chainId || 
-          newChainId === BASE_TESTNET.chainId
-        ),
-      }));
+      if (!window.ethereum) return;
+
+      try {
+        // Rebuild provider + signer on the new chain — this is the key step that
+        // triggers initializeContracts() in useWeb3Store via the provider dependency.
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const account = accounts?.[0] ?? null;
+        const signer = account ? await provider.getSigner(account) : null;
+
+        const contractAddresses = getContractAddresses(newChainId);
+        const hasDeployedContracts =
+          contractAddresses.reflectiveToken !== ethers.ZeroAddress &&
+          contractAddresses.flexibleTieredStaking !== ethers.ZeroAddress;
+
+        console.log('[useWeb3] Chain changed — new provider created for chain:', newChainId, 'contracts available:', hasDeployedContracts);
+
+        setWeb3State(prev => ({
+          ...prev,
+          provider,
+          signer,
+          account,
+          chainId: newChainId,
+          isCorrectNetwork: hasDeployedContracts && (
+            newChainId === BASE_MAINNET.chainId ||
+            newChainId === BASE_TESTNET.chainId ||
+            newChainId === LOCALHOST.chainId
+          ),
+        }));
+      } catch (err) {
+        console.error('[useWeb3] Failed to rebuild provider on chain change:', err);
+        // Fallback: at minimum update chainId so the UI reflects the switch
+        setWeb3State(prev => ({
+          ...prev,
+          chainId: newChainId,
+          isCorrectNetwork: false,
+        }));
+      }
     };
 
+    console.log('[useWeb3] Registering accountsChanged and chainChanged listeners...');
     window.ethereum.on('accountsChanged', handleAccountsChanged);
     window.ethereum.on('chainChanged', handleChainChanged);
 
+    // Polling fallback because accountsChanged and chainChanged can be unreliable in some browsers/extensions
+    console.log('[useWeb3] Starting background account and chain polling interval...');
+    const pollInterval = setInterval(async () => {
+      try {
+        if (!window.ethereum) return;
+        
+        // Poll for account changes
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+          if (accounts[0]?.toLowerCase() !== latestAccountRef.current?.toLowerCase()) {
+            console.log('[useWeb3] Polling fallback detected account change from:', latestAccountRef.current, 'to:', accounts[0]);
+            await handleAccountsChanged(accounts);
+          }
+        } else if (latestAccountRef.current !== null) {
+          console.log('[useWeb3] Polling fallback detected all accounts disconnected');
+          disconnect();
+        }
+
+        // Poll for chain changes
+        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+        const currentChainId = parseInt(chainIdHex, 16);
+        if (currentChainId !== latestChainIdRef.current) {
+          console.log('[useWeb3] Polling fallback detected chain change from:', latestChainIdRef.current, 'to:', currentChainId);
+          await handleChainChanged(chainIdHex);
+        }
+      } catch (err) {
+        // Silently ignore polling errors
+      }
+    }, 2000);
+
     return () => {
+      clearInterval(pollInterval);
       if (window.ethereum) {
         window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
         window.ethereum.removeListener('chainChanged', handleChainChanged);
@@ -325,5 +473,6 @@ export const useWeb3 = () => {
     connectWallet,
     switchToBaseNetwork,
     disconnect,
+    switchAccount,
   };
 };

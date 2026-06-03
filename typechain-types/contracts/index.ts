@@ -14,6 +14,7 @@ export type { mocks };
 export type { ContinuousClearingAuction } from "./ContinuousClearingAuction";
 export type { IYieldStrategy } from "./IYieldStrategy";
 export type { ImprovedTimelock } from "./ImprovedTimelock";
+export type { SimpleMockUSDC } from "./SimpleMockUSDC";
 export type { SimpleStaking } from "./SimpleStaking";
 export type { SimpleStakingV2 } from "./SimpleStakingV2";
 export type { TokenDistribution } from "./TokenDistribution";

@@ -96,8 +96,13 @@ We will build a dedicated, beautiful **Auction Management Dashboard** page insid
 
 ### Frontend Pages
 
-#### [NEW] [AuctionPage.tsx](file:///c:/Users/cozmo/OneDrive/Desktop/Job/Birdy/dr-birdy-books-protocol-main/frontend/src/admin/pages/AuctionPage.tsx)
+#### [MODIFY] [AuctionPage.tsx](file:///c:/Users/cozmo/OneDrive/Desktop/Job/Birdy/dr-birdy-books-protocol-main/frontend/src/admin/pages/AuctionPage.tsx)
 *   Implements the React component to view bidding metrics, auction progress, and execute owner controls (end early, cancel, finalize).
+*   **NEW**: Integrates a client-side **Developer Sandbox / Testnet Contract Deployer** card:
+    *   Deploys `MockERC20` (Mock USDC) to act as raising currency with 1 click.
+    *   Deploys `ContinuousClearingAuction` with custom parameters (Token, Currency, Token Amount, Floor Price, Start Block delay, Duration, splits, owner).
+    *   Exposes a "Load Deployed Auction" action to instantly load the deployed contract address.
+    *   Safety-guarded to prevent accidental deployments on Base Mainnet.
 
 ### Deployments
 
@@ -105,7 +110,6 @@ We will build a dedicated, beautiful **Auction Management Dashboard** page insid
 #### [DELETE] [deployment-mainnet-1768423657870.json](file:///c:/Users/cozmo/OneDrive/Desktop/Job/Birdy/dr-birdy-books-protocol-main/deployments/deployment-mainnet-1768423657870.json)
 #### [DELETE] [deployment-mainnet-1768427880919.json](file:///c:/Users/cozmo/OneDrive/Desktop/Job/Birdy/dr-birdy-books-protocol-main/deployments/deployment-mainnet-1768427880919.json)
 #### [DELETE] [deployment-mainnet-20250110.json](file:///c:/Users/cozmo/OneDrive/Desktop/Job/Birdy/dr-birdy-books-protocol-main/deployments/deployment-mainnet-20250110.json)
-#### [DELETE] [verify-commands-1768423950880.txt](file:///c:/Users/cozmo/OneDrive/Desktop/Job/Birdy/dr-birdy-books-protocol-main/deployments/verify-commands-1768423950880.txt)
 
 ---
 
@@ -124,6 +128,16 @@ We will create a comprehensive Hardhat test file `test/ContinuousClearingAuction
     *   Call `cancelAuction()` as owner.
     *   Assert that bidders can withdraw 100% of their deposits and the owner receives all DBBPT tokens back.
 5.  **Claims**: Verify that bidders claim the correct amount of DBBPT tokens with 0% transaction fee.
+
+### Client-Side Deployer Validation
+1. Deploy `MockERC20` using the sandbox.
+2. Deploy the clearing auction using the sandbox.
+3. Load the contract and verify the interactive buttons (submit test bids, end early, finalize).
+- [x] Verify build with `npx tsc --noEmit` inside `frontend/` — ✅ 0 errors
+- [x] Fix stale signer and account out-of-sync behavior on MetaMask account switch:
+    - [x] Refactored `Navbar.tsx` and `FeedbackModal.tsx` to read Web3 state from global Zustand store (`useWeb3Store`) instead of initiating independent local hook instances
+    - [x] Updated `initializeContracts` inside `useAppStore.ts` to re-initialize contracts when the provider instance changes, ensuring contract calls and signers are bound to the active wallet address
+- [x] Update `walkthrough.md` with final deployment details
 
 ### Manual Verification
 1.  Verify the new `ContinuousClearingAuction.sol` on Base Sepolia testnet.
