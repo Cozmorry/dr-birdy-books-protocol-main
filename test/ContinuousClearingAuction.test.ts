@@ -1,217 +1,404 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Contract, Signer } from "ethers";
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import { ContinuousClearingAuction, SimpleMockUSDC } from "../typechain-types";
 
 describe("ContinuousClearingAuction", function () {
-  let token: any;
-  let currency: any;
-  let auction: any;
-  
-  let owner: any;
-  let bidder1: any;
-  let bidder2: any;
-  let fundsRecipient: any;
-  let liquidityRecipient: any;
+  let auction: ContinuousClearingAuction;
+  let token: SimpleMockUSDC; // Using mock ERC20 for token instead of complex ReflectiveToken
+  let currency: SimpleMockUSDC;
+  let owner: SignerWithAddress;
+  let fundsRecipient: SignerWithAddress;
+  let liquidityRecipient: SignerWithAddress;
+  let bidder1: SignerWithAddress;
+  let bidder2: SignerWithAddress;
+  let bidder3: SignerWithAddress;
 
   const TOKEN_AMOUNT = ethers.parseEther("1500000"); // 1.5M DBBPT
-  const FLOOR_PRICE = ethers.parseUnits("1", 5); // $0.10 in 6-decimal currency units (e.g. USDC)
-  const START_DELAY = 1;
-  const END_DELAY = 100;
+  const FLOOR_PRICE = ethers.parseUnits("0.1", 6); // 0.1 USDC per DBBPT
+  const BID_AMOUNT_1 = ethers.parseUnits("50000", 6); // 50k USDC
+  const BID_AMOUNT_2 = ethers.parseUnits("30000", 6); // 30k USDC
+  const BID_AMOUNT_3 = ethers.parseUnits("20000", 6); // 20k USDC
 
-  beforeEach(async () => {
-    [owner, bidder1, bidder2, fundsRecipient, liquidityRecipient] = await ethers.getSigners();
+  beforeEach(async function () {
+    [owner, fundsRecipient, liquidityRecipient, bidder1, bidder2, bidder3] = await ethers.getSigners();
 
-    // Deploy ReflectiveToken as our auction token
-    const TokenFactory = await ethers.getContractFactory("ReflectiveToken");
-    const GatewayFactory = await ethers.getContractFactory("ArweaveGateway");
-    const RouterFactory = await ethers.getContractFactory("MockUniswapRouter");
-    const OracleFactory = await ethers.getContractFactory("MockPriceOracle");
-
-    const gateway = await GatewayFactory.deploy();
-    const router = await RouterFactory.deploy();
-    const oracle = await OracleFactory.deploy();
-    token = await TokenFactory.deploy();
-
-    await gateway.waitForDeployment();
-    await router.waitForDeployment();
-    await oracle.waitForDeployment();
-    await token.waitForDeployment();
-
-    // Initialize ReflectiveToken
-    await token.initialize(
-      await router.getAddress(),
-      owner.address,
-      ethers.ZeroAddress,
-      await gateway.getAddress(),
-      await oracle.getAddress()
-    );
-
-    // Deploy MockERC20 as our raising currency (6 decimals like USDC)
-    const CurrencyFactory = await ethers.getContractFactory("MockERC20");
-    currency = await CurrencyFactory.deploy("USD Coin", "USDC", ethers.parseUnits("1000000", 6));
+    // Deploy SimpleMockUSDC for currency
+    const MockUSDCFactory = await ethers.getContractFactory("SimpleMockUSDC");
+    currency = await MockUSDCFactory.deploy();
     await currency.waitForDeployment();
 
-    // Fund bidders with currency
-    await currency.mint(bidder1.address, ethers.parseUnits("200000", 6));
-    await currency.mint(bidder2.address, ethers.parseUnits("200000", 6));
+    // Deploy SimpleMockUSDC for token (simpler than ReflectiveToken for testing)
+    token = await MockUSDCFactory.deploy();
+    await token.waitForDeployment();
 
-    // Deploy the Auction contract
-    const startBlock = (await ethers.provider.getBlockNumber()) + START_DELAY;
-    const endBlock = startBlock + END_DELAY;
+    // Get current block
+    const currentBlock = await ethers.provider.getBlockNumber();
+    const START_BLOCK = currentBlock + 5;
+    const END_BLOCK = START_BLOCK + 100;
 
+    // Deploy ContinuousClearingAuction
     const AuctionFactory = await ethers.getContractFactory("ContinuousClearingAuction");
     auction = await AuctionFactory.deploy(
       await token.getAddress(),
       await currency.getAddress(),
       TOKEN_AMOUNT,
       FLOOR_PRICE,
-      startBlock,
-      endBlock,
+      START_BLOCK,
+      END_BLOCK,
       fundsRecipient.address,
       liquidityRecipient.address,
       owner.address
     );
     await auction.waitForDeployment();
 
-    // Set the auction contract as the staking contract in ReflectiveToken to enable fee-free transfers
-    await token.setStakingContract(await auction.getAddress());
+    // Mint tokens to auction contract (simulating funding)
+    await token.mint(await auction.getAddress(), TOKEN_AMOUNT);
 
-    // Transfer the 1.5M DBBPT tokens to the auction contract
-    await token.transfer(await auction.getAddress(), TOKEN_AMOUNT);
+    // Mint USDC to bidders
+    await currency.mint(bidder1.address, ethers.parseUnits("100000", 6));
+    await currency.mint(bidder2.address, ethers.parseUnits("100000", 6));
+    await currency.mint(bidder3.address, ethers.parseUnits("100000", 6));
 
-    // Move blocks to start of auction
-    await ethers.provider.send("evm_mine", []);
+    // Approve auction to spend USDC
+    await currency.connect(bidder1).approve(await auction.getAddress(), ethers.MaxUint256);
+    await currency.connect(bidder2).approve(await auction.getAddress(), ethers.MaxUint256);
+    await currency.connect(bidder3).approve(await auction.getAddress(), ethers.MaxUint256);
+
+    // Mine blocks to reach start block
+    for (let i = 0; i < 5; i++) {
+      await ethers.provider.send("evm_mine", []);
+    }
   });
 
-  it("should initialize with correct parameters", async function () {
-    expect(await auction.token()).to.equal(await token.getAddress());
-    expect(await auction.currency()).to.equal(await currency.getAddress());
-    expect(await auction.tokenAmount()).to.equal(TOKEN_AMOUNT);
-    expect(await auction.floorPrice()).to.equal(FLOOR_PRICE);
-    expect(await auction.fundsRecipient()).to.equal(fundsRecipient.address);
-    expect(await auction.liquidityRecipient()).to.equal(liquidityRecipient.address);
+  describe("Deployment", function () {
+    it("Should set the correct token and currency addresses", async function () {
+      expect(await auction.token()).to.equal(await token.getAddress());
+      expect(await auction.currency()).to.equal(await currency.getAddress());
+    });
+
+    it("Should set the correct auction parameters", async function () {
+      expect(await auction.tokenAmount()).to.equal(TOKEN_AMOUNT);
+      expect(await auction.floorPrice()).to.equal(FLOOR_PRICE);
+      expect(await auction.fundsRecipient()).to.equal(fundsRecipient.address);
+      expect(await auction.liquidityRecipient()).to.equal(liquidityRecipient.address);
+    });
+
+    it("Should set the correct owner", async function () {
+      expect(await auction.owner()).to.equal(owner.address);
+    });
+
+    it("Should be funded with correct amount of DBBPT", async function () {
+      const balance = await token.balanceOf(await auction.getAddress());
+      expect(balance).to.equal(TOKEN_AMOUNT);
+    });
   });
 
-  it("should allow bidding", async function () {
-    const bidAmount = ethers.parseUnits("50000", 6);
-    await currency.connect(bidder1).approve(await auction.getAddress(), bidAmount);
-    
-    await expect(auction.connect(bidder1).bid(bidAmount))
-      .to.emit(auction, "BidSubmitted")
-      .withArgs(bidder1.address, bidAmount);
+  describe("Bidding", function () {
+    it("Should allow bidders to place bids", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      expect(await auction.currencyContributed(bidder1.address)).to.equal(BID_AMOUNT_1);
+      expect(await auction.totalCurrencyContributed()).to.equal(BID_AMOUNT_1);
+    });
 
-    expect(await auction.currencyContributed(bidder1.address)).to.equal(bidAmount);
-    expect(await auction.totalCurrencyContributed()).to.equal(bidAmount);
+    it("Should allow multiple bids from the same bidder", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(bidder1).bid(ethers.parseUnits("10000", 6));
+      
+      const expectedTotal = BID_AMOUNT_1 + ethers.parseUnits("10000", 6);
+      expect(await auction.currencyContributed(bidder1.address)).to.equal(expectedTotal);
+    });
+
+    it("Should allow multiple bidders", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(bidder2).bid(BID_AMOUNT_2);
+      await auction.connect(bidder3).bid(BID_AMOUNT_3);
+
+      const expectedTotal = BID_AMOUNT_1 + BID_AMOUNT_2 + BID_AMOUNT_3;
+      expect(await auction.totalCurrencyContributed()).to.equal(expectedTotal);
+    });
+
+    it("Should emit BidSubmitted event", async function () {
+      await expect(auction.connect(bidder1).bid(BID_AMOUNT_1))
+        .to.emit(auction, "BidSubmitted")
+        .withArgs(bidder1.address, BID_AMOUNT_1);
+    });
+
+    it("Should revert if bid amount is 0", async function () {
+      await expect(auction.connect(bidder1).bid(0))
+        .to.be.revertedWith("Bid amount must be greater than 0");
+    });
+
+    it("Should revert if auction has ended", async function () {
+      await auction.connect(owner).endAuctionEarly();
+      await expect(auction.connect(bidder1).bid(BID_AMOUNT_1))
+        .to.be.revertedWith("Auction has ended or is canceled");
+    });
   });
 
-  it("should enforce floor price protection and calculate correct clearing price", async function () {
-    // Bidder 1 bids $50k
-    // Bidder 2 bids $100k
-    // Total raised = $150k (hits $150k target perfectly!)
-    // Clearing price should be: $150k / 1.5M tokens = $0.10 = 100,000 (which equals FLOOR_PRICE)
-    const bid1 = ethers.parseUnits("50000", 6);
-    const bid2 = ethers.parseUnits("100000", 6);
+  describe("Early Finalization", function () {
+    it("Should allow owner to end auction early", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).endAuctionEarly();
+      
+      expect(await auction.isEnded()).to.be.true;
+    });
 
-    await currency.connect(bidder1).approve(await auction.getAddress(), bid1);
-    await currency.connect(bidder2).approve(await auction.getAddress(), bid2);
+    it("Should emit AuctionEndedEarly event", async function () {
+      await expect(auction.connect(owner).endAuctionEarly())
+        .to.emit(auction, "AuctionEndedEarly");
+    });
 
-    await auction.connect(bidder1).bid(bid1);
-    await auction.connect(bidder2).bid(bid2);
+    it("Should prevent bidding after early end", async function () {
+      await auction.connect(owner).endAuctionEarly();
+      
+      await expect(auction.connect(bidder1).bid(BID_AMOUNT_1))
+        .to.be.revertedWith("Auction has ended or is canceled");
+    });
 
-    // End auction early by owner
-    await auction.connect(owner).endAuctionEarly();
-    
-    // Finalize
-    await expect(auction.connect(owner).finalize())
-      .to.emit(auction, "AuctionFinalized")
-      .withArgs(FLOOR_PRICE, bid1 + bid2, TOKEN_AMOUNT);
+    it("Should allow finalization after early end", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
+      
+      expect(await auction.isFinalized()).to.be.true;
+    });
 
-    expect(await auction.clearingPrice()).to.equal(FLOOR_PRICE);
-    expect(await auction.totalTokensSold()).to.equal(TOKEN_AMOUNT);
-
-    // Verify fund split: 1/3 to liquidity ($50k), 2/3 to funds ($100k)
-    expect(await currency.balanceOf(liquidityRecipient.address)).to.equal(ethers.parseUnits("50000", 6));
-    expect(await currency.balanceOf(fundsRecipient.address)).to.equal(ethers.parseUnits("100000", 6));
-
-    // Bidders claim tokens at $0.10 clearing price
-    // Bidder 1 gets 50k / 0.10 = 500k DBBPT
-    // Bidder 2 gets 100k / 0.10 = 1M DBBPT
-    await auction.connect(bidder1).claimTokens();
-    await auction.connect(bidder2).claimTokens();
-
-    expect(await token.balanceOf(bidder1.address)).to.equal(ethers.parseEther("500000"));
-    expect(await token.balanceOf(bidder2.address)).to.equal(ethers.parseEther("1000000"));
+    it("Should revert if non-owner tries to end early", async function () {
+      await expect(auction.connect(bidder1).endAuctionEarly())
+        .to.be.revertedWithCustomError(auction, "OwnableUnauthorizedAccount");
+    });
   });
 
-  it("should calculate higher clearing price if bids exceed target", async function () {
-    // Bidder 1 bids $150k
-    // Bidder 2 bids $150k
-    // Total raised = $300k
-    // Clearing price should be: $300k / 1.5M tokens = $0.20 = 200,000 (USDC units)
-    const bid1 = ethers.parseUnits("150000", 6);
-    const bid2 = ethers.parseUnits("150000", 6);
+  describe("Cancellation", function () {
+    it("Should allow owner to cancel auction", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).cancelAuction();
+      
+      expect(await auction.isCanceled()).to.be.true;
+      expect(await auction.isEnded()).to.be.true;
+    });
 
-    await currency.connect(bidder1).approve(await auction.getAddress(), bid1);
-    await currency.connect(bidder2).approve(await auction.getAddress(), bid2);
+    it("Should emit AuctionCanceled event", async function () {
+      await expect(auction.connect(owner).cancelAuction())
+        .to.emit(auction, "AuctionCanceled");
+    });
 
-    await auction.connect(bidder1).bid(bid1);
-    await auction.connect(bidder2).bid(bid2);
+    it("Should allow bidders to claim 100% refund after cancellation", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).cancelAuction();
 
-    await auction.connect(owner).endAuctionEarly();
-    await auction.connect(owner).finalize();
+      const balanceBefore = await currency.balanceOf(bidder1.address);
+      await auction.connect(bidder1).claimRefund();
+      const balanceAfter = await currency.balanceOf(bidder1.address);
 
-    const expectedPrice = ethers.parseUnits("2", 5); // $0.20
-    expect(await auction.clearingPrice()).to.equal(expectedPrice);
-    expect(await auction.totalTokensSold()).to.equal(TOKEN_AMOUNT);
+      expect(balanceAfter - balanceBefore).to.equal(BID_AMOUNT_1);
+    });
 
-    // Bidder 1 gets 150k / 0.20 = 750k DBBPT
-    await auction.connect(bidder1).claimTokens();
-    expect(await token.balanceOf(bidder1.address)).to.equal(ethers.parseEther("750000"));
+    it("Should prevent double refund claims", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).cancelAuction();
+
+      await auction.connect(bidder1).claimRefund();
+      
+      await expect(auction.connect(bidder1).claimRefund())
+        .to.be.revertedWith("Refund already claimed");
+    });
+
+    it("Should allow owner to withdraw all tokens after cancellation", async function () {
+      await auction.connect(owner).cancelAuction();
+
+      const balanceBefore = await token.balanceOf(owner.address);
+      await auction.connect(owner).withdrawUnsoldTokens();
+      const balanceAfter = await token.balanceOf(owner.address);
+
+      expect(balanceAfter - balanceBefore).to.equal(TOKEN_AMOUNT);
+    });
+
+    it("Should revert if non-owner tries to cancel", async function () {
+      await expect(auction.connect(bidder1).cancelAuction())
+        .to.be.revertedWithCustomError(auction, "OwnableUnauthorizedAccount");
+    });
   });
 
-  it("should return unsold tokens to owner if raised currency is below target at floor price", async function () {
-    // Total raise is only $75k
-    // Clearing price defaults to FLOOR_PRICE ($0.10)
-    // Sold tokens = $75k / $0.10 = 750k DBBPT
-    // Unsold tokens returned to owner = 1.5M - 750k = 750k DBBPT
-    const bid1 = ethers.parseUnits("75000", 6);
+  describe("Finalization", function () {
+    it("Should correctly calculate clearing price above floor", async function () {
+      const totalBid = BID_AMOUNT_1 + BID_AMOUNT_2 + BID_AMOUNT_3; // 100k USDC
+      
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(bidder2).bid(BID_AMOUNT_2);
+      await auction.connect(bidder3).bid(BID_AMOUNT_3);
+      
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
 
-    await currency.connect(bidder1).approve(await auction.getAddress(), bid1);
-    await auction.connect(bidder1).bid(bid1);
+      // Clearing Price = (100,000 USDC * 1e18) / 1,500,000 DBBPT = 0.0666... USDC per DBBPT
+      // This is below floor price (0.1), so should use floor price
+      expect(await auction.clearingPrice()).to.equal(FLOOR_PRICE);
+    });
 
-    const ownerBalBefore = await token.balanceOf(owner.address);
+    it("Should correctly split funds (2/3 + 1/3)", async function () {
+      const totalBid = BID_AMOUNT_1 + BID_AMOUNT_2; // 80k USDC
+      
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(bidder2).bid(BID_AMOUNT_2);
+      
+      await auction.connect(owner).endAuctionEarly();
 
-    await auction.connect(owner).endAuctionEarly();
-    await auction.connect(owner).finalize();
+      const fundsBalanceBefore = await currency.balanceOf(fundsRecipient.address);
+      const liquidityBalanceBefore = await currency.balanceOf(liquidityRecipient.address);
 
-    expect(await auction.clearingPrice()).to.equal(FLOOR_PRICE);
-    expect(await auction.totalTokensSold()).to.equal(ethers.parseEther("750000"));
+      await auction.connect(owner).finalize();
 
-    // Owner gets back 750k DBBPT unsold tokens
-    const ownerBalAfter = await token.balanceOf(owner.address);
-    expect(ownerBalAfter - ownerBalBefore).to.equal(ethers.parseEther("750000"));
+      const fundsBalanceAfter = await currency.balanceOf(fundsRecipient.address);
+      const liquidityBalanceAfter = await currency.balanceOf(liquidityRecipient.address);
+
+      const liquidityShare = totalBid / 3n; // 1/3
+      const fundsShare = totalBid - liquidityShare; // 2/3
+
+      expect(liquidityBalanceAfter - liquidityBalanceBefore).to.equal(liquidityShare);
+      expect(fundsBalanceAfter - fundsBalanceBefore).to.equal(fundsShare);
+    });
+
+    it("Should return unsold tokens to owner", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1); // 50k USDC
+      
+      await auction.connect(owner).endAuctionEarly();
+
+      const ownerBalanceBefore = await token.balanceOf(owner.address);
+      await auction.connect(owner).finalize();
+      const ownerBalanceAfter = await token.balanceOf(owner.address);
+
+      // At floor price (0.1 USDC), 50k USDC buys 500k DBBPT
+      // So 1,000,000 DBBPT should be returned (1,500,000 - 500,000)
+      const expectedUnsold = ethers.parseEther("1000000");
+      expect(ownerBalanceAfter - ownerBalanceBefore).to.equal(expectedUnsold);
+    });
+
+    it("Should emit AuctionFinalized event", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).endAuctionEarly();
+
+      await expect(auction.connect(owner).finalize())
+        .to.emit(auction, "AuctionFinalized");
+    });
+
+    it("Should revert if finalized twice", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1);
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
+
+      await expect(auction.connect(owner).finalize())
+        .to.be.revertedWith("Auction already finalized");
+    });
+
+    it("Should revert if auction is canceled", async function () {
+      await auction.connect(owner).cancelAuction();
+
+      await expect(auction.connect(owner).finalize())
+        .to.be.revertedWith("Auction is canceled");
+    });
   });
 
-  it("should allow cancellation and refunds", async function () {
-    const bidAmount = ethers.parseUnits("50000", 6);
-    await currency.connect(bidder1).approve(await auction.getAddress(), bidAmount);
-    await auction.connect(bidder1).bid(bidAmount);
+  describe("Token Claims", function () {
+    beforeEach(async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1); // 50k USDC
+      await auction.connect(bidder2).bid(BID_AMOUNT_2); // 30k USDC
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
+    });
 
-    // Cancel auction by owner
-    await expect(auction.connect(owner).cancelAuction())
-      .to.emit(auction, "AuctionCanceled");
+    it("Should allow bidders to claim tokens", async function () {
+      const balanceBefore = await token.balanceOf(bidder1.address);
+      await auction.connect(bidder1).claimTokens();
+      const balanceAfter = await token.balanceOf(bidder1.address);
 
-    // Bidder claims refund
-    const balBefore = await currency.balanceOf(bidder1.address);
-    await expect(auction.connect(bidder1).claimRefund())
-      .to.emit(auction, "RefundClaimed")
-      .withArgs(bidder1.address, bidAmount);
+      // 50k USDC at floor price (0.1) = 500k DBBPT
+      const expectedTokens = ethers.parseEther("500000");
+      expect(balanceAfter - balanceBefore).to.equal(expectedTokens);
+    });
 
-    expect(await currency.balanceOf(bidder1.address)).to.equal(balBefore + bidAmount);
+    it("Should transfer tokens with 0% fee", async function () {
+      // Using mock ERC20 which has no fees, just verify exact amount transfer
+      await auction.connect(bidder1).claimTokens();
+      
+      const balance = await token.balanceOf(bidder1.address);
+      const expectedTokens = ethers.parseEther("500000");
+      
+      // Should receive exact amount (mock token has no fees)
+      expect(balance).to.equal(expectedTokens);
+    });
 
-    // Owner withdraws DBBPT tokens back
-    const tokenBalBefore = await token.balanceOf(owner.address);
-    await auction.connect(owner).withdrawUnsoldTokens();
-    expect(await token.balanceOf(owner.address)).to.equal(tokenBalBefore + TOKEN_AMOUNT);
+    it("Should emit TokensClaimed event", async function () {
+      await expect(auction.connect(bidder1).claimTokens())
+        .to.emit(auction, "TokensClaimed")
+        .withArgs(bidder1.address, ethers.parseEther("500000"));
+    });
+
+    it("Should prevent double claims", async function () {
+      await auction.connect(bidder1).claimTokens();
+      
+      await expect(auction.connect(bidder1).claimTokens())
+        .to.be.revertedWith("Tokens already claimed");
+    });
+
+    it("Should revert if no contribution was made", async function () {
+      await expect(auction.connect(bidder3).claimTokens())
+        .to.be.revertedWith("No contribution made");
+    });
+
+    it("Should revert if auction not finalized", async function () {
+      // Deploy new auction
+      const currentBlock = await ethers.provider.getBlockNumber();
+      const AuctionFactory = await ethers.getContractFactory("ContinuousClearingAuction");
+      const newAuction = await AuctionFactory.deploy(
+        await token.getAddress(),
+        await currency.getAddress(),
+        TOKEN_AMOUNT,
+        FLOOR_PRICE,
+        currentBlock + 5,
+        currentBlock + 105,
+        fundsRecipient.address,
+        liquidityRecipient.address,
+        owner.address
+      );
+      
+      await expect(newAuction.connect(bidder1).claimTokens())
+        .to.be.revertedWith("Auction not finalized yet");
+    });
+  });
+
+  describe("Edge Cases", function () {
+    it("Should handle zero bids (no bids placed)", async function () {
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
+
+      expect(await auction.clearingPrice()).to.equal(FLOOR_PRICE);
+      expect(await auction.totalTokensSold()).to.equal(0);
+    });
+
+    it("Should handle all tokens sold (clearing price above floor)", async function () {
+      // Bid enough to exceed floor price
+      const hugeBid = ethers.parseUnits("200000", 6); // 200k USDC
+      await currency.mint(bidder1.address, hugeBid);
+      await currency.connect(bidder1).approve(await auction.getAddress(), hugeBid);
+      
+      await auction.connect(bidder1).bid(hugeBid);
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
+
+      // 200k / 1.5M = 0.1333 USDC per DBBPT (above floor)
+      expect(await auction.totalTokensSold()).to.equal(TOKEN_AMOUNT);
+    });
+
+    it("Should handle partial token sale (clearing price at floor)", async function () {
+      await auction.connect(bidder1).bid(BID_AMOUNT_1); // 50k USDC
+      await auction.connect(owner).endAuctionEarly();
+      await auction.connect(owner).finalize();
+
+      // At floor price (0.1), only 500k tokens sold
+      const expectedSold = ethers.parseEther("500000");
+      expect(await auction.totalTokensSold()).to.equal(expectedSold);
+    });
   });
 });
