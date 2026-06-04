@@ -353,8 +353,8 @@ export default function AuctionPage() {
       );
 
       const currentBlockNum = await provider.getBlockNumber();
-      // Look back 200,000 blocks (safer for testnet)
-      const startLookupBlock = Math.max(0, currentBlockNum - 200000);
+      // Base Sepolia RPC limits to 2000 blocks max
+      const startLookupBlock = Math.max(0, currentBlockNum - 2000);
 
       // Fetch bid events
       const bidFilter = contract.filters.BidSubmitted();

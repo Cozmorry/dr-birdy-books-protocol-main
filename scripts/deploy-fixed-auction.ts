@@ -21,6 +21,14 @@ async function main() {
 
   const TOKEN_ADDRESS = "0xB49872C1aD8a052f1369ABDfC890264938647EB6"; // DBBPT (keep existing)
   
+  // Recipient addresses for fund splits
+  const FUNDS_RECIPIENT = deployer.address; // Gets 2/3 of raised funds (66.67%) - Operations
+  const LIQUIDITY_RECIPIENT = "0xC82D41C27b6c035aE8dad6218451A8Cea9f6dC6b"; // Gets 1/3 of raised funds (33.33%) - Morris/Developer
+  
+  console.log("\n💰 Fund Recipients:");
+  console.log("   Operations (2/3):  ", FUNDS_RECIPIENT);
+  console.log("   Liquidity (1/3):   ", LIQUIDITY_RECIPIENT);
+  
   // Step 1: Deploy SimpleMockUSDC
   console.log("\n📝 Step 1: Deploying SimpleMockUSDC...");
   const MockUSDCFactory = await ethers.getContractFactory("SimpleMockUSDC");
@@ -46,9 +54,9 @@ async function main() {
     FLOOR_PRICE,
     START_BLOCK,
     END_BLOCK,
-    deployer.address, // funds recipient
-    deployer.address, // liquidity recipient
-    deployer.address  // owner
+    FUNDS_RECIPIENT,     // 2/3 of funds (operations)
+    LIQUIDITY_RECIPIENT, // 1/3 of funds (morris/developer)
+    deployer.address     // owner
   );
   await auction.waitForDeployment();
   const auctionAddress = await auction.getAddress();
@@ -86,6 +94,9 @@ async function main() {
   console.log("   DBBPT Token:       ", TOKEN_ADDRESS);
   console.log("   Mock USDC (NEW):   ", usdcAddress);
   console.log("   Auction (NEW):     ", auctionAddress);
+  console.log("\n💰 Fund Recipients:");
+  console.log("   Operations (2/3):  ", FUNDS_RECIPIENT, "(Your Address)");
+  console.log("   Liquidity (1/3):   ", LIQUIDITY_RECIPIENT, "(Morris/Developer)");
 
   console.log("\n📝 Update frontend/.env:");
   console.log(`   REACT_APP_AUCTION_ADDRESS=${auctionAddress}`);
