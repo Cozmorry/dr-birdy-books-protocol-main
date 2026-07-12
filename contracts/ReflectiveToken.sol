@@ -481,9 +481,13 @@ contract ReflectiveToken is
      */
     function createUniswapPair() external onlyOwner {
         require(pairAddress == address(0), "Pair already created");
-        pairAddress = IUniswapV2Factory(
-            IUniswapV2Router(uniswapRouter).factory()
-        ).createPair(address(this), WETH);
+        address factory = IUniswapV2Router(uniswapRouter).factory();
+        address existingPair = IUniswapV2Factory(factory).getPair(address(this), WETH);
+        if (existingPair != address(0)) {
+            pairAddress = existingPair;
+        } else {
+            pairAddress = IUniswapV2Factory(factory).createPair(address(this), WETH);
+        }
     }
 
     /**
@@ -491,9 +495,13 @@ contract ReflectiveToken is
      */
     function _createUniswapPairInternal() internal {
         require(pairAddress == address(0), "Pair already created");
-        pairAddress = IUniswapV2Factory(
-            IUniswapV2Router(uniswapRouter).factory()
-        ).createPair(address(this), WETH);
+        address factory = IUniswapV2Router(uniswapRouter).factory();
+        address existingPair = IUniswapV2Factory(factory).getPair(address(this), WETH);
+        if (existingPair != address(0)) {
+            pairAddress = existingPair;
+        } else {
+            pairAddress = IUniswapV2Factory(factory).createPair(address(this), WETH);
+        }
     }
 
     /**

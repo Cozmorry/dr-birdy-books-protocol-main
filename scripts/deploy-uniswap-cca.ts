@@ -59,7 +59,7 @@ function packAuctionSteps(steps: AuctionStep[]): string {
     // For 1.5M total supply, MPS = (tokens * 1e6) / totalSupply
     // Then scale to per-block rate
     const mps = Math.floor((step.tokensPerBlock * 1e6) / 1500000);
-    
+
     // Pack: uint64(mps) | (uint64(blocks) << 24)
     const packedStep = BigInt(mps) | (BigInt(step.durationBlocks) << 24n);
     packed += packedStep.toString(16).padStart(16, "0");
@@ -175,6 +175,16 @@ async function main() {
   }
 
   console.log("   ✅ Auction created:", auctionAddress);
+
+  console.log("\n🛡️ Step 1.5: Excluding auction from fees...");
+  const tokenContract = await ethers.getContractAt("ReflectiveToken", DBBPT_TOKEN);
+  try {
+    const excludeTx = await tokenContract.excludeFromFee(auctionAddress, true);
+    await excludeTx.wait();
+    console.log("   ✅ Auction excluded from fees!");
+  } catch (error: any) {
+    console.log("   ⚠️ Could not exclude auction from fees:", error.message);
+  }
 
   console.log("\n💸 Step 2: Transferring DBBPT tokens to auction...");
   const transferTx = await dbbptToken.transfer(auctionAddress, TOKEN_AMOUNT);

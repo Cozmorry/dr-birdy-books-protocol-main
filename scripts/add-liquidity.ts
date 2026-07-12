@@ -59,8 +59,8 @@ async function main() {
   const router = new ethers.Contract(UNISWAP_ROUTER_V2, routerAbi, signer);
 
   // Prompt for amounts (you can modify these values)
-  const TOKEN_AMOUNT = ethers.parseUnits("100000", tokenDecimals); // 100k tokens (adjust as needed)
-  const ETH_AMOUNT = ethers.parseEther("1.0"); // 1 ETH (adjust as needed)
+  const TOKEN_AMOUNT = ethers.parseUnits("1000", tokenDecimals); // 1k tokens
+  const ETH_AMOUNT = ethers.parseEther("0.001"); // 0.001 ETH
 
   console.log("\n💰 Liquidity to Add:");
   console.log("   Token Amount:", ethers.formatUnits(TOKEN_AMOUNT, tokenDecimals), tokenSymbol);
@@ -84,8 +84,22 @@ async function main() {
   await approveTx.wait();
   console.log("   ✅ Tokens approved");
 
-  // Calculate minimum amounts (with 1% slippage tolerance)
-  const minTokenAmount = (TOKEN_AMOUNT * 99n) / 100n;
+  // Exclude owner from fees to prevent taxes from breaking the liquidity addition
+  try {
+    console.log("\n🛡️ Excluding owner from fees...");
+    const excludeTx = await token.excludeFromFee(signer.address, true);
+    await excludeTx.wait();
+    console.log("   ✅ Owner excluded from fees");
+  } catch (e: any) {
+    if (e.message && e.message.includes("already excluded")) {
+      console.log("   ✅ Owner is already excluded from fees");
+    } else {
+      console.log("   ⚠️ Could not set fee exclusion:", e.message);
+    }
+  }
+
+  // Calculate minimum amounts
+  const minTokenAmount = 0n; // Set to 0 to avoid deflationary tax reverts
   const minETHAmount = (ETH_AMOUNT * 99n) / 100n;
   const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes from now
 
