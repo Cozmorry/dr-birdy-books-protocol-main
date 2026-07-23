@@ -975,11 +975,15 @@ contract ReflectiveToken is
         bool fromExcluded = _isExcludedFromFee[from];
         bool toExcluded = _isExcludedFromFee[to];
         bool stakingContractInvolved = (stakingContract != address(0) && (from == stakingContract || to == stakingContract));
+        // OPTION B: Tax only when sender is not excluded.
+        // - Buys  (excluded pair → buyer): NO TAX ✅
+        // - Sells (buyer → excluded pair): TAX ✅
+        // - Wallet-to-wallet: TAX ✅
         bool shouldApplyFees = !inSwap &&
             from != address(this) &&
             to != address(this) &&
             !stakingContractInvolved &&
-            (!fromExcluded || !toExcluded); // Fees apply if at least one is NOT excluded
+            !fromExcluded;
 
         uint256 transferAmount = value;
         uint256 feeAmount = 0;
@@ -1035,21 +1039,22 @@ contract ReflectiveToken is
             }
         }
 
-        // 6. Handle fees (add to contract if fees were applied)
+        // 6. Accumulate fees in contract (owner distributes manually — no auto-trigger)
         if (feeAmount > 0) {
             unchecked {
                 _tOwned[address(this)] += feeAmount;
             }
-            // Auto-liquidity trigger
-            uint256 contractTokenBalance = balanceOf(address(this));
-            if (contractTokenBalance >= swapThreshold) {
-                swapAndLiquify();
-            }
+            emit Transfer(from, address(this), feeAmount);
         }
 
-        // 7. Emit Transfer event
+        // 7. Emit net transfer event
         emit Transfer(from, to, transferAmount);
     }
+
+
+    /// @dev Required to receive ETH from Uniswap router during swapAndLiquify
+    receive() external payable {}
+
 
     // 5. allowance()
     function allowance(
