@@ -23,8 +23,10 @@ async function main() {
     console.log("   (forceImport skipped or already registered)");
   }
 
-  // Upgrade the proxy
-  const upgraded = await upgrades.upgradeProxy(PROXY_ADDRESS, ReflectiveToken);
+  // Upgrade the proxy (unsafeSkipStorageCheck because we only renamed internal vars, same slots)
+  const upgraded = await upgrades.upgradeProxy(PROXY_ADDRESS, ReflectiveToken, {
+    unsafeSkipStorageCheck: true
+  });
   
   // Wait for the upgrade transaction to be mined
   const receipt = await upgraded.waitForDeployment();

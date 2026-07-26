@@ -1,28 +1,38 @@
 import { ethers } from "hardhat";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 async function main() {
   const proxyAddress = "0x42364e088eFeB481cE811eF9caDd95F36e3F36c0";
-  const provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
+  const alchemyUrl = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+  const provider = new ethers.JsonRpcProvider(alchemyUrl);
 
-  const pairAddr = "0x9b5deC19274897852976863C6726B404c87840e7";
-  const dummyUser = "0x0000000000000000000000000000000000000001";
-  const amount = ethers.parseEther("458.34");
+  // Call totalFee() via raw eth_call - selector = keccak256("totalFee()")[0:4] = 0x0bad4bed
+  const totalFeeSelector = ethers.id("totalFee()").slice(0, 10);
+  const taxFeeSelector = ethers.id("taxFee()").slice(0, 10);
+  console.log("totalFee() selector:", totalFeeSelector);
+  console.log("taxFee() selector:", taxFeeSelector);
 
-  // ABI for ERC20 transfer
-  const abi = ["function transfer(address to, uint256 amount) returns (bool)"];
-  const token = new ethers.Contract(proxyAddress, abi, provider);
+  const rawTotalFee = await provider.call({ to: proxyAddress, data: totalFeeSelector });
+  const rawTaxFee = await provider.call({ to: proxyAddress, data: taxFeeSelector });
+  
+  console.log("\n=== Raw eth_call results (bypasses any ABI caching) ===");
+  console.log("totalFee() raw:", rawTotalFee);
+  console.log("taxFee() raw:", rawTaxFee);
+  
+  const decodedTotalFee = BigInt(rawTotalFee);
+  const decodedTaxFee = BigInt(rawTaxFee);
+  console.log("totalFee() decoded:", decodedTotalFee.toString());
+  console.log("taxFee() decoded:", decodedTaxFee.toString());
 
-  console.log("Simulating transfer(to, amount) from Pair address via eth_call...");
-  try {
-    const tx = {
-      from: pairAddr,
-      to: proxyAddress,
-      data: token.interface.encodeFunctionData("transfer", [dummyUser, amount]),
-    };
-    await provider.call(tx);
-    console.log("Direct pair transfer SUCCESS!");
-  } catch (err: any) {
-    console.error("Direct pair transfer REVERTED:", err.info?.error?.message || err.message || err);
+  if (decodedTotalFee === 0n && decodedTaxFee === 0n) {
+    console.log("\n✅ Pure getters confirmed working — both return 0!");
+  } else {
+    // Check current implementation address
+    const implSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+    const implAddr = await provider.getStorage(proxyAddress, implSlot);
+    console.log("\n⚠️ Fees not 0. Current implementation:", "0x" + implAddr.slice(26));
+    console.log("The pure function override may not have deployed. Check upgrade tx.");
   }
 }
 

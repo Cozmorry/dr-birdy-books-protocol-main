@@ -72,10 +72,12 @@ export interface ReflectiveTokenInterface extends Interface {
       | "queueSetSlippage"
       | "queueUpdateArweaveGateway"
       | "queueUpdateMarketingWallet"
+      | "reinitializeFeesToZero"
       | "renounceOwnership"
       | "setArweaveGateway"
       | "setDistributionContract"
       | "setFees"
+      | "setFeesDirect"
       | "setMarketingWallet"
       | "setMaxTxAmount"
       | "setPriceOracle"
@@ -317,6 +319,10 @@ export interface ReflectiveTokenInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "reinitializeFeesToZero",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
@@ -330,6 +336,10 @@ export interface ReflectiveTokenInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "setFees",
+    values: [BigNumberish, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setFeesDirect",
     values: [BigNumberish, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
@@ -612,6 +622,10 @@ export interface ReflectiveTokenInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "reinitializeFeesToZero",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
@@ -624,6 +638,10 @@ export interface ReflectiveTokenInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "setFees", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "setFeesDirect",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "setMarketingWallet",
     data: BytesLike
@@ -1429,6 +1447,8 @@ export interface ReflectiveToken extends BaseContract {
     "nonpayable"
   >;
 
+  reinitializeFeesToZero: TypedContractMethod<[], [void], "nonpayable">;
+
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
 
   setArweaveGateway: TypedContractMethod<
@@ -1444,11 +1464,13 @@ export interface ReflectiveToken extends BaseContract {
   >;
 
   setFees: TypedContractMethod<
-    [
-      newTaxFee: BigNumberish,
-      newLiquidityFee: BigNumberish,
-      newMarketingFee: BigNumberish
-    ],
+    [arg0: BigNumberish, arg1: BigNumberish, arg2: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setFeesDirect: TypedContractMethod<
+    [arg0: BigNumberish, arg1: BigNumberish, arg2: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1859,6 +1881,9 @@ export interface ReflectiveToken extends BaseContract {
     nameOrSignature: "queueUpdateMarketingWallet"
   ): TypedContractMethod<[newWallet: AddressLike], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "reinitializeFeesToZero"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
@@ -1874,11 +1899,14 @@ export interface ReflectiveToken extends BaseContract {
   getFunction(
     nameOrSignature: "setFees"
   ): TypedContractMethod<
-    [
-      newTaxFee: BigNumberish,
-      newLiquidityFee: BigNumberish,
-      newMarketingFee: BigNumberish
-    ],
+    [arg0: BigNumberish, arg1: BigNumberish, arg2: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "setFeesDirect"
+  ): TypedContractMethod<
+    [arg0: BigNumberish, arg1: BigNumberish, arg2: BigNumberish],
     [void],
     "nonpayable"
   >;

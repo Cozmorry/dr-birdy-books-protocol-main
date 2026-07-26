@@ -143,11 +143,24 @@ contract ReflectiveToken is
     uint256 public maxTxAmount; // 1% of supply
     uint256 public swapThreshold; // 1% of supply
 
-    // Fee Structure (in basis points)
-    uint256 public taxFee; // 1%
-    uint256 public liquidityFee; // 2%
-    uint256 public marketingFee; // 2%
-    uint256 public totalFee;
+    // Legacy fee storage slots — same order as original taxFee/liquidityFee/marketingFee/totalFee.
+    // Values in proxy storage may be nonzero but are NEVER used in transfer logic.
+    // Storage layout is preserved (same slot order, same types, only renamed to internal).
+    /// @custom:oz-renamed-from taxFee
+    uint256 internal _legacyTaxFee;
+    /// @custom:oz-renamed-from liquidityFee
+    uint256 internal _legacyLiquidityFee;
+    /// @custom:oz-renamed-from marketingFee
+    uint256 internal _legacyMarketingFee;
+    /// @custom:oz-renamed-from totalFee
+    uint256 internal _legacyTotalFee;
+
+    // Public fee getters — always return 0. Satisfies ALL DEX/launchpad scanners.
+    function taxFee() public pure returns (uint256) { return 0; }
+    function liquidityFee() public pure returns (uint256) { return 0; }
+    function marketingFee() public pure returns (uint256) { return 0; }
+    function totalFee() public pure returns (uint256) { return 0; }
+
 
     // Slippage configuration (in basis points) - OPTIMIZED FOR BASE LAUNCH
     uint256 public swapSlippageBps; // 0.5% default for low-liquidity swaps
@@ -305,11 +318,8 @@ contract ReflectiveToken is
         maxTxAmount = _TOTAL_SUPPLY / 100; // 1% of supply
         swapThreshold = _TOTAL_SUPPLY / 100; // 1% of supply
         
-        // Fee Structure (in basis points)
-        taxFee = 100; // 1%
-        liquidityFee = 200; // 2%
-        marketingFee = 200; // 2%
-        totalFee = taxFee + liquidityFee + marketingFee;
+        // Fee Structure: fees are permanently 0% (see pure getter functions above)
+        // No storage writes needed for fee variables
         
         // Slippage configuration (in basis points)
         swapSlippageBps = 50; // 0.5% default for low-liquidity swaps
@@ -348,6 +358,11 @@ contract ReflectiveToken is
         if (_arweaveGateway != address(0)) {
             emit ArweaveGatewaySet(_arweaveGateway);
         }
+    }
+
+    function reinitializeFeesToZero() external onlyOwner {
+        // Fees are now pure functions returning 0 — nothing to zero in storage
+        emit FeeChangeExecuted(0, 0, 0);
     }
 
     /**
@@ -813,17 +828,22 @@ contract ReflectiveToken is
         // For now, just emit the event
     }
 
-    // Called by timelock to update fees
+    // Direct fee update by owner — fees are permanently 0, no-op
+    function setFeesDirect(
+        uint256,
+        uint256,
+        uint256
+    ) external onlyOwner {
+        emit FeeChangeExecuted(0, 0, 0);
+    }
+
+    // Called by timelock to update fees — fees are permanently 0, no-op
     function setFees(
-        uint256 newTaxFee,
-        uint256 newLiquidityFee,
-        uint256 newMarketingFee
+        uint256,
+        uint256,
+        uint256
     ) external onlyTimelock {
-        taxFee = newTaxFee;
-        liquidityFee = newLiquidityFee;
-        marketingFee = newMarketingFee;
-        totalFee = taxFee + liquidityFee + marketingFee;
-        emit FeeChangeExecuted(newTaxFee, newLiquidityFee, newMarketingFee);
+        emit FeeChangeExecuted(0, 0, 0);
     }
 
     /**
@@ -975,25 +995,14 @@ contract ReflectiveToken is
         bool fromExcluded = _isExcludedFromFee[from];
         bool toExcluded = _isExcludedFromFee[to];
         bool stakingContractInvolved = (stakingContract != address(0) && (from == stakingContract || to == stakingContract));
-        // OPTION B: Tax only when sender is not excluded.
-        // - Buys  (excluded pair → buyer): NO TAX ✅
-        // - Sells (buyer → excluded pair): TAX ✅
-        // - Wallet-to-wallet: TAX ✅
-        bool shouldApplyFees = !inSwap &&
-            from != address(this) &&
-            to != address(this) &&
-            !stakingContractInvolved &&
-            !fromExcluded;
+        // ALL FEES ARE PERMANENTLY DISABLED (0% TAX EVERYWHERE)
+        bool shouldApplyFees = false;
 
         uint256 transferAmount = value;
         uint256 feeAmount = 0;
 
-        // 3. Calculate and apply fees if needed
-        if (shouldApplyFees) {
-            feeAmount = (value * totalFee) / 10000;
-            transferAmount = value - feeAmount;
-            _tFeeTotal += feeAmount;
-        }
+        // Fees are permanently disabled (shouldApplyFees is always false)
+        // feeAmount stays 0, transferAmount equals full value
 
         // 4. Update FROM account balance
         if (fromExcluded) {
@@ -1270,8 +1279,8 @@ contract ReflectiveToken is
      * @param ethReceived Total ETH received from the swap.
      */
     function _distributeMarketingFee(uint256 ethReceived) private {
-        uint256 marketingShare = (ethReceived * marketingFee) /
-            (marketingFee + liquidityFee);
+        // Fees permanently disabled — send all ETH to marketing wallet if set
+        uint256 marketingShare = ethReceived;
         
         // Split marketing fee between marketing wallet and yield strategy
         if (yieldStrategy != address(0) && yieldStrategyFeeBps > 0) {
